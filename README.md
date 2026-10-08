@@ -125,6 +125,14 @@ Compiling
 
 Compiling requires using CMake 3.1 or newer. GCC, Clang, and Visual Studio 2019 are known to work for compiling mGBA.
 
+### Windows double-click launcher
+
+Double-click `Launch mGBA.cmd` in the checkout folder. No terminal commands are needed. If the app has not been built, the launcher downloads a private MSYS2 toolchain, installs the dependencies, builds this checkout, and opens mGBA. Keep the window open during the first setup; it requires 64-bit Windows 10 or newer, internet access, and several GB of free disk space. Administrator access is not required.
+
+Later launches reuse the completed build and work offline. You can also drop a ROM onto the launcher or pass command-line arguments to it. Tools are stored under `%LOCALAPPDATA%\mgba-willow-tools`, and the automatic build and setup log are in `build-auto-windows` (`launcher.log`). If setup fails, the window shows the error; double-click again to retry. To rebuild after changing the source, delete `build-auto-windows\build-ready` and launch again.
+
+The launcher also recognizes existing `mGBA.exe` builds in the checkout root, `build`, common Windows build folders, and Visual Studio's `out/build/x64-Release` and `out/build/x64-Debug` folders, including their `Release`, `RelWithDebInfo`, `Debug`, and `bin` subfolders. Existing manual builds need their runtime DLLs beside the executable or on `PATH`.
+
 #### Docker building
 
 The recommended way to build for most platforms is to use Docker. Several Docker images are provided that contain the requisite toolchain and dependencies for building mGBA across several platforms.
