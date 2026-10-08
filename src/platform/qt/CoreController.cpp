@@ -508,6 +508,9 @@ void CoreController::reset() {
 }
 
 void CoreController::setPaused(bool paused) {
+	if (m_aiControl && !paused) {
+		return;
+	}
 	QMutexLocker locker(&m_actionMutex);
 	if (paused) {
 		if (m_moreFrames < 0) {
@@ -522,6 +525,9 @@ void CoreController::setPaused(bool paused) {
 }
 
 void CoreController::frameAdvance() {
+	if (m_aiControl) {
+		return;
+	}
 	QMutexLocker locker(&m_actionMutex);
 	m_moreFrames = 1;
 	if (isPaused()) {
@@ -532,6 +538,46 @@ void CoreController::frameAdvance() {
 void CoreController::addFrameAction(std::function<void ()> action) {
 	QMutexLocker locker(&m_actionMutex);
 	m_frameActions.append(action);
+}
+
+void CoreController::setAIControl(bool enabled) {
+	if (!hasStarted() || mCoreThreadHasExited(&m_threadContext)) {
+		m_aiControl = false;
+		m_aiKeys = 0;
+		return;
+	}
+	mCoreThreadPause(&m_threadContext);
+	Interrupter interrupter(this);
+	QMutexLocker locker(&m_actionMutex);
+	m_moreFrames = 0;
+	m_aiControl = enabled;
+	m_aiKeys = 0;
+	m_activeKeys = 0;
+	m_removedKeys = ~0;
+	m_threadContext.core->setKeys(m_threadContext.core, 0);
+}
+
+bool CoreController::advanceAI(unsigned keys, int frames) {
+	if (!hasStarted() || mCoreThreadHasExited(&m_threadContext) || !m_aiControl || !isPaused() || frames < 1 || frames > 600 || keys > 0x3FF) {
+		return false;
+	}
+	{
+		Interrupter interrupter(this);
+		QMutexLocker locker(&m_actionMutex);
+		m_aiKeys = keys;
+		m_threadContext.core->setKeys(m_threadContext.core, keys);
+		m_moreFrames = frames;
+	}
+	mCoreThreadUnpause(&m_threadContext);
+	return true;
+}
+
+void CoreController::refreshAIFrame() {
+	{
+		QMutexLocker locker(&m_bufferMutex);
+		if (!m_hwaccel) m_completeBuffer = m_activeBuffer;
+	}
+	emit frameAvailable();
 }
 
 void CoreController::setSync(bool sync) {
@@ -920,10 +966,12 @@ void CoreController::yankPak() {
 }
 
 void CoreController::addKey(int key) {
+	if (m_aiControl) return;
 	m_activeKeys |= 1 << key;
 }
 
 void CoreController::clearKey(int key) {
+	if (m_aiControl) return;
 	m_activeKeys &= ~(1 << key);
 	m_removedKeys |= 1 << key;
 }
@@ -1221,6 +1269,10 @@ void CoreController::setFramebufferHandle(int fb) {
 }
 
 void CoreController::updateKeys() {
+	if (m_aiControl) {
+		m_threadContext.core->setKeys(m_threadContext.core, m_aiKeys);
+		return;
+	}
 	int polledKeys = m_inputController->pollEvents() | updateAutofire();
 	int activeKeys = m_activeKeys | polledKeys;
 	activeKeys |= m_threadContext.core->getKeys(m_threadContext.core) & ~m_removedKeys;
@@ -1263,6 +1315,7 @@ void CoreController::finishFrame() {
 		if (m_moreFrames > 0) {
 			--m_moreFrames;
 			if (!m_moreFrames) {
+				m_aiKeys = 0;
 				mCoreThreadPauseFromThread(&m_threadContext);
 			}
 		}

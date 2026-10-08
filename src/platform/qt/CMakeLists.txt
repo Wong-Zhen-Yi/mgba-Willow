@@ -97,6 +97,7 @@ if(QT_TYPE STREQUAL STATIC_LIBRARY)
 endif()
 
 set(SOURCE_FILES
+	AIController.cpp
 	AboutScreen.cpp
 	AbstractUpdater.cpp
 	Action.cpp

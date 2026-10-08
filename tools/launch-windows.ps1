@@ -11,7 +11,18 @@ $msysRoot = Join-Path $toolsDir 'msys64'
 $lockStream = $null
 $transcribing = $false
 $buildReady = $null
-$buildRecipe = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'build-windows.sh') -Algorithm SHA256).Hash
+# Include source changes, not just the build script, in the cached build identity.
+$buildInputs = @(
+    Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src'), (Join-Path $repoRoot 'include'), (Join-Path $repoRoot 'res') -Recurse -File
+    Get-Item -LiteralPath (Join-Path $repoRoot 'CMakeLists.txt'), (Join-Path $repoRoot 'version.cmake'), (Join-Path $PSScriptRoot 'build-windows.sh')
+)
+$buildIdentity = ($buildInputs | Sort-Object FullName | ForEach-Object {
+    $_.FullName.Substring($repoRoot.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+}) -join "`n"
+$recipeHasher = [Security.Cryptography.SHA256]::Create()
+try {
+    $buildRecipe = [BitConverter]::ToString($recipeHasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($buildIdentity))).Replace('-', '')
+} finally { $recipeHasher.Dispose() }
 
 function Invoke-Native {
     param([string]$Program, [string[]]$NativeArguments)
@@ -125,16 +136,6 @@ function Install-BuildTools {
     }
 }
 
-function Find-ExistingApp {
-    foreach ($directory in @('.', 'build', 'build-win64', 'build-win32', 'build-w64',
-        'build-w32', 'build-windows', 'out\build\x64-Release', 'out\build\x64-Debug')) {
-        foreach ($configuration in @('.', 'Release', 'RelWithDebInfo', 'Debug', 'bin')) {
-            $candidate = Join-Path (Join-Path (Join-Path $repoRoot $directory) $configuration) 'mGBA.exe'
-            if (Test-Path -LiteralPath $candidate) { return $candidate }
-        }
-    }
-}
-
 try {
     New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
     try {
@@ -145,7 +146,9 @@ try {
     }
     Start-Transcript -LiteralPath $logPath -Force | Out-Null
     $transcribing = $true
-    $appPath = Find-ExistingApp
+    # Always use the managed build from this checkout; unrelated binaries may
+    # lack the AI bridge even when they are named mGBA.exe.
+    $appPath = $null
     if (-not $appPath) {
         $appPath = Join-Path $buildDir 'mGBA.exe'
         $buildReady = Join-Path $buildDir 'build-ready'

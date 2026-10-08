@@ -4,6 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #include "Window.h"
+#include "AIController.h"
 
 #include <QKeyEvent>
 #include <QKeySequence>
@@ -1911,6 +1912,7 @@ void Window::setupMenu(QMenuBar* menubar) {
 		action->setEnabled(false);
 	}
 
+	new AIController(this, &m_actions);
 	m_shortcutController->rebuildItems();
 	m_actions.rebuildMenu(menuBar(), this, *m_shortcutController);
 }

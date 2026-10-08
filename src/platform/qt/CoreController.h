@@ -15,6 +15,7 @@
 #include "VFileDevice.h"
 
 #include <functional>
+#include <atomic>
 #include <memory>
 
 #include <mgba/core/core.h>
@@ -140,6 +141,10 @@ public:
 
 	void addFrameAction(std::function<void ()> callback);
 	uint64_t frameCounter() const { return m_frameCounter; }
+	void setAIControl(bool enabled);
+	bool aiControl() const { return m_aiControl; }
+	bool advanceAI(unsigned keys, int frames);
+	void refreshAIFrame();
 
 public slots:
 	void start();
@@ -279,7 +284,9 @@ private:
 	std::unique_ptr<mCacheSet> m_cacheSet;
 	std::unique_ptr<Override> m_override;
 
-	uint64_t m_frameCounter;
+	std::atomic<uint64_t> m_frameCounter{0};
+	std::atomic<bool> m_aiControl{false};
+	std::atomic<unsigned> m_aiKeys{0};
 	QList<std::function<void()>> m_resetActions;
 	QList<std::function<void()>> m_frameActions;
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))

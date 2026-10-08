@@ -5,6 +5,10 @@ mGBA is an emulator for running Game Boy Advance games. It aims to be faster and
 
 Up-to-date news and downloads can be found at [mgba.io](https://mgba.io/).
 
+This Willow checkout includes a local MCP for playing a visible game from a
+Codex chat using Luna models. See [Play mGBA with Luna](tools/mcp/README.md) for
+setup, frame-counted controls, memory reads, checkpoints, and manual takeover.
+
 [![Build status](https://buildbot.mgba.io/badges/build-win32.svg)](https://buildbot.mgba.io)
 [![Translation status](https://hosted.weblate.org/widgets/mgba/-/svg-badge.svg)](https://hosted.weblate.org/engage/mgba)
 
