@@ -3,7 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { Bridge, descriptors, listSessions } from './bridge.mjs';
 
-const instructions = `Control a visible mGBA game with shared human input. The bridge is enabled automatically while mGBA is open; the user can disable it in AI > MCP Enabled. Start with list_sessions and connect. Human directions override conflicting AI directions; other buttons combine. AI speed defaults to 4x and can be changed with set_speed or AI > AI Speed. The emulator runs while you think, so observations become stale quickly. Use short observe/action cycles near hazards. Use act_sequence for predictable movement to reduce model/tool round trips, with at most 600 total frames. Use screenshot:false only when a fresh image is unnecessary; obtain a new observation before uncertain decisions. Cancelled actions report cancelled:true and only completed sequence steps; do not assume planned moves completed. A manual pause must be resumed by the user. Disconnect releases AI inputs and restores ordinary speed without pausing or clearing human buttons. Save a checkpoint before risky moves. Use memory_map before reading memory: bytes are not labeled health or coordinates unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game. This MCP does not select or invoke a model.`;
+const instructions = `Control a visible mGBA game with shared human input. Multiple agents can connect to the same window; coordinate goals because they share game progress, speed, and checkpoints. Only one action runs at a time: if busy, observe and retry after completion. Observations and memory reads remain available during another agent's action. The bridge is enabled automatically while mGBA is open; the user can disable it in AI > MCP Enabled. Start with list_sessions and connect. Human directions override conflicting AI directions; other buttons combine. AI speed defaults to 4x and can be changed with set_speed or AI > AI Speed. The emulator runs while you think, so observations become stale quickly. Use short observe/action cycles near hazards. Use act_sequence for predictable movement to reduce model/tool round trips, with up to 200 steps and at most 600 total frames. Use screenshot:false only when a fresh image is unnecessary; obtain a new observation before uncertain decisions. Cancelled actions report cancelled:true and only completed sequence steps; do not assume planned moves completed. A manual pause must be resumed by the user. Disconnect cancels only your pending action; other connected agents retain control. The last agent disconnecting restores ordinary speed without pausing or clearing human buttons. Save a checkpoint before risky moves, using agent-specific names to avoid overwriting another agent's checkpoint. Use memory_map before reading memory: bytes are not labeled health or coordinates unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game. This MCP does not select or invoke a model.`;
 const server = new McpServer({ name: 'mgba-willow', version: '1.0.0' }, { instructions });
 let bridge;
 let queue = Promise.resolve();
@@ -41,7 +41,7 @@ function call(method, args) {
 
 register('list_sessions', 'List visible mGBA windows, game titles, platforms, and AI control status. Open a ROM with Launch mGBA.cmd first.', {}, true,
   async () => ({ sessions: await listSessions() }));
-register('connect', 'Acquire AI control of one game window, preserve its pause state, and return its screenshot. Human controls remain active. Another controlling client is rejected.', {
+register('connect', 'Join shared AI control of one game window, preserve its pause state, and return its screenshot. Multiple agents can connect; actions run one at a time. Human controls remain active.', {
   session_id: z.string().uuid(),
 }, false, async ({ session_id }) => {
   if (bridge) {
@@ -67,8 +67,8 @@ register('act', 'Hold AI buttons for exactly 1–600 frames, then release only A
   ...actionSchema,
   screenshot: z.boolean().optional(),
 }, false, args => call('act', args));
-register('act_sequence', 'Execute 1–32 predictable moves without intermediate tool round trips, at most 600 total frames. Return each completed step’s frame boundaries and one final screenshot by default. Pause or disconnect cancels remaining moves.', {
-  actions: z.array(z.object(actionSchema)).min(1).max(32).refine(actions => actions.reduce((total, action) => total + action.frames, 0) <= 600, 'Sequence exceeds 600 total frames'),
+register('act_sequence', 'Execute 1–200 predictable moves without intermediate tool round trips, at most 600 total frames. Return each completed step’s frame boundaries and one final screenshot by default. Pause or disconnect cancels remaining moves.', {
+  actions: z.array(z.object(actionSchema)).min(1).max(200).refine(actions => actions.reduce((total, action) => total + action.frames, 0) <= 600, 'Sequence exceeds 600 total frames'),
   screenshot: z.boolean().optional(),
 }, false, args => call('act_sequence', args));
 register('set_speed', 'Set the persisted AI gameplay speed, shared with AI > AI Speed. Human fast-forward controls temporarily take priority. Ordinary speed settings are restored when AI control ends.', {
@@ -86,7 +86,7 @@ register('save_checkpoint', 'Save a named AI checkpoint for this ROM outside nor
   args => call('save_checkpoint', args));
 register('load_checkpoint', 'Restore a named checkpoint for this ROM and return its screenshot. Restores game progress and saved data from that checkpoint.', checkpointSchema, false,
   args => call('load_checkpoint', args));
-register('disconnect', 'Release AI inputs and restore ordinary speed, preserving human buttons and the current pause state.', {}, false, async args => {
+register('disconnect', 'Disconnect this agent and cancel only its pending action. Other agents retain control; the last disconnect restores ordinary speed. Preserve human buttons and pause state.', {}, false, async args => {
   try { return await call('disconnect', args); }
   finally { bridge?.close(); bridge = undefined; }
 });

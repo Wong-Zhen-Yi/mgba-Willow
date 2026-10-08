@@ -28,6 +28,7 @@ private:
 	void request(QLocalSocket* socket, const QJsonObject& request);
 	void reply(QLocalSocket* socket, const QJsonValue& id, const QJsonObject& result, const QString& error = {});
 	void release(const QString& reason);
+	void disconnectClient(QLocalSocket* socket);
 	void setEnabled(bool enabled);
 	void finishPending(bool cancelled = false, const QString& reason = {});
 	QJsonArray completedSteps() const;
@@ -35,7 +36,8 @@ private:
 	QJsonObject session() const;
 	Window* m_window;
 	QLocalServer m_server;
-	QPointer<QLocalSocket> m_owner;
+	QSet<QLocalSocket*> m_clients;
+	QPointer<QLocalSocket> m_actionOwner;
 	std::shared_ptr<CoreController> m_core;
 	std::shared_ptr<Action> m_toggle;
 	std::shared_ptr<Action> m_enabled;

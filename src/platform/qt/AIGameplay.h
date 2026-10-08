@@ -10,9 +10,10 @@ namespace QGBA {
 class AIGameplay {
 public:
 	struct Step { unsigned keys; int frames; };
+	static constexpr std::size_t MaxSteps = 200;
 
 	bool start(const std::vector<Step>& steps, uint64_t frame) {
-		if (pending() || steps.empty() || steps.size() > 32) return false;
+		if (pending() || steps.empty() || steps.size() > MaxSteps) return false;
 		int total = 0;
 		for (const auto& step : steps) {
 			if (step.frames < 1 || step.frames > 600 || step.keys > 0x3FF) return false;

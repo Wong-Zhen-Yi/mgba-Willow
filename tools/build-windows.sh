@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_dir=$(cygpath -u "$MGBA_SOURCE_ROOT")
-build_dir=$(cygpath -u "$MGBA_BUILD_ROOT")
+# CMake is a native Windows executable. Use native forward-slash paths even
+# when the caller disables MSYS argument conversion (for example, Hermes).
+source_dir=$(cygpath -m "$MGBA_SOURCE_ROOT")
+build_dir=$(cygpath -m "$MGBA_BUILD_ROOT")
 
 # windres otherwise constructs an unquoted absolute preprocessor path,
 # which fails when the user's Windows profile contains spaces.

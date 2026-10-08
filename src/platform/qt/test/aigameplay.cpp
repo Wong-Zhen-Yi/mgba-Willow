@@ -23,7 +23,7 @@ int main() {
 	CHECK(!game.start({{A, 601}}, 0));
 	CHECK(!game.start({{0x400, 1}}, 0));
 	CHECK(!game.start({{A, 600}, {B, 1}}, 0));
-	CHECK(!game.start(std::vector<AIGameplay::Step>(33, {A, 1}), 0));
+	CHECK(!game.start(std::vector<AIGameplay::Step>(201, {A, 1}), 0));
 	CHECK(game.start({{Right, 2}, {A, 1}, {0, 2}}, 100));
 	CHECK(game.startFrame() == 100 && game.endFrame() == 105);
 	CHECK(!game.start({{B, 1}}, 100));
@@ -50,5 +50,15 @@ int main() {
 	CHECK(game.start({{B, 600}}, 300));
 	for (int i = 0; i < 599; ++i) CHECK(!game.finishFrame());
 	CHECK(game.finishFrame() && game.completed() == 1 && game.endFrame() == 900);
+	std::vector<AIGameplay::Step> longSequence;
+	for (int i = 0; i < 200; ++i) longSequence.push_back({i % 2 ? Left : Right, 3});
+	CHECK(game.start(longSequence, 1000));
+	for (int i = 0; i < 200; ++i) {
+		CHECK(game.keys() == longSequence[i].keys && game.completed() == std::size_t(i));
+		CHECK(!game.finishFrame());
+		CHECK(!game.finishFrame());
+		CHECK(game.finishFrame() == (i == 199));
+	}
+	CHECK(!game.pending() && game.keys() == 0 && game.completed() == 200 && game.endFrame() == 1600);
 	std::cout << "PASS: shared directional priority, contiguous exact frame steps, limits, cancellation, input release, and restart\n";
 }

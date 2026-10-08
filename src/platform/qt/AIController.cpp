@@ -85,7 +85,7 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 		m_coreConnections.append(connect(core.get(), &CoreController::paused, this, [this]() { finishPending(true, tr("Game paused; resume manually")); }));
 		core->setAISpeed(m_window->config()->getOption("aiSpeed", 4).toFloat());
 		core->setAIControl(true);
-		m_status->setText(tr("MCP: ready; AI waiting for Codex"));
+		m_status->setText(tr("MCP: ready; AI waiting for agents"));
 	});
 	m_server.setSocketOptions(QLocalServer::UserAccessOption);
 	connect(&m_server, &QLocalServer::newConnection, this, [this]() {
@@ -93,14 +93,14 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 			m_sockets.insert(socket);
 			connect(socket, &QLocalSocket::readyRead, this, [this, socket]() { receive(socket); });
 			connect(socket, &QLocalSocket::disconnected, this, [this, socket]() {
-				if (m_owner == socket) release(tr("ready; disconnected"));
+				disconnectClient(socket);
 				m_sockets.remove(socket);
 				socket->deleteLater();
 			});
 		}
 	});
 	m_timer.setSingleShot(true);
-	connect(&m_timer, &QTimer::timeout, this, [this]() { release(tr("ready; action timed out")); });
+	connect(&m_timer, &QTimer::timeout, this, [this]() { finishPending(true, tr("Action timed out")); });
 	connect(window, &Window::shutdown, this, [this]() { setEnabled(false); });
 	m_enabled->setActive(true);
 }
@@ -186,7 +186,7 @@ QJsonObject AIController::session() const {
 		{"platform", core ? (core->platform() == mPLATFORM_GBA ? "GBA" : "GB/GBC") : "none"},
 		{"started", core && core->hasStarted()}, {"ai_control", core && core->aiControl()},
 		{"frame", core ? double(core->frameCounter()) : 0}, {"paused", core && core->isPaused()},
-		{"connected", !m_owner.isNull()}, {"mcp_enabled", m_server.isListening()},
+		{"connected", !m_clients.isEmpty()}, {"connected_clients", int(m_clients.size())}, {"mcp_enabled", m_server.isListening()},
 		{"ai_speed", m_window->config()->getOption("aiSpeed", 4).toInt() == -1 ? QJsonValue("maximum") : QJsonValue(m_window->config()->getOption("aiSpeed", 4).toInt())},
 		{"human_keys", core ? int(core->humanKeys()) : 0}, {"ai_keys", core ? int(core->aiKeys()) : 0},
 		{"effective_keys", core ? int(AIGameplay::mergeKeys(core->humanKeys(), core->aiKeys())) : 0}};
@@ -243,9 +243,18 @@ void AIController::finishPending(bool cancelled, const QString& reason) {
 	else result.insert("reason", reason);
 	if (m_sequence) result.insert("steps", completedSteps());
 	const auto id = m_pending;
+	const auto owner = m_actionOwner;
 	m_pending = QJsonValue();
+	m_actionOwner.clear();
 	m_timer.stop();
-	reply(m_owner, id, result);
+	reply(owner, id, result);
+}
+
+void AIController::disconnectClient(QLocalSocket* socket) {
+	if (!m_clients.remove(socket)) return;
+	if (m_actionOwner == socket) finishPending(true, tr("Action client disconnected"));
+	if (m_clients.isEmpty()) release(tr("ready; disconnected"));
+	else m_status->setText(tr("MCP: connected; %1 AI clients").arg(m_clients.size()));
 }
 
 void AIController::release(const QString& reason) {
@@ -255,7 +264,8 @@ void AIController::release(const QString& reason) {
 	m_coreConnections.clear();
 	if (m_core) m_core->setAIControl(false);
 	m_core.reset();
-	m_owner.clear();
+	m_clients.clear();
+	m_actionOwner.clear();
 	m_toggle->setActive(false);
 	m_status->setText(tr("MCP: %1").arg(reason));
 }
@@ -269,24 +279,24 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 	if (!m_server.isListening()) { fail(tr("MCP is disabled")); return; }
 	if (method == "session") { reply(socket, id, session()); return; }
 	if (method == "connect") {
-		if (!m_pending.isNull() && !m_pending.isUndefined()) { fail(tr("An action is already in progress")); return; }
-		if (m_owner && m_owner != socket) { fail(tr("This window is controlled by another client")); return; }
 		if (!m_toggle->isActive()) m_toggle->setActive(true);
 		if (!m_core) { fail(tr("Open a single-player game first")); return; }
-		m_owner = socket;
-		m_status->setText(tr("MCP: connected; shared AI control"));
+		m_clients.insert(socket);
+		m_status->setText(tr("MCP: connected; %1 AI clients").arg(m_clients.size()));
 		reply(socket, id, observation());
 		return;
 	}
-	if (socket != m_owner || !m_core || !m_core->hasStarted() || m_window->controller() != m_core || m_core->path() != m_gamePath) {
+	if (!m_clients.contains(socket) || !m_core || !m_core->hasStarted() || m_window->controller() != m_core || m_core->path() != m_gamePath) {
 		fail(tr("No controlled game; connect first")); return;
 	}
 	if (method == "disconnect") {
 		const bool paused = m_core->isPaused();
-		release(tr("ready; disconnected")); reply(socket, id, {{"paused", paused}}); return;
+		disconnectClient(socket); reply(socket, id, {{"paused", paused}}); return;
 	}
-	if (!m_pending.isNull() && !m_pending.isUndefined()) { fail(tr("An action is already in progress")); return; }
 	if (method == "observe") { reply(socket, id, observation()); return; }
+	if (!m_pending.isNull() && !m_pending.isUndefined() && method != "memory_map" && method != "read_memory") {
+		fail(tr("An action is already in progress; observe and retry after it completes")); return;
+	}
 	if (method == "set_speed") {
 		const auto value = args.value("multiplier");
 		int speed = value == QJsonValue("maximum") ? -1 : value.toInt(0);
@@ -303,7 +313,7 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		QJsonArray actions;
 		if (method == "act") actions.append(args);
 		else if (args.value("actions").isArray()) actions = args.value("actions").toArray();
-		if (actions.isEmpty() || actions.size() > 32) { fail(tr("Expected 1–32 actions")); return; }
+		if (actions.isEmpty() || actions.size() > int(AIGameplay::MaxSteps)) { fail(tr("Expected 1–200 actions")); return; }
 		const QStringList names{"A", "B", "Select", "Start", "Right", "Left", "Up", "Down", "R", "L"};
 		std::vector<AIGameplay::Step> steps;
 		QList<int> durations;
@@ -333,6 +343,7 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		m_sequence = method == "act_sequence";
 		m_screenshot = args.value("screenshot").toBool(true);
 		m_pending = id;
+		m_actionOwner = socket;
 		m_timer.start(30000);
 		return;
 	}

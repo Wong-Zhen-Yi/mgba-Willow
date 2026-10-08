@@ -141,10 +141,23 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
     { action_start_frame: 21, action_end_frame: 22 },
   ]);
   assert.equal((await call('act_sequence', { actions: [{ buttons: [], frames: 600 }], screenshot: false })).content.length, 1);
+  const longStart = frame;
+  const longCalls = calls.length;
+  const longSequence = await call('act_sequence', {
+    actions: Array.from({ length: 200 }, (_, i) => ({ buttons: [i % 2 ? 'Left' : 'Right'], frames: 3 })),
+  });
+  assert.equal(longSequence.isError, undefined);
+  assert.equal(calls.length, longCalls + 1, '200 moves should make exactly one bridge call');
+  assert.equal(longSequence.content[1].type, 'image');
+  assert.equal(longSequence.structuredContent.steps.length, 200);
+  assert.equal(longSequence.structuredContent.action_end_frame - longStart, 600);
+  assert.deepEqual(longSequence.structuredContent.steps[199], {
+    action_start_frame: longStart + 597, action_end_frame: longStart + 600,
+  });
   const count = calls.length;
   for (const args of [
     { actions: [] },
-    { actions: Array.from({ length: 33 }, () => ({ buttons: [], frames: 1 })) },
+    { actions: Array.from({ length: 201 }, () => ({ buttons: [], frames: 1 })) },
     { actions: [{ buttons: [], frames: 600 }, { buttons: [], frames: 1 }] },
     { actions: [{ buttons: ['X'], frames: 1 }] },
     { actions: [{ buttons: [], frames: 0 }] },

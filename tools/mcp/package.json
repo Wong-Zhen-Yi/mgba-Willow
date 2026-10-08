@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs",
-    "smoke": "node test/smoke.mjs"
+    "smoke": "node test/smoke.mjs",
+    "smoke:multi-agent": "node test/multi-agent-smoke.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",

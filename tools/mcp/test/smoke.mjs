@@ -87,12 +87,14 @@ try {
   assert.equal(restored.content[1].mimeType, 'image/png');
   assert.deepEqual((await call('read_memory', { address: rom.start, length: 32 })).structuredContent, before.structuredContent);
   assert.equal((await call('read_memory', { address: ram.start, length: 4096 })).structuredContent.hex.length, ramBefore.structuredContent.hex.length);
-  // A second client must be rejected while the first owns the window.
+  // Multiple clients can observe and disconnect independently.
   const descriptor = (await descriptors()).find(d => d.session_id === session.session_id);
   const competitor = await Bridge.open(descriptor);
-  await assert.rejects(competitor.request('connect'), /another client/);
-  // Validate bridge-side bounds independently of MCP schema validation.
   await assert.rejects(competitor.request('observe'), /connect first/);
+  assert.equal((await competitor.request('connect')).connected_clients, 2);
+  assert.ok((await competitor.request('observe')).png);
+  await competitor.request('disconnect');
+  assert.equal((await call('observe')).structuredContent.connected_clients, 1);
   competitor.close();
   const validator = await Bridge.open(descriptor);
   await call('disconnect');
@@ -127,7 +129,7 @@ try {
   assert.ok(later.frame > released.frame, 'Disconnect paused ordinary gameplay');
   assert.ok(later.frame - released.frame < 24, 'Ordinary speed was not restored');
   status.close();
-  console.log(`PASS: ${session.platform} live MCP images, continuous play while thinking, exact button durations, input release, ROM reads, rejected ranges, checkpoint restore, exclusive ownership, reconnect, and abrupt disconnect.`);
+  console.log(`PASS: ${session.platform} live MCP images, continuous play while thinking, exact button durations, input release, ROM reads, rejected ranges, checkpoint restore, shared clients, reconnect, and abrupt disconnect.`);
 } finally {
   if (connected) await client.callTool({ name: 'disconnect', arguments: {} }).catch(() => {});
   await client.close();
