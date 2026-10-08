@@ -193,6 +193,8 @@ void DisplayQt::paintEvent(QPaintEvent*) {
 
 	painter.restore();
 	painter.setOpacity(1);
+	controllerPainter()->setViewport(full);
+	controllerPainter()->paint(&painter, size());
 	if (isShowOSD() || isShowFrameCounter()) {
 		messagePainter()->paint(&painter);
 	}

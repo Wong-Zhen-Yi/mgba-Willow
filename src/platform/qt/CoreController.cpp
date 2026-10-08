@@ -97,6 +97,8 @@ CoreController::CoreController(mCore* core, QObject* parent)
 		}
 
 		controller->m_resetActions.clear();
+		controller->m_aiGameplay.cancel();
+		controller->m_aiKeys = 0;
 		controller->m_frameCounter = -1;
 
 		if (!controller->m_hwaccel) {
@@ -298,6 +300,8 @@ void CoreController::loadConfig(ConfigController* config) {
 	m_saveStateFlags = config->getOption("saveStateExtdata", m_saveStateFlags).toInt();
 	m_fastForwardRatio = config->getOption("fastForwardRatio", m_fastForwardRatio).toFloat();
 	m_fastForwardHeldRatio = config->getOption("fastForwardHeldRatio", m_fastForwardRatio).toFloat();
+	m_aiSpeed = config->getOption("aiSpeed", 4).toFloat();
+	if (m_aiSpeed != 1 && m_aiSpeed != 2 && m_aiSpeed != 4 && m_aiSpeed != 8 && m_aiSpeed != -1) m_aiSpeed = 4;
 	m_videoSync = config->getOption("videoSync", m_videoSync).toInt();
 	m_audioSync = config->getOption("audioSync", m_audioSync).toInt();
 	m_fpsTarget = config->getOption("fpsTarget").toFloat();
@@ -508,11 +512,10 @@ void CoreController::reset() {
 }
 
 void CoreController::setPaused(bool paused) {
-	if (m_aiControl && !paused) {
-		return;
-	}
 	QMutexLocker locker(&m_actionMutex);
 	if (paused) {
+		m_aiGameplay.cancel();
+		m_aiKeys = 0;
 		if (m_moreFrames < 0) {
 			m_moreFrames = 1;
 		}
@@ -544,31 +547,48 @@ void CoreController::setAIControl(bool enabled) {
 	if (!hasStarted() || mCoreThreadHasExited(&m_threadContext)) {
 		m_aiControl = false;
 		m_aiKeys = 0;
+		m_aiGameplay.cancel();
 		return;
 	}
-	mCoreThreadPause(&m_threadContext);
 	Interrupter interrupter(this);
 	QMutexLocker locker(&m_actionMutex);
-	m_moreFrames = 0;
+	m_aiGameplay.cancel();
 	m_aiControl = enabled;
 	m_aiKeys = 0;
-	m_activeKeys = 0;
-	m_removedKeys = ~0;
-	m_threadContext.core->setKeys(m_threadContext.core, 0);
+	// Remove AI input before restoring the ordinary script/input path.
+	m_threadContext.core->setKeys(m_threadContext.core, m_humanKeys);
+	updateKeys();
+	updateFastForward();
+	emit fastForwardChanged(m_fastForward || m_fastForwardForced || (enabled && m_aiSpeed != 1));
+}
+
+void CoreController::cancelAIAction() {
+	Interrupter interrupter(this);
+	QMutexLocker locker(&m_actionMutex);
+	m_aiGameplay.cancel();
+	m_aiKeys = 0;
+	if (hasStarted() && !mCoreThreadHasExited(&m_threadContext)) updateKeys();
+}
+
+void CoreController::setAISpeed(float multiplier) {
+	Interrupter interrupter(this);
+	m_aiSpeed = multiplier;
+	if (hasStarted() && !mCoreThreadHasExited(&m_threadContext)) updateFastForward();
+	emit fastForwardChanged(m_fastForward || m_fastForwardForced || (m_aiControl && m_aiSpeed != 1));
 }
 
 bool CoreController::advanceAI(unsigned keys, int frames) {
-	if (!hasStarted() || mCoreThreadHasExited(&m_threadContext) || !m_aiControl || !isPaused() || frames < 1 || frames > 600 || keys > 0x3FF) {
-		return false;
-	}
-	{
-		Interrupter interrupter(this);
-		QMutexLocker locker(&m_actionMutex);
-		m_aiKeys = keys;
-		m_threadContext.core->setKeys(m_threadContext.core, keys);
-		m_moreFrames = frames;
-	}
-	mCoreThreadUnpause(&m_threadContext);
+	return advanceAI(std::vector<AIGameplay::Step>{{keys, frames}});
+}
+
+bool CoreController::advanceAI(const std::vector<AIGameplay::Step>& steps) {
+	if (!hasStarted() || mCoreThreadHasExited(&m_threadContext) || !m_aiControl) return false;
+	Interrupter interrupter(this);
+	QMutexLocker locker(&m_actionMutex);
+	if (isPaused() || m_moreFrames >= 0 || !m_aiGameplay.start(steps, m_frameCounter)) return false;
+	m_aiKeys = m_aiGameplay.keys();
+	m_aiActionEnd = m_aiGameplay.endFrame();
+	updateKeys();
 	return true;
 }
 
@@ -966,12 +986,12 @@ void CoreController::yankPak() {
 }
 
 void CoreController::addKey(int key) {
-	if (m_aiControl) return;
+	QMutexLocker locker(&m_actionMutex);
 	m_activeKeys |= 1 << key;
 }
 
 void CoreController::clearKey(int key) {
-	if (m_aiControl) return;
+	QMutexLocker locker(&m_actionMutex);
 	m_activeKeys &= ~(1 << key);
 	m_removedKeys |= 1 << key;
 }
@@ -1269,15 +1289,20 @@ void CoreController::setFramebufferHandle(int fb) {
 }
 
 void CoreController::updateKeys() {
-	if (m_aiControl) {
-		m_threadContext.core->setKeys(m_threadContext.core, m_aiKeys);
-		return;
-	}
-	int polledKeys = m_inputController->pollEvents() | updateAutofire();
-	int activeKeys = m_activeKeys | polledKeys;
-	activeKeys |= m_threadContext.core->getKeys(m_threadContext.core) & ~m_removedKeys;
+	QMutexLocker locker(&m_actionMutex);
+	const unsigned polledKeys = m_inputController->pollEvents() | updateAutofire();
+	unsigned human = m_activeKeys | polledKeys;
+	// Preserve the ordinary scripting input path outside AI control. During
+	// shared control, previous effective keys must not feed back as human keys.
+	if (!m_aiControl) human |= m_threadContext.core->getKeys(m_threadContext.core) & ~m_removedKeys;
+	m_humanKeys = human;
 	m_removedKeys = polledKeys;
-	m_threadContext.core->setKeys(m_threadContext.core, activeKeys);
+	const unsigned effective = AIGameplay::mergeKeys(human, m_aiKeys);
+	m_threadContext.core->setKeys(m_threadContext.core, effective);
+	if (effective != m_effectiveKeys) {
+		m_effectiveKeys = effective;
+		emit effectiveKeysChanged(effective);
+	}
 }
 
 int CoreController::updateAutofire() {
@@ -1312,9 +1337,14 @@ void CoreController::finishFrame() {
 		for (auto& action : frameActions) {
 			action();
 		}
+		if (m_aiGameplay.finishFrame()) {
+			QMetaObject::invokeMethod(this, "aiActionFinished", Qt::QueuedConnection);
+		}
+		m_aiKeys = m_aiGameplay.keys();
 		if (m_moreFrames > 0) {
 			--m_moreFrames;
 			if (!m_moreFrames) {
+				m_aiGameplay.cancel();
 				m_aiKeys = 0;
 				mCoreThreadPauseFromThread(&m_threadContext);
 			}
@@ -1378,6 +1408,14 @@ void CoreController::updateFastForward() {
 				m_threadContext.impl->sync.fpsTarget = m_fpsTarget * m_fastForwardHeldRatio;
 				m_threadContext.impl->sync.audioWait = true;
 			}
+		}
+	} else if (m_aiControl && m_aiSpeed != 1) {
+		m_threadContext.core->opts.volume = m_fastForwardVolume >= 0 ? m_fastForwardVolume : m_threadContext.core->opts.volume;
+		m_threadContext.core->opts.mute = m_fastForwardMute || m_mute;
+		setSync(false);
+		if (m_aiSpeed > 0) {
+			m_threadContext.impl->sync.fpsTarget = m_fpsTarget * m_aiSpeed;
+			m_threadContext.impl->sync.audioWait = true;
 		}
 	} else {
 		if (!mCoreConfigGetIntValue(&m_threadContext.core->config, "volume", &m_threadContext.core->opts.volume)) {

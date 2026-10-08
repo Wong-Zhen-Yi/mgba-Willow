@@ -169,12 +169,13 @@ void mGLWidget::paintGL() {
 		m_refresh.start(17);
 	}
 
-	if (m_showOSD && m_messagePainter) {
+	if ((m_showOSD && m_messagePainter) || (m_controllerPainter && m_controllerPainter->isVisible(size()))) {
 		qreal r = window()->devicePixelRatio();
 		m_paintDev->setDevicePixelRatio(r);
 		m_paintDev->setSize(size() * r);
 		QPainter painter(m_paintDev.get());
-		m_messagePainter->paint(&painter);
+		if (m_controllerPainter) m_controllerPainter->paint(&painter, size());
+		if (m_showOSD && m_messagePainter) m_messagePainter->paint(&painter);
 		painter.end();
 	}
 }
@@ -207,6 +208,7 @@ DisplayGL::DisplayGL(const QSurfaceFormat& format, QWidget* parent)
 		m_gl->setAttribute(Qt::WA_NativeWindow);
 		m_gl->setFormat(format);
 		m_gl->setMessagePainter(messagePainter());
+		m_gl->setControllerPainter(controllerPainter());
 		QBoxLayout* layout = new QVBoxLayout;
 		layout->addWidget(m_gl);
 		layout->setContentsMargins(0, 0, 0, 0);
@@ -254,6 +256,7 @@ void DisplayGL::startDrawing(std::shared_ptr<CoreController> controller) {
 	m_isDrawing = true;
 	m_painter->setContext(controller);
 	m_painter->setMessagePainter(messagePainter());
+	m_painter->setControllerPainter(controllerPainter());
 	m_context = std::move(controller);
 	if (videoProxy()) {
 		videoProxy()->moveToThread(&m_drawThread);
@@ -972,14 +975,24 @@ void PainterGL::performDraw() {
 		maxSize = QSize(0, 0);
 	}
 	m_backend->contextResized(m_backend, m_size.width() * r, m_size.height() * r, maxSize.width() * r, maxSize.height() * r);
+	if (m_controllerPainter) {
+		// Use the actual backend viewport, including shaders, scaling and DPI.
+		GLint viewport[4];
+		m_gl->functions()->glGetIntegerv(GL_VIEWPORT, viewport);
+		m_controllerPainter->setViewport(QRectF(viewport[0] / r,
+			m_size.height() - (viewport[1] + viewport[3]) / r,
+			viewport[2] / r, viewport[3] / r).toAlignedRect());
+	}
 	if (m_buffer) {
 		m_backend->setImage(m_backend, VIDEO_LAYER_IMAGE, m_buffer);
 	}
 	cacheContentSize();
 	m_backend->drawFrame(m_backend);
-	if (m_showOSD && m_messagePainter && m_paintDev && !glContextHasBug(OpenGLBug::IG4ICD_CRASH)) {
+	const bool showController = m_controllerPainter && m_controllerPainter->isVisible(m_size);
+	if (((m_showOSD && m_messagePainter) || showController) && m_paintDev && !glContextHasBug(OpenGLBug::IG4ICD_CRASH)) {
 		m_painter.begin(m_paintDev.get());
-		m_messagePainter->paint(&m_painter);
+		if (showController) m_controllerPainter->paint(&m_painter, m_size);
+		if (m_showOSD && m_messagePainter) m_messagePainter->paint(&m_painter);
 
 		if (m_drawFrametimes) {
 			m_painter.setPen(Qt::gray);

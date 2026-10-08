@@ -7,6 +7,7 @@
 #include "moc_Display.cpp"
 
 #include "CoreController.h"
+#include "AIGameplay.h"
 #include "ConfigController.h"
 #include "DisplayGL.h"
 #include "DisplayQt.h"
@@ -75,6 +76,21 @@ QGBA::Display::Display(QWidget* parent)
 
 void QGBA::Display::attach(std::shared_ptr<CoreController> controller) {
 	CoreController* controllerP = controller.get();
+	m_controllerPainter.reset();
+	// Preserve each input edge, independently of GUI/render frame skipping.
+	connect(controllerP, &CoreController::effectiveKeysChanged, this, [this](unsigned keys) {
+		m_controllerPainter.setKeys(keys);
+	});
+	m_controllerPainter.setKeys(AIGameplay::mergeKeys(controllerP->humanKeys(), controllerP->aiKeys()));
+	connect(controllerP, &CoreController::effectiveKeysChanged, this, [this] {
+		if (!isDrawing()) {
+			forceDraw();
+			QTimer::singleShot(110, this, [this] { if (!isDrawing()) forceDraw(); });
+		}
+	});
+	connect(controllerP, &CoreController::stopping, this, [this] {
+		m_controllerPainter.reset();
+	});
 	connect(controllerP, &CoreController::stateLoaded, this, &Display::resizeContext);
 	connect(controllerP, &CoreController::stateLoaded, this, &Display::forceDraw);
 	connect(controllerP, &CoreController::rewound, this, &Display::forceDraw);

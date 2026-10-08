@@ -118,6 +118,7 @@ set(SOURCE_FILES
 	CoreController.cpp
 	Display.cpp
 	DisplayGL.cpp
+	ControllerPainter.cpp
 	DisplayQt.cpp
 	ForwarderController.cpp
 	ForwarderGenerator.cpp
@@ -597,6 +598,8 @@ debug_strip(${BINARY_NAME}-qt)
 
 if(BUILD_SUITE)
 	enable_testing()
+	add_executable(test-qt-aigameplay test/aigameplay.cpp)
+	add_test(platform-qt-aigameplay test-qt-aigameplay)
 	find_package(${QT}Test)
 	if(${QT}Test_FOUND)
 		get_property(ALL_TESTS DIRECTORY PROPERTY VARIABLES)

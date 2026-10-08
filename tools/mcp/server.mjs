@@ -3,7 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { Bridge, descriptors, listSessions } from './bridge.mjs';
 
-const instructions = `Control a visible mGBA game through short observe/action cycles. The emulator pauses between moves, so take time to inspect screenshots. Start with list_sessions and connect. Use 1–8 frames near hazards and longer moves only when safe; act with no buttons to wait. Save a checkpoint before risky moves. Use memory_map before reading memory: raw bytes are not labeled health, coordinates, or progress unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game or assume that beating a game is guaranteed. GPT-6 Luna with medium reasoning is the recommended Codex chat setting; this MCP does not select or invoke a model.`;
+const instructions = `Control a visible mGBA game with shared human input. The bridge is enabled automatically while mGBA is open; the user can disable it in AI > MCP Enabled. Start with list_sessions and connect. Human directions override conflicting AI directions; other buttons combine. AI speed defaults to 4x and can be changed with set_speed or AI > AI Speed. The emulator runs while you think, so observations become stale quickly. Use short observe/action cycles near hazards. Use act_sequence for predictable movement to reduce model/tool round trips, with at most 600 total frames. Use screenshot:false only when a fresh image is unnecessary; obtain a new observation before uncertain decisions. Cancelled actions report cancelled:true and only completed sequence steps; do not assume planned moves completed. A manual pause must be resumed by the user. Disconnect releases AI inputs and restores ordinary speed without pausing or clearing human buttons. Save a checkpoint before risky moves. Use memory_map before reading memory: bytes are not labeled health or coordinates unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game. This MCP does not select or invoke a model.`;
 const server = new McpServer({ name: 'mgba-willow', version: '1.0.0' }, { instructions });
 let bridge;
 let queue = Promise.resolve();
@@ -41,7 +41,7 @@ function call(method, args) {
 
 register('list_sessions', 'List visible mGBA windows, game titles, platforms, and AI control status. Open a ROM with Launch mGBA.cmd first.', {}, true,
   async () => ({ sessions: await listSessions() }));
-register('connect', 'Acquire AI control of one game window, pause it, and return its screenshot. Another controlling client is rejected.', {
+register('connect', 'Acquire AI control of one game window, preserve its pause state, and return its screenshot. Human controls remain active. Another controlling client is rejected.', {
   session_id: z.string().uuid(),
 }, false, async ({ session_id }) => {
   if (bridge) {
@@ -57,12 +57,23 @@ register('connect', 'Acquire AI control of one game window, pause it, and return
     return result;
   } catch (error) { candidate.close(); throw error; }
 });
-register('observe', 'Get the current game screenshot, frame count, and pause status without advancing the game.', {}, true,
+register('observe', 'Get a snapshot of the live game, frame count, and pause status. The game continues running after the snapshot.', {}, true,
   args => call('observe', args));
-register('act', 'Hold the requested buttons for exactly 1–600 frames, release them, pause, and return a screenshot. Empty buttons means wait. L/R require GBA.', {
+const actionSchema = {
   buttons: z.array(z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R'])).max(10),
   frames: z.number().int().min(1).max(600),
+};
+register('act', 'Hold AI buttons for exactly 1–600 frames, then release only AI input. Human controls remain active. Returns frame boundaries and a screenshot by default; screenshot:false skips image encoding. Manual pause cancels pending actions.', {
+  ...actionSchema,
+  screenshot: z.boolean().optional(),
 }, false, args => call('act', args));
+register('act_sequence', 'Execute 1–32 predictable moves without intermediate tool round trips, at most 600 total frames. Return each completed step’s frame boundaries and one final screenshot by default. Pause or disconnect cancels remaining moves.', {
+  actions: z.array(z.object(actionSchema)).min(1).max(32).refine(actions => actions.reduce((total, action) => total + action.frames, 0) <= 600, 'Sequence exceeds 600 total frames'),
+  screenshot: z.boolean().optional(),
+}, false, args => call('act_sequence', args));
+register('set_speed', 'Set the persisted AI gameplay speed, shared with AI > AI Speed. Human fast-forward controls temporarily take priority. Ordinary speed settings are restored when AI control ends.', {
+  multiplier: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(8), z.literal('maximum')]),
+}, false, args => call('set_speed', args));
 register('memory_map', 'List emulator memory regions, supported raw read ranges, and bank limits. MMIO and virtual memory are unavailable.', {}, true,
   args => call('memory_map', args));
 register('read_memory', 'Read 1–4096 raw bytes from a supported memory region as hexadecimal. Address is a numeric byte address; segment selects a bank, or -1 uses the current mapping.', {
@@ -75,7 +86,7 @@ register('save_checkpoint', 'Save a named AI checkpoint for this ROM outside nor
   args => call('save_checkpoint', args));
 register('load_checkpoint', 'Restore a named checkpoint for this ROM and return its screenshot. Restores game progress and saved data from that checkpoint.', checkpointSchema, false,
   args => call('load_checkpoint', args));
-register('disconnect', 'Release all AI inputs and leave the game paused for user takeover.', {}, false, async args => {
+register('disconnect', 'Release AI inputs and restore ordinary speed, preserving human buttons and the current pause state.', {}, false, async args => {
   try { return await call('disconnect', args); }
   finally { bridge?.close(); bridge = undefined; }
 });

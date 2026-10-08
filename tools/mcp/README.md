@@ -1,6 +1,6 @@
 # Play mGBA with Luna in Codex
 
-This local MCP controls a visible game in this checkout's Qt mGBA app. It provides screenshots, exact frame-counted button presses, read-only memory, and separate AI checkpoints. Games pause while the model thinks. Node.js 20 or newer is required.
+This local MCP controls a visible game in this checkout's Qt mGBA app. It provides screenshots, exact frame-counted button presses, read-only memory, and separate AI checkpoints. Games keep running while the model thinks. Node.js 20 or newer is required.
 
 ## Setup
 
@@ -11,13 +11,19 @@ This local MCP controls a visible game in this checkout's Qt mGBA app. It provid
 
 The MCP itself never calls an inference API or changes your chat model. Gameplay uses your normal Codex model access and usage limits.
 
-## Control and takeover
+## Availability, shared controls, and speed
 
-The agent uses `list_sessions`, `connect`, `observe`, and `act`. Connecting enables **AI → AI Control** and pauses the game. The status bar shows its connection. One client can control each window. Multiplayer sessions are unsupported.
+The app starts its local bridge automatically, even before you load a ROM. **AI → MCP Enabled** turns the bridge off or back on for that window. Disabling it cancels pending actions and closes clients; re-enable it and reconnect to resume AI control. Each new app launch enables MCP again. The status bar shows ready, connected, disabled, or an endpoint error. Codex starts the stdio MCP adapter when it loads the registered server; no Windows background service is needed.
 
-Each action holds its buttons for 1–600 frames, releases them, and returns the resulting PNG. Empty buttons advance time without input. Keyboard input and autofire are suppressed while AI control is active. The game stays paused between actions.
+The agent uses `list_sessions`, `connect`, `observe`, and `act`. Connecting enables **AI → AI Control** without changing a manual pause. One AI client can control each window; multiplayer sessions remain unsupported. Your keyboard, controller, and autofire continue working alongside AI input. Human directions override opposite AI directions, and other buttons combine. Turning AI Control off, disconnecting, or timing out releases only AI buttons, preserves human input and the current pause state, and restores ordinary speed settings. **MCP Enabled** can prevent clients from reconnecting entirely.
 
-Uncheck **AI → AI Control** to stop the agent and take over, then resume through the normal Pause control. A disconnect or timeout also releases buttons and leaves the game paused. Reconnect after closing or changing the game. No ROMs are downloaded or supplied by this integration.
+**AI → AI Speed** selects 1×, 2×, 4×, 8×, or Maximum. The initial default is **4×**; selections persist. `set_speed` accepts `multiplier: 1`, `2`, `4`, `8`, or `"maximum"` and changes the same setting. Existing fast-forward menu controls and shortcuts temporarily take priority. Actual speed depends on hardware. Faster emulation reduces action time; it does not change Codex's model or inference latency.
+
+Each `act` holds AI buttons for 1–600 emulated frames, releases them, and returns a screenshot by default. Empty buttons mean wait; `screenshot: false` returns metadata without encoding an image. `act_sequence` accepts `actions: [{ buttons: ["Right"], frames: 30 }, { buttons: ["A"], frames: 2 }]`, with 1–32 steps and at most 600 frames in total. Steps transition directly on the emulation thread and return one final screenshot by default, or metadata only with `screenshot: false`. Results include `action_start_frame`, `action_end_frame`, and per-step boundaries in `steps`; the screenshot frame may be later than completion.
+
+Use batches for predictable moves and fresh screenshots near hazards. Manual pause cancels remaining steps and returns `cancelled: true`, a reason, and only fully completed step boundaries. Disabling MCP or changing games also cancels pending moves. A cancellation does not return a successful overall end frame. Observations include `human_keys`, `ai_keys`, and `effective_keys`; `keys` remains the effective emulator mask. Session metadata includes `mcp_enabled`, `ai_speed`, `frame`, and `paused`.
+
+Games continue while Codex thinks and when the app loses focus or is minimized during AI control. The normal Pause control works; resume manually before issuing another action. Reconnect after changing, resetting, or closing a game. No ROMs are downloaded or supplied by this integration.
 
 ## Memory and checkpoints
 
@@ -31,6 +37,6 @@ Checkpoint names use 1–64 letters, digits, underscores, or hyphens. `save_chec
 - Already controlled: disconnect the other chat or toggle AI Control off in that window.
 - Lost connection: reconnect; stale discovery files from crashed apps are ignored.
 - Tools unavailable: run `codex mcp list`, rerun setup if needed, and restart the chat. Registration does not inject tools into an already running turn.
-- Run `npm test` in `tools/mcp` for protocol tests. With a test ROM open, run `npm run smoke` for live bridge checks; this advances the game and creates an AI test checkpoint.
+- Run `npm test` in `tools/mcp` for protocol tests. The C++ `platform-qt-aigameplay` test (with `BUILD_SUITE=ON`) checks directional priority and frame sequences. With a test ROM open, run `npm run smoke` for live bridge checks; this advances the game and creates an AI test checkpoint.
 
 The bridge uses a Windows named pipe restricted to the current user. There is no network listener or public service.

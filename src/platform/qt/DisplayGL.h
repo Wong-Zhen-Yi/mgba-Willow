@@ -56,6 +56,7 @@ public:
 	void setTex(GLuint tex) { m_tex = tex; }
 	void setVBO(GLuint vbo) { m_vbo = vbo; }
 	void setMessagePainter(MessagePainter*);
+	void setControllerPainter(ControllerPainter* painter) { m_controllerPainter = painter; }
 	void setShowOSD(bool showOSD);
 	bool finalizeVAO();
 	void reset();
@@ -77,6 +78,7 @@ private:
 	int m_refreshResidue = 0;
 	std::unique_ptr<QOpenGLPaintDevice> m_paintDev;
 	MessagePainter* m_messagePainter = nullptr;
+	ControllerPainter* m_controllerPainter = nullptr;
 	bool m_showOSD = false;
 };
 
@@ -152,6 +154,7 @@ public:
 	void setThread(QThread*);
 	void setContext(std::shared_ptr<CoreController>);
 	void setMessagePainter(MessagePainter*);
+	void setControllerPainter(ControllerPainter* painter) { m_controllerPainter = painter; }
 	void enqueue(const uint32_t* backing);
 
 	void stop();
@@ -239,6 +242,7 @@ private:
 	QSize m_maxSize;
 	int m_maxScale = 0;
 	MessagePainter* m_messagePainter = nullptr;
+	ControllerPainter* m_controllerPainter = nullptr;
 	QElapsedTimer m_delayTimer;
 	std::shared_ptr<VideoProxy> m_videoProxy;
 	int m_swapInterval = -1;

@@ -13,6 +13,7 @@
 #include <QSize>
 
 #include "VFileDevice.h"
+#include "AIGameplay.h"
 
 #include <functional>
 #include <atomic>
@@ -144,6 +145,16 @@ public:
 	void setAIControl(bool enabled);
 	bool aiControl() const { return m_aiControl; }
 	bool advanceAI(unsigned keys, int frames);
+	bool advanceAI(const std::vector<AIGameplay::Step>& steps);
+	void cancelAIAction();
+	bool aiActionPending() const { return m_aiGameplay.pending(); }
+	size_t aiCompletedSteps() const { return m_aiGameplay.completed(); }
+	uint64_t aiActionStart() const { return m_aiGameplay.startFrame(); }
+	unsigned aiKeys() const { return m_aiKeys; }
+	unsigned humanKeys() const { return m_humanKeys; }
+	void setAISpeed(float multiplier);
+	float aiSpeed() const { return m_aiSpeed; }
+	uint64_t aiActionEnd() const { return m_aiActionEnd; }
 	void refreshAIFrame();
 
 public slots:
@@ -234,6 +245,8 @@ signals:
 	void crashed(const QString& errorMessage);
 	void failed();
 	void frameAvailable();
+	void effectiveKeysChanged(unsigned keys);
+	void aiActionFinished();
 	void didReset();
 	void stateLoaded();
 	void rewound();
@@ -287,6 +300,11 @@ private:
 	std::atomic<uint64_t> m_frameCounter{0};
 	std::atomic<bool> m_aiControl{false};
 	std::atomic<unsigned> m_aiKeys{0};
+	std::atomic<uint64_t> m_aiActionEnd{0};
+	AIGameplay m_aiGameplay;
+	std::atomic<unsigned> m_humanKeys{0};
+	unsigned m_effectiveKeys = 0; // Protected by m_actionMutex
+	float m_aiSpeed = 4.f;
 	QList<std::function<void()>> m_resetActions;
 	QList<std::function<void()>> m_frameActions;
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))

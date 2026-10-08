@@ -801,7 +801,7 @@ void Window::hideEvent(QHideEvent* event) {
 		return;
 	}
 
-	if (m_config->getOption("pauseOnMinimize").toInt() && !m_controller->isPaused()) {
+	if (m_config->getOption("pauseOnMinimize").toInt() && !m_controller->aiControl() && !m_controller->isPaused()) {
 		m_autoresume = true;
 		m_controller->setPaused(true);
 	}
@@ -2172,7 +2172,7 @@ void Window::focusCheck() {
 	if (!m_controller) {
 		return;
 	}
-	if (m_config->getOption("pauseOnFocusLost").toInt()) {
+	if (m_config->getOption("pauseOnFocusLost").toInt() && !m_controller->aiControl()) {
 		if (QGuiApplication::focusWindow() && m_autoresume) {
 			m_controller->setPaused(false);
 			m_autoresume = false;

@@ -79,15 +79,26 @@ test('session discovery ignores stale and invalid descriptors', async t => {
 
 test('MCP handshake, tools, schema validation, images, and reconnect', async t => {
   let frame = 10;
+  let speed = 4;
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
   const calls = [];
   const f = await fixture(t, (socket, req, id) => {
     calls.push(req);
+    const start = frame;
+    let steps;
     if (req.method === 'act') frame += req.args.frames;
-    const result = req.method === 'session' ? { session_id: id, started: true, title: 'Test' }
-      : req.method === 'disconnect' ? { paused: true }
+    if (req.method === 'act_sequence') steps = req.args.actions.map(action => {
+      const begin = frame; frame += action.frames;
+      return { action_start_frame: begin, action_end_frame: frame };
+    });
+    if (req.method === 'set_speed') speed = req.args.multiplier;
+    const result = req.method === 'session' ? { session_id: id, started: true, title: 'Test', mcp_enabled: true, ai_speed: speed }
+      : req.method === 'disconnect' ? { paused: false }
       : req.method === 'read_memory' ? { hex: '0001' }
-      : { png, frame, paused: true };
+      : { ...(req.args.screenshot === false ? {} : { png }), frame, paused: false, ai_speed: speed,
+        human_keys: 0, ai_keys: 0, effective_keys: 0,
+        ...(['act', 'act_sequence'].includes(req.method) ? { action_start_frame: start, action_end_frame: frame, cancelled: false } : {}),
+        ...(steps ? { steps } : {}) };
     socket.write(JSON.stringify({ id: req.id, result }) + '\n');
   });
   const transport = new StdioClientTransport({
@@ -102,13 +113,14 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
   t.after(() => client.close());
   await client.connect(transport);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint'].sort());
+  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'act_sequence', 'set_speed', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint'].sort());
   const call = (name, args = {}) => client.callTool({ name, arguments: args });
   assert.equal((await call('observe')).isError, true);
   assert.equal((await call('list_sessions')).structuredContent.sessions[0].session_id, f.id);
   const connected = await call('connect', { session_id: f.id });
   assert.equal(connected.content[1].type, 'image');
   assert.equal(connected.content[1].mimeType, 'image/png');
+  assert.equal(connected.structuredContent.paused, false);
   assert.equal(connected.structuredContent.png, undefined);
   const result = await call('act', { buttons: ['A', 'Up'], frames: 3 });
   assert.equal(result.structuredContent.frame, 13);
@@ -116,10 +128,42 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
     assert.equal((await call('act', args)).isError, true);
   }
   assert.equal(calls.filter(call => call.method === 'act').length, 1);
+  const noImage = await call('act', { buttons: [], frames: 1, screenshot: false });
+  assert.equal(noImage.content.length, 1);
+  assert.equal(noImage.structuredContent.action_end_frame - noImage.structuredContent.action_start_frame, 1);
+  const sequenceCalls = calls.length;
+  const sequence = await call('act_sequence', { actions: [{ buttons: ['Right'], frames: 5 }, { buttons: ['A'], frames: 2 }, { buttons: [], frames: 1 }] });
+  assert.equal(calls.length, sequenceCalls + 1, 'Batch should make exactly one bridge call');
+  assert.equal(sequence.content[1].type, 'image');
+  assert.deepEqual(sequence.structuredContent.steps, [
+    { action_start_frame: 14, action_end_frame: 19 },
+    { action_start_frame: 19, action_end_frame: 21 },
+    { action_start_frame: 21, action_end_frame: 22 },
+  ]);
+  assert.equal((await call('act_sequence', { actions: [{ buttons: [], frames: 600 }], screenshot: false })).content.length, 1);
+  const count = calls.length;
+  for (const args of [
+    { actions: [] },
+    { actions: Array.from({ length: 33 }, () => ({ buttons: [], frames: 1 })) },
+    { actions: [{ buttons: [], frames: 600 }, { buttons: [], frames: 1 }] },
+    { actions: [{ buttons: ['X'], frames: 1 }] },
+    { actions: [{ buttons: [], frames: 0 }] },
+    { actions: [{ buttons: [], frames: 1 }], screenshot: 'false' },
+  ]) assert.equal((await call('act_sequence', args)).isError, true);
+  assert.equal(calls.length, count, 'Invalid sequences must never reach the bridge');
+  for (const multiplier of [1, 2, 4, 8, 'maximum']) {
+    assert.equal((await call('set_speed', { multiplier })).structuredContent.ai_speed, multiplier);
+  }
+  const speedCalls = calls.length;
+  for (const multiplier of [0, 3, 16, -1, '4', 'unbounded']) {
+    assert.equal((await call('set_speed', { multiplier })).isError, true);
+  }
+  assert.equal(calls.length, speedCalls);
+  assert.equal((await call('list_sessions')).structuredContent.sessions[0].ai_speed, 'maximum');
   assert.equal((await call('read_memory', { address: -1, length: 1 })).isError, true);
   assert.equal((await call('read_memory', { address: 0, length: 4097 })).isError, true);
   assert.equal((await call('save_checkpoint', { name: '../escape' })).isError, true);
-  await call('disconnect');
+  assert.equal((await call('disconnect')).structuredContent.paused, false);
   assert.equal((await call('observe')).isError, true);
   assert.equal((await call('connect', { session_id: f.id })).isError, undefined);
   await call('disconnect');

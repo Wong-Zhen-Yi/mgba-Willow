@@ -13,6 +13,7 @@
 #include <QWidget>
 
 #include "MessagePainter.h"
+#include "ControllerPainter.h"
 
 struct VideoBackend;
 struct VideoShader;
@@ -94,12 +95,14 @@ protected:
 	virtual void mouseMoveEvent(QMouseEvent*) override;
 
 	MessagePainter* messagePainter() { return &m_messagePainter; }
+	ControllerPainter* controllerPainter() { return &m_controllerPainter; }
 
 private:
 	static Driver s_driver;
 	static const int MOUSE_DISAPPEAR_TIMER = 1000;
 
 	MessagePainter m_messagePainter;
+	ControllerPainter m_controllerPainter;
 	bool m_showOSD = true;
 	bool m_showFrameCounter = false;
 	bool m_lockAspectRatio = false;
