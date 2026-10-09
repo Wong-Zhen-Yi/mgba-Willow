@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QSet>
 #include <QJsonArray>
+#include <QHash>
 #include <memory>
 
 class QLabel;
@@ -52,6 +53,11 @@ private:
 	QList<int> m_stepFrames;
 	bool m_screenshot = true;
 	bool m_sequence = false;
+	bool m_stateAction = false;
+	QJsonObject m_actionState;
+	unsigned m_directionKeys = 0;
+	QHash<QLocalSocket*, QString> m_lastStall;
+	QHash<QLocalSocket*, int> m_stallCount;
 	bool m_changingEnabled = false;
 	QList<QMetaObject::Connection> m_coreConnections;
 };

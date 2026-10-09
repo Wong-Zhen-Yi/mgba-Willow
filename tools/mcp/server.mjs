@@ -2,10 +2,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { Bridge, descriptors, listSessions } from './bridge.mjs';
+import { StateResponses } from './state-responses.mjs';
 
 const instructions = `Control a visible mGBA game with shared human input. Multiple agents can connect to the same window; coordinate goals because they share game progress, speed, and checkpoints. Only one action runs at a time: if busy, observe and retry after completion. Observations and memory reads remain available during another agent's action. The bridge is enabled automatically while mGBA is open; the user can disable it in AI > MCP Enabled. Start with list_sessions and connect. Human directions override conflicting AI directions; other buttons combine. AI speed defaults to 4x and can be changed with set_speed or AI > AI Speed. The emulator runs while you think, so observations become stale quickly. Use short observe/action cycles near hazards. Use act_sequence for predictable movement to reduce model/tool round trips, with up to 200 steps and at most 600 total frames. Use screenshot:false only when a fresh image is unnecessary; obtain a new observation before uncertain decisions. Cancelled actions report cancelled:true and only completed sequence steps; do not assume planned moves completed. A manual pause must be resumed by the user. Disconnect cancels only your pending action; other connected agents retain control. The last agent disconnecting restores ordinary speed without pausing or clearing human buttons. Save a checkpoint before risky moves, using agent-specific names to avoid overwriting another agent's checkpoint. Use memory_map before reading memory: bytes are not labeled health or coordinates unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game. This MCP does not select or invoke a model.`;
-const server = new McpServer({ name: 'mgba-willow', version: '1.0.0' }, { instructions });
+const server = new McpServer({ name: 'mgba-willow', version: '1.1.0' }, { instructions: `${instructions} For verified Emerald, prefer get_game_state and get_local_map before moving; use move_to for ordinary on-foot routes, press for taps, and wait_until for readiness. Check progress.completed and progress.reason after movement. State responses are full first, then per-client top-level deltas: merge game_state_changes and remove removed_state_fields; full_state:true refreshes the baseline. Only atomic:true certifies screenshot/state frame alignment. Unsupported ROMs retain raw tools.` });
 let bridge;
+const stateResponses = new StateResponses();
 let queue = Promise.resolve();
 
 export function content(result) {
@@ -26,7 +28,7 @@ function register(name, description, inputSchema, readOnly, callback) {
     annotations: { readOnlyHint: readOnly, destructiveHint: false, openWorldHint: false, idempotentHint: readOnly },
   }, args => {
     const run = queue.then(async () => {
-      try { return content(await callback(args)); }
+      try { return content(stateResponses.apply(await callback(args), args.full_state === true)); }
       catch (error) { return { content: [{ type: 'text', text: error.message }], isError: true }; }
     });
     queue = run.catch(() => {});
@@ -44,6 +46,7 @@ register('list_sessions', 'List visible mGBA windows, game titles, platforms, an
 register('connect', 'Join shared AI control of one game window, preserve its pause state, and return its screenshot. Multiple agents can connect; actions run one at a time. Human controls remain active.', {
   session_id: z.string().uuid(),
 }, false, async ({ session_id }) => {
+  stateResponses.reset();
   if (bridge) {
     try { await bridge.request('disconnect'); } catch {}
     bridge.close(); bridge = undefined;
@@ -57,8 +60,27 @@ register('connect', 'Join shared AI control of one game window, preserve its pau
     return result;
   } catch (error) { candidate.close(); throw error; }
 });
-register('observe', 'Get a snapshot of the live game, frame count, and pause status. The game continues running after the snapshot.', {}, true,
+const observationSchema = { screenshot: z.boolean().optional(), full_state: z.boolean().optional() };
+register('observe', 'Get a screenshot and decoded state. atomic:true certifies a shared completed emulated frame; hardware rendering reports atomic:false. Unsupported ROMs retain screenshots and raw tools. State changes use a per-client baseline; full_state:true returns the complete state.', observationSchema, true,
   args => call('observe', args));
+register('get_game_state', 'Read verified Emerald map coordinates, facing, interaction state, party HP and moves, bag inventory, and numeric event flags. No screenshot by default. Subsequent responses contain top-level state changes; full_state:true refreshes the baseline. Unsupported ROMs report supported:false.', observationSchema, true,
+  args => call('get_game_state', args));
+register('get_local_map', 'Read a radius of live Emerald collision tiles, elevations, behaviors, ladders, one-way ledges, active NPCs, warps and map connections. Coordinates exclude the game’s seven-tile border. Unknown tiles are never assumed passable.', {
+  ...observationSchema, radius: z.number().int().min(1).max(16).optional(),
+}, true, args => call('get_local_map', args));
+register('move_to', 'Follow a bounded on-foot path on the current verified Emerald map. Check every emulated frame and release input on encounters, dialogue, scripted movement, transitions, human input, blockage or timeout. Returns progress.reason; completed:false requires replanning. Special traversal is excluded. No screenshot by default.', {
+  ...observationSchema, x: z.number().int().min(0).max(511), y: z.number().int().min(0).max(511),
+  max_frames: z.number().int().min(1).max(600).optional(),
+}, false, args => call('move_to', args));
+register('wait_until', 'Advance with no AI buttons until a decoded Emerald condition holds for stable_frames (default 2), or max_frames (default 600) expires. Stops on human input or manual pause. map_transition_complete means the overworld is ready; it does not require a transition to begin.', {
+  ...observationSchema,
+  condition: z.enum(['battle_menu_ready', 'overworld_ready', 'map_transition_complete', 'dialogue']),
+  max_frames: z.number().int().min(1).max(600).optional(), stable_frames: z.number().int().min(1).max(60).optional(),
+}, false, args => call('wait_until', args));
+register('press', 'Tap one button, then keep AI input released for an explicit interval. Defaults to a one-frame hold and two-frame release; works on supported and unsupported ROMs. No screenshot by default.', {
+  ...observationSchema, button: z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R']),
+  hold_frames: z.number().int().min(1).max(60).optional(), release_frames: z.number().int().min(1).max(60).optional(),
+}, false, args => call('press', args));
 const actionSchema = {
   buttons: z.array(z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R'])).max(10),
   frames: z.number().int().min(1).max(600),
@@ -85,7 +107,7 @@ const checkpointSchema = { name: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) };
 register('save_checkpoint', 'Save a named AI checkpoint for this ROM outside normal save-state slots. An existing checkpoint of the same name is replaced.', checkpointSchema, false,
   args => call('save_checkpoint', args));
 register('load_checkpoint', 'Restore a named checkpoint for this ROM and return its screenshot. Restores game progress and saved data from that checkpoint.', checkpointSchema, false,
-  args => call('load_checkpoint', args));
+  args => { stateResponses.reset(); return call('load_checkpoint', args); });
 register('disconnect', 'Disconnect this agent and cancel only its pending action. Other agents retain control; the last disconnect restores ordinary speed. Preserve human buttons and pause state.', {}, false, async args => {
   try { return await call('disconnect', args); }
   finally { bridge?.close(); bridge = undefined; }

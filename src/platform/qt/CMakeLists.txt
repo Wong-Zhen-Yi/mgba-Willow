@@ -98,6 +98,7 @@ endif()
 
 set(SOURCE_FILES
 	AIController.cpp
+	EmeraldGameState.cpp
 	AboutScreen.cpp
 	AbstractUpdater.cpp
 	Action.cpp
@@ -596,10 +597,17 @@ endif()
 
 debug_strip(${BINARY_NAME}-qt)
 
-if(BUILD_SUITE)
+option(BUILD_AI_TESTS "Build standalone AI gameplay and Emerald adapter tests" OFF)
+if(BUILD_SUITE OR BUILD_AI_TESTS)
 	enable_testing()
 	add_executable(test-qt-aigameplay test/aigameplay.cpp)
 	add_test(platform-qt-aigameplay test-qt-aigameplay)
+	add_executable(test-qt-emeraldgamestate test/emeraldgamestate.cpp EmeraldGameState.cpp)
+	target_link_libraries(test-qt-emeraldgamestate ${QT}::Core)
+	set_target_properties(test-qt-emeraldgamestate PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
+	add_test(platform-qt-emeraldgamestate test-qt-emeraldgamestate)
+endif()
+if(BUILD_SUITE)
 	find_package(${QT}Test)
 	if(${QT}Test_FOUND)
 		get_property(ALL_TESTS DIRECTORY PROPERTY VARIABLES)

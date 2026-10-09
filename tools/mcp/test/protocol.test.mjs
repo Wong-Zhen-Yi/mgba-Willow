@@ -113,7 +113,7 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
   t.after(() => client.close());
   await client.connect(transport);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'act_sequence', 'set_speed', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint'].sort());
+  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'act_sequence', 'set_speed', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint', 'get_game_state', 'get_local_map', 'move_to', 'press', 'wait_until'].sort());
   const call = (name, args = {}) => client.callTool({ name, arguments: args });
   assert.equal((await call('observe')).isError, true);
   assert.equal((await call('list_sessions')).structuredContent.sessions[0].session_id, f.id);
@@ -179,6 +179,29 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
   assert.equal((await call('disconnect')).structuredContent.paused, false);
   assert.equal((await call('observe')).isError, true);
   assert.equal((await call('connect', { session_id: f.id })).isError, undefined);
+  for (const name of ['get_game_state', 'get_local_map', 'press', 'move_to', 'wait_until']) {
+    assert.equal(tools.find(tool => tool.name === name).annotations.readOnlyHint, ['get_game_state', 'get_local_map'].includes(name));
+  }
+  for (const [name, args] of [
+    ['get_local_map', { radius: 17 }], ['move_to', { x: -1, y: 0 }], ['move_to', { x: 0, y: 0, max_frames: 601 }],
+    ['wait_until', { condition: 'guessed' }], ['wait_until', { condition: 'dialogue', stable_frames: 0 }],
+    ['press', { button: 'X' }], ['press', { button: 'A', release_frames: 0 }],
+    ['get_game_state', { screenshot: 'true' }],
+  ]) {
+    const before = calls.length;
+    assert.equal((await call(name, args)).isError, true);
+    assert.equal(calls.length, before, 'Invalid state/action input must not reach the bridge');
+  }
+  for (const [name, args] of [
+    ['get_game_state', { full_state: true, screenshot: false }], ['get_local_map', { radius: 4, screenshot: false }],
+    ['press', { button: 'A', hold_frames: 1, release_frames: 2, screenshot: false }],
+    ['move_to', { x: 3, y: 4, max_frames: 60, screenshot: false }],
+    ['wait_until', { condition: 'battle_menu_ready', max_frames: 60, stable_frames: 2, screenshot: false }],
+  ]) {
+    assert.equal((await call(name, args)).isError, undefined);
+    assert.deepEqual(calls.at(-1).args, args);
+    assert.equal(calls.at(-1).method, name);
+  }
   await call('disconnect');
   assert.equal(errors, '');
 });

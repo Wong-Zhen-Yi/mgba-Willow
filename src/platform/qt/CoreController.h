@@ -14,6 +14,7 @@
 
 #include "VFileDevice.h"
 #include "AIGameplay.h"
+#include "EmeraldGameState.h"
 
 #include <functional>
 #include <atomic>
@@ -147,7 +148,11 @@ public:
 	bool advanceAI(unsigned keys, int frames);
 	bool advanceAI(const std::vector<AIGameplay::Step>& steps);
 	void cancelAIAction();
-	bool aiActionPending() const { return m_aiGameplay.pending(); }
+	bool aiActionPending() const { return m_aiGameplay.pending() || m_aiStateAction.pending(); }
+	bool startAIStateAction(const QString& method, const QJsonObject& args);
+	const EmeraldGameState& aiGameState() const { return m_aiGameState; }
+	bool aiAtomicFrame() const { return !m_hwaccel && m_aiGameState.supported() && m_aiGameState.hasSnapshot() && m_aiGameState.frame() == m_frameCounter; }
+	QJsonObject aiStateActionResult() const { return m_aiStateAction.result(); }
 	size_t aiCompletedSteps() const { return m_aiGameplay.completed(); }
 	uint64_t aiActionStart() const { return m_aiGameplay.startFrame(); }
 	unsigned aiKeys() const { return m_aiKeys; }
@@ -302,6 +307,8 @@ private:
 	std::atomic<unsigned> m_aiKeys{0};
 	std::atomic<uint64_t> m_aiActionEnd{0};
 	AIGameplay m_aiGameplay;
+	EmeraldGameState m_aiGameState;
+	AIStateAction m_aiStateAction;
 	std::atomic<unsigned> m_humanKeys{0};
 	unsigned m_effectiveKeys = 0; // Protected by m_actionMutex
 	float m_aiSpeed = 4.f;

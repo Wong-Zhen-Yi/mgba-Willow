@@ -205,6 +205,8 @@ QJsonObject AIController::observation(bool screenshot) {
 	result.insert("paused", m_core->isPaused());
 	result.insert("keys", int(core->getKeys(core)));
 	result.insert("effective_keys", int(core->getKeys(core)));
+	result.insert("game_state", m_core->aiGameState().state());
+	result.insert("atomic", m_core->aiAtomicFrame());
 	guard.resume();
 	if (!screenshot) return result;
 	QByteArray png;
@@ -234,7 +236,8 @@ void AIController::finishPending(bool cancelled, const QString& reason) {
 	if (m_window->controller() != m_core || m_core->path() != m_gamePath) cancelled = true;
 	if (!cancelled && (m_core->aiActionPending() || m_core->frameCounter() < m_core->aiActionEnd())) return;
 	// A pause arriving after the final frame still returns successful completion.
-	cancelled = cancelled && m_core->aiCompletedSteps() < size_t(m_stepFrames.size());
+	cancelled = cancelled && (m_stateAction ? m_core->aiActionPending() : m_core->aiCompletedSteps() < size_t(m_stepFrames.size()));
+	auto stateActionResult = m_core->aiStateActionResult();
 	if (cancelled) m_core->cancelAIAction();
 	auto result = observation(m_screenshot && !cancelled);
 	result.insert("cancelled", cancelled);
@@ -242,6 +245,21 @@ void AIController::finishPending(bool cancelled, const QString& reason) {
 	if (!cancelled) result.insert("action_end_frame", double(m_core->aiActionEnd()));
 	else result.insert("reason", reason);
 	if (m_sequence) result.insert("steps", completedSteps());
+	if (m_stateAction) {
+		if (cancelled) { stateActionResult.insert("reason", reason); stateActionResult.insert("completed", false); stateActionResult.insert("stop_frame", double(m_core->frameCounter())); }
+		result.insert("progress", stateActionResult);
+	}
+	else if (m_directionKeys && m_actionState.value("available").toBool()) {
+		const auto end = m_core->aiGameState().state(false);
+		const auto startPlayer = m_actionState.value("player").toObject(), endPlayer = end.value("player").toObject();
+		const bool sameMap = end.value("map") == m_actionState.value("map");
+		const bool unchanged = end.value("available").toBool() && sameMap && startPlayer.value("x") == endPlayer.value("x") && startPlayer.value("y") == endPlayer.value("y");
+		const QString signature = QString::number(m_actionState.value("map").toObject().value("id").toInt()) + ":" +
+			QString::number(startPlayer.value("x").toInt()) + ":" + QString::number(startPlayer.value("y").toInt()) + ":" + QString::number(m_directionKeys);
+		int repeats = unchanged ? (m_lastStall.value(m_actionOwner) == signature ? m_stallCount.value(m_actionOwner) + 1 : 1) : 0;
+		m_lastStall[m_actionOwner] = signature; m_stallCount[m_actionOwner] = repeats;
+		result.insert("progress", QJsonObject{{"position_unchanged", unchanged}, {"repeated_movement_loop", repeats >= 3}, {"unchanged_attempts", repeats}, {"map_changed", !sameMap}});
+	}
 	const auto id = m_pending;
 	const auto owner = m_actionOwner;
 	m_pending = QJsonValue();
@@ -253,6 +271,7 @@ void AIController::finishPending(bool cancelled, const QString& reason) {
 void AIController::disconnectClient(QLocalSocket* socket) {
 	if (!m_clients.remove(socket)) return;
 	if (m_actionOwner == socket) finishPending(true, tr("Action client disconnected"));
+	m_lastStall.remove(socket); m_stallCount.remove(socket);
 	if (m_clients.isEmpty()) release(tr("ready; disconnected"));
 	else m_status->setText(tr("MCP: connected; %1 AI clients").arg(m_clients.size()));
 }
@@ -265,6 +284,7 @@ void AIController::release(const QString& reason) {
 	if (m_core) m_core->setAIControl(false);
 	m_core.reset();
 	m_clients.clear();
+	m_lastStall.clear(); m_stallCount.clear();
 	m_actionOwner.clear();
 	m_toggle->setActive(false);
 	m_status->setText(tr("MCP: %1").arg(reason));
@@ -272,8 +292,8 @@ void AIController::release(const QString& reason) {
 
 void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 	const auto id = req.value("id");
-	const QString method = req.value("method").toString();
-	const auto args = req.value("args").toObject();
+	QString method = req.value("method").toString();
+	auto args = req.value("args").toObject();
 	auto fail = [&](const QString& message) { reply(socket, id, {}, message); };
 	if (!integer(id, 1, 9007199254740991.0)) { fail(tr("Invalid request id")); return; }
 	if (!m_server.isListening()) { fail(tr("MCP is disabled")); return; }
@@ -293,7 +313,14 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		const bool paused = m_core->isPaused();
 		disconnectClient(socket); reply(socket, id, {{"paused", paused}}); return;
 	}
-	if (method == "observe") { reply(socket, id, observation()); return; }
+	if (method == "observe" || method == "get_game_state" || method == "get_local_map") {
+		if (args.contains("screenshot") && !args.value("screenshot").isBool()) { fail(tr("Expected boolean screenshot")); return; }
+		if (method == "get_local_map" && args.contains("radius") && !integer(args.value("radius"), 1, 16)) { fail(tr("Expected radius 1–16")); return; }
+		CoreController::Interrupter guard(m_core);
+		auto result = observation(args.value("screenshot").toBool(method == "observe"));
+		if (method == "get_local_map") result.insert("local_map", m_core->aiGameState().localMap(args.value("radius").toInt(4)));
+		reply(socket, id, result); return;
+	}
 	if (!m_pending.isNull() && !m_pending.isUndefined() && method != "memory_map" && method != "read_memory") {
 		fail(tr("An action is already in progress; observe and retry after it completes")); return;
 	}
@@ -306,6 +333,31 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		m_window->config()->setOption("aiSpeed", speed);
 		m_window->config()->write();
 		reply(socket, id, session()); return;
+	}
+	if (method == "move_to" || method == "wait_until") {
+		if ((args.contains("max_frames") && !integer(args.value("max_frames"), 1, 600)) ||
+			(args.contains("screenshot") && !args.value("screenshot").isBool())) { fail(tr("Expected 1–600 max_frames and boolean screenshot")); return; }
+		if (method == "move_to" && (!integer(args.value("x"), 0, 511) || !integer(args.value("y"), 0, 511))) { fail(tr("Expected map coordinates x/y 0–511")); return; }
+		const QStringList conditions{"battle_menu_ready", "overworld_ready", "map_transition_complete", "dialogue"};
+		if (method == "wait_until" && (!conditions.contains(args.value("condition").toString()) ||
+			(args.contains("stable_frames") && !integer(args.value("stable_frames"), 1, 60)))) { fail(tr("Unsupported condition or stable_frames (1–60)")); return; }
+		CoreController::Interrupter guard(m_core);
+		if (!m_core->aiGameState().supported()) { fail(tr("Unsupported ROM; use the raw tools")); return; }
+		if (!m_core->startAIStateAction(method, args)) { fail(tr("Cannot start: resume manually, release human input, and wait for an initialized overworld on foot")); return; }
+		m_stateAction = true; m_sequence = false; m_stepFrames.clear();
+		m_start = m_core->frameCounter(); m_screenshot = args.value("screenshot").toBool(false);
+		m_pending = id; m_actionOwner = socket; m_timer.start(30000);
+		if (!m_core->aiActionPending()) finishPending();
+		return;
+	}
+	if (method == "press") {
+		if (!args.value("button").isString() || (args.contains("hold_frames") && !integer(args.value("hold_frames"), 1, 60)) ||
+			(args.contains("release_frames") && !integer(args.value("release_frames"), 1, 60))) { fail(tr("Expected button, hold_frames and release_frames (1–60)")); return; }
+		args.insert("actions", QJsonArray{
+			QJsonObject{{"buttons", QJsonArray{args.value("button")}}, {"frames", args.value("hold_frames").toInt(1)}},
+			QJsonObject{{"buttons", QJsonArray{}}, {"frames", args.value("release_frames").toInt(2)}}});
+		if (!args.contains("screenshot")) args.insert("screenshot", false);
+		method = "act_sequence";
 	}
 	if (method == "act" || method == "act_sequence") {
 		if (m_core->isPaused()) { fail(tr("Game paused; resume manually before acting")); return; }
@@ -337,8 +389,12 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		}
 		if (total > 600) { fail(tr("Sequence exceeds 600 total frames")); return; }
 		CoreController::Interrupter guard(m_core);
+		m_actionState = m_core->aiGameState().state(false);
+		m_directionKeys = 0;
+		for (const auto& step : steps) m_directionKeys |= step.keys & 0xF0;
 		if (!m_core->advanceAI(steps)) { fail(tr("Cannot advance game; resume manually if paused")); return; }
 		m_start = m_core->aiActionStart();
+		m_stateAction = false;
 		m_stepFrames = durations;
 		m_sequence = method == "act_sequence";
 		m_screenshot = args.value("screenshot").toBool(true);
@@ -412,6 +468,7 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		if (!ok) { fail(tr("Checkpoint operation failed (wrong ROM or damaged state)")); return; }
 		if (!save) m_core->cancelAIAction();
 		if (!save) m_core->refreshAIFrame();
+		if (!save) { m_lastStall.clear(); m_stallCount.clear(); }
 		guard.resume();
 		reply(socket, id, observation());
 		return;

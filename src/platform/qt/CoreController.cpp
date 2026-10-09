@@ -548,12 +548,15 @@ void CoreController::setAIControl(bool enabled) {
 		m_aiControl = false;
 		m_aiKeys = 0;
 		m_aiGameplay.cancel();
+		m_aiStateAction.cancel("game_stopped", m_frameCounter);
 		return;
 	}
 	Interrupter interrupter(this);
 	QMutexLocker locker(&m_actionMutex);
 	m_aiGameplay.cancel();
+	m_aiStateAction.cancel("control_changed");
 	m_aiControl = enabled;
+	if (enabled) m_aiGameState.identify(m_threadContext.core);
 	m_aiKeys = 0;
 	// Remove AI input before restoring the ordinary script/input path.
 	m_threadContext.core->setKeys(m_threadContext.core, m_humanKeys);
@@ -566,6 +569,7 @@ void CoreController::cancelAIAction() {
 	Interrupter interrupter(this);
 	QMutexLocker locker(&m_actionMutex);
 	m_aiGameplay.cancel();
+	m_aiStateAction.cancel("cancelled");
 	m_aiKeys = 0;
 	if (hasStarted() && !mCoreThreadHasExited(&m_threadContext)) updateKeys();
 }
@@ -585,14 +589,32 @@ bool CoreController::advanceAI(const std::vector<AIGameplay::Step>& steps) {
 	if (!hasStarted() || mCoreThreadHasExited(&m_threadContext) || !m_aiControl) return false;
 	Interrupter interrupter(this);
 	QMutexLocker locker(&m_actionMutex);
-	if (isPaused() || m_moreFrames >= 0 || !m_aiGameplay.start(steps, m_frameCounter)) return false;
+	if (isPaused() || m_moreFrames >= 0 || m_aiStateAction.pending() || !m_aiGameplay.start(steps, m_frameCounter)) return false;
 	m_aiKeys = m_aiGameplay.keys();
 	m_aiActionEnd = m_aiGameplay.endFrame();
 	updateKeys();
 	return true;
 }
 
+bool CoreController::startAIStateAction(const QString& method, const QJsonObject& args) {
+	Interrupter interrupter(this);
+	QMutexLocker locker(&m_actionMutex);
+	if (!hasStarted() || !m_aiControl || isPaused() || m_moreFrames >= 0 || aiActionPending() || !m_aiGameState.supported() || m_humanKeys) return false;
+	if (method == "move_to") {
+		if (!m_aiStateAction.startMove(m_aiGameState, QPoint(args.value("x").toInt(), args.value("y").toInt()), args.value("max_frames").toInt(600))) return false;
+	} else {
+		m_aiStateAction.startWait(m_aiGameState, args.value("condition").toString(), args.value("max_frames").toInt(600), args.value("stable_frames").toInt(2));
+	}
+	m_aiKeys = m_aiStateAction.keys();
+	m_aiActionEnd = m_frameCounter.load();
+	updateKeys();
+	return true;
+}
+
 void CoreController::refreshAIFrame() {
+	// Checkpoint RAM does not correspond to a newly completed rendered frame.
+	// Invalidate decoded observations until the next frame-end capture.
+	if (m_aiControl) m_aiGameState.identify(m_threadContext.core);
 	{
 		QMutexLocker locker(&m_bufferMutex);
 		if (!m_hwaccel) m_completeBuffer = m_activeBuffer;
@@ -988,6 +1010,13 @@ void CoreController::yankPak() {
 void CoreController::addKey(int key) {
 	QMutexLocker locker(&m_actionMutex);
 	m_activeKeys |= 1 << key;
+	// Latch even a keyboard tap that is released before the next input poll.
+	if (m_aiStateAction.pending()) {
+		m_aiStateAction.cancel("human_input", m_frameCounter);
+		m_aiKeys = 0;
+		m_aiActionEnd = m_frameCounter.load();
+		QMetaObject::invokeMethod(this, "aiActionFinished", Qt::QueuedConnection);
+	}
 }
 
 void CoreController::clearKey(int key) {
@@ -1296,6 +1325,12 @@ void CoreController::updateKeys() {
 	// shared control, previous effective keys must not feed back as human keys.
 	if (!m_aiControl) human |= m_threadContext.core->getKeys(m_threadContext.core) & ~m_removedKeys;
 	m_humanKeys = human;
+	if (human && m_aiStateAction.pending()) {
+		m_aiStateAction.cancel("human_input", m_frameCounter);
+		m_aiKeys = 0;
+		m_aiActionEnd = m_frameCounter.load();
+		QMetaObject::invokeMethod(this, "aiActionFinished", Qt::QueuedConnection);
+	}
 	m_removedKeys = polledKeys;
 	const unsigned effective = AIGameplay::mergeKeys(human, m_aiKeys);
 	m_threadContext.core->setKeys(m_threadContext.core, effective);
@@ -1329,6 +1364,7 @@ void CoreController::finishFrame() {
 		QMutexLocker locker(&m_bufferMutex);
 		memcpy(m_completeBuffer.data(), m_activeBuffer.constData(), width * height * BYTES_PER_PIXEL);
 	}
+	if (m_aiControl) m_aiGameState.capture(m_threadContext.core, m_frameCounter + 1, m_humanKeys, m_aiKeys, m_effectiveKeys);
 
 	{
 		QMutexLocker locker(&m_actionMutex);
@@ -1340,7 +1376,11 @@ void CoreController::finishFrame() {
 		if (m_aiGameplay.finishFrame()) {
 			QMetaObject::invokeMethod(this, "aiActionFinished", Qt::QueuedConnection);
 		}
-		m_aiKeys = m_aiGameplay.keys();
+		if (m_aiStateAction.tick(m_aiGameState, m_humanKeys)) {
+			m_aiActionEnd = m_frameCounter + 1;
+			QMetaObject::invokeMethod(this, "aiActionFinished", Qt::QueuedConnection);
+		}
+		m_aiKeys = m_aiStateAction.pending() ? m_aiStateAction.keys() : m_aiGameplay.keys();
 		if (m_moreFrames > 0) {
 			--m_moreFrames;
 			if (!m_moreFrames) {
