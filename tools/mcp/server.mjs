@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { Bridge, descriptors, listSessions } from './bridge.mjs';
 import { StateResponses } from './state-responses.mjs';
+import { guardedMovement } from './visual-movement.mjs';
 
 const instructions = `Control a visible mGBA game with shared human input. Multiple agents can connect to the same window; coordinate goals because they share game progress, speed, and checkpoints. Only one action runs at a time: if busy, observe and retry after completion. Observations and memory reads remain available during another agent's action. The bridge is enabled automatically while mGBA is open; the user can disable it in AI > MCP Enabled. Start with list_sessions and connect. Human directions override conflicting AI directions; other buttons combine. AI speed defaults to 4x and can be changed with set_speed or AI > AI Speed. The emulator runs while you think, so observations become stale quickly. Use short observe/action cycles near hazards. Use act_sequence for predictable movement to reduce model/tool round trips, with up to 200 steps and at most 600 total frames. Use screenshot:false only when a fresh image is unnecessary; obtain a new observation before uncertain decisions. Cancelled actions report cancelled:true and only completed sequence steps; do not assume planned moves completed. A manual pause must be resumed by the user. Disconnect cancels only your pending action; other connected agents retain control. The last agent disconnecting restores ordinary speed without pausing or clearing human buttons. Save a checkpoint before risky moves, using agent-specific names to avoid overwriting another agent's checkpoint. Use memory_map before reading memory: bytes are not labeled health or coordinates unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game. This MCP does not select or invoke a model.`;
 const server = new McpServer({ name: 'mgba-willow', version: '1.1.0' }, { instructions: `${instructions} For verified Emerald, prefer get_game_state and get_local_map before moving; use move_to for ordinary on-foot routes, press for taps, and wait_until for readiness. Check progress.completed and progress.reason after movement. State responses are full first, then per-client top-level deltas: merge game_state_changes and remove removed_state_fields; full_state:true refreshes the baseline. Only atomic:true certifies screenshot/state frame alignment. Unsupported ROMs retain raw tools.` });
@@ -85,14 +86,14 @@ const actionSchema = {
   buttons: z.array(z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R'])).max(10),
   frames: z.number().int().min(1).max(600),
 };
-register('act', 'Hold AI buttons for exactly 1–600 frames, then release only AI input. Human controls remain active. Returns frame boundaries and a screenshot by default; screenshot:false skips image encoding. Manual pause cancels pending actions.', {
+register('act', 'Hold AI buttons for up to 1–600 frames, then release only AI input. Unsupported ROM directional holds stop early on 64 frames of stable screenshots; inspect progress.requires_replan and progress.reason before moving again. Visual stalls indicate possible obstacles, not verified collision. Returns actual frame boundaries and a screenshot by default. Manual pause cancels pending actions.', {
   ...actionSchema,
   screenshot: z.boolean().optional(),
-}, false, args => call('act', args));
-register('act_sequence', 'Execute 1–200 predictable moves without intermediate tool round trips, at most 600 total frames. Return each completed step’s frame boundaries and one final screenshot by default. Pause or disconnect cancels remaining moves.', {
+}, false, args => guardedMovement(call, 'act', args));
+register('act_sequence', 'Execute 1–200 predictable moves, at most 600 total frames. Unsupported ROM long directional holds use screenshot checks and stop the sequence on a visual stall; progress.requires_replan means inspect and choose another route. Return only fully completed step boundaries and one final screenshot by default. Pause or disconnect cancels remaining moves.', {
   actions: z.array(z.object(actionSchema)).min(1).max(200).refine(actions => actions.reduce((total, action) => total + action.frames, 0) <= 600, 'Sequence exceeds 600 total frames'),
   screenshot: z.boolean().optional(),
-}, false, args => call('act_sequence', args));
+}, false, args => guardedMovement(call, 'act_sequence', args));
 register('set_speed', 'Set the persisted AI gameplay speed, shared with AI > AI Speed. Human fast-forward controls temporarily take priority. Ordinary speed settings are restored when AI control ends.', {
   multiplier: z.union([z.literal(1), z.literal(2), z.literal(4), z.literal(8), z.literal('maximum')]),
 }, false, args => call('set_speed', args));
@@ -121,3 +122,4 @@ process.on('SIGINT', () => shutdown().finally(() => process.exit(0)));
 process.on('SIGTERM', () => shutdown().finally(() => process.exit(0)));
 await server.connect(new StdioServerTransport());
 process.stdin.on('end', () => shutdown());
+

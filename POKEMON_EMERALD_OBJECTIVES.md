@@ -8,7 +8,7 @@ This file is the authoritative objective and progress tracker for our Emerald pl
 
 The default completion target is **become Champion, enter the Hall of Fame, and save**. Optional goals below do not block main-story completion. This is a milestone list; training, healing, supplies, and navigation are supporting actions.
 
-Unchecked means **completion has not been verified**, not necessarily that the objective remains undone. No current save has been inspected for this list. Mark a milestone complete only after observing its outcome in the game or corroborating it with reliably interpreted game state. Record evidence in the progress log; do not infer progress from location alone. Follow prerequisite order, allowing objectives already completed or legitimately completed in another order.
+Unchecked means **completion has not been verified**, not necessarily that the objective remains undone. Mark a milestone complete only after observing its outcome in the game or corroborating it with reliably interpreted game state. Update this file immediately after each completed objective and record evidence in the progress log; do not infer progress from location alone. Follow prerequisite order, allowing objectives already completed or legitimately completed in another order.
 
 ## Required main-story objectives
 
@@ -20,9 +20,9 @@ Unchecked means **completion has not been verified**, not necessarily that the o
 - [ ] M06 — Recover the Devon Goods and rescue Peeko in Rusturf Tunnel; receive Devon's delivery assignments and PokéNav.
 - [ ] M07 — Deliver Steven's letter in Granite Cave.
 - [ ] M08 — Defeat Brawly in Dewford: Knuckle Badge.
-- [ ] M09 — Deliver the Devon Goods to Stern at Slateport's Oceanic Museum; defeat the Aqua attackers.
-- [ ] M10 — Beat the Route 110 rival and Wally outside Mauville Gym.
-- [ ] M11 — Defeat Wattson: Dynamo Badge; obtain Rock Smash.
+- [x] M09 — Deliver the Devon Goods to Stern at Slateport's Oceanic Museum; defeat the Aqua attackers.
+- [x] M10 — Beat the Route 110 rival and Wally outside Mauville Gym.
+- [x] M11 — Defeat Wattson: Dynamo Badge; obtain Rock Smash.
 - [ ] M12 — Clear the Rusturf Tunnel rocks and obtain Strength.
 - [ ] M13 — Witness the Meteor Falls incident; defeat Maxie at Mt. Chimney.
 - [ ] M14 — Defeat Flannery in Lavaridge: Heat Badge.
@@ -72,13 +72,43 @@ Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.
 
 ## Current progress
 
-- Save inspected: No.
-- Verified completed objectives: None recorded.
-- Next action when gameplay is requested: Inspect the loaded game and reconcile this checklist before choosing the first unmet prerequisite.
+- Save inspected: Loaded game observed through mGBA MCP screenshots on 2026-10-09. ROM is unsupported by decoded state tools; verification uses visible gameplay.
+- Verified completed objectives: M09, M10, M11. Earlier objectives remain unverified in this tracker.
+- Current location: Upper Route 112, outside the northern Fiery Path exit, standing just south of the berry patch. Aroma Lady Shayla immediately below/right has been defeated. This is the northern section of Route 112, not the cable-car entrance side.
+- Last save: 9 October 2026, approximately 17:56 Singapore time. In-game save overwrote the existing save; SAVE screen confirmed ROUTE 112 and 3 badges, followed by the saving message and return to overworld. AI checkpoint: `root-story-route112-handoff`.
+- Healing / return point: Mauville Pokémon Center; healed after Wattson before heading north.
+- Party: Marshtomp level 27, 80/80 HP, lead; Taillow level 18, 31/43 HP; Oddish level 14, 38/38 HP; Plusle level 13, 41/41 HP; Whismur level 6, 23/23 HP. No fainted Pokémon. Marshtomp moves: Rock Smash, Mud Shot, Rock Tomb, Water Gun. Tackle was replaced with Rock Smash. Taillow has Wing Attack, Growl, Focus Energy, Quick Attack.
+- Supplies: 3 Super Potions remain; Ether and the sole Repel were used. HM06 Rock Smash is owned and taught; TM34 Shock Wave received from Wattson. Acro Bike remains in Key Items.
+- Next action: Continue EAST from the berry patch to the upper Route 111 section, then NORTH and WEST onto ash-covered Route 113 toward Fallarbor. Continue Route 114 to Meteor Falls for the theft scene, then return to the Route 112 cable car for Mt. Chimney. M12 Strength in Rusturf Tunnel has NOT been verified; HM list currently showed Cut, Flash, Rock Smash, without Strength. Obtain it before a later route requires it.
+- Resume protocol: Read this note, list mGBA sessions, connect to the current game, and observe before input. ROM SHA1 `11b20175dcf8f33058aa5af4571b0fe9758a82a3` is unsupported by decoded Emerald state tools; use screenshots/raw controls. Do not reset or load an older checkpoint. Explicit released-button frames between repeated taps improve reliability. Both agents disconnected after the save.
 - Main-story completion: Unverified.
 
 ## Progress log
 
 | Date | Objective | Evidence / outcome |
 | --- | --- | --- |
+| 2026-10-09 | M11 completed | Defeated Wattson's Voltorb, Electrike, Magneton, Manectric using Marshtomp; Dynamo Badge and TM34 Shock Wave receipt observed. In-game save confirmed 3 badges. |
+| 2026-10-09 | Story route and HM use | Healed in Mauville, taught HM06 Rock Smash to Marshtomp over Tackle, smashed Route 111 barrier, crossed Route 112 and Fiery Path. Defeated Camper Larry, Hiker Trent, and Aroma Lady Shayla. Marshtomp reached level 27; Taillow reached level 18. |
+| 2026-10-09 | User-requested handoff save | Saved on upper Route 112 beside berries after northern Fiery Path exit. Save screen confirmed Route 112, 3 badges, playtime 14:49; saving message then overworld observed. Checkpoint `root-story-route112-handoff`; user asked to stop and leave a resumption note. |
 | 2026-10-09 | Checklist created | Objectives defined; no gameplay progress asserted. |
+| 2026-10-09 | Travel to Slateport | Talked to Mr. Briney in Dewford and sailed to Slateport; arrival dialogue observed. |
+| 2026-10-09 | Slateport healing | Pokémon Center healing completed; nurse's “Thank you for waiting” and farewell observed. Sets Slateport as the blackout return point. |
+| 2026-10-09 | M09 completed | Spoke to Dock at the shipyard, found Stern upstairs in the Oceanic Museum, defeated both Aqua grunts, witnessed Archie's departure, and completed Stern's Devon Goods delivery dialogue. Stern then left; Scott's museum-exit introduction completed. |
+| 2026-10-09 | Post-museum healing | Returned to Slateport Pokémon Center after both Aqua battles and completed healing; nurse's “Thank you for waiting” observed. |
+
+| 2026-10-09 | Team addition | Captured female Plusle level 13 on Route 110; Gotcha and Pokédex registration observed. Taillow level 12 used two Quick Attacks and remains full HP but paralyzed. Four Poké Balls and one Great Ball remain. |
+
+| 2026-10-09 | Route 110 training | Defeated Pokéfan Isabel and Pokéfan Kaleb in a double battle. Taillow leveled from 12 to 14 and learned Wing Attack over Peck; Marshtomp leveled from 22 to 23. Both full HP at battle end, Taillow paralyzed again. Reward ₽2240 observed. |
+| 2026-10-09 | Route 110 rival defeated | Defeated May: Wingull level 18, Grovyle level 20, Slugma level 18. Taillow reached level 16; Wing Attack and Quick Attack defeated Grovyle. Marshtomp level 23 finished Slugma with Water Gun. No party members fainted. Reward ₽1200 observed. M10 remains unchecked until Wally is also verified defeated. |
+
+| 2026-10-09 | Post-rival save | Itemfinder received and placed in Key Items pocket. In-game confirmation 'MATT saved the game' observed after May; separate checkpoint root-after-route110-rival created. |
+
+
+| 2026-10-09 | Mauville reached and healed | Followed pedestrian Route 110 around both cycling-road underpasses; defeated northern Psychic Edward and Triathlete Alyssa (Abra and Magnemite level 15). Mauville nurse''s Thank you for waiting confirmed full healing; sets Mauville return point. |
+
+| 2026-10-09 | Mauville supplies | Bought 10 Poké Balls (received one Premier Ball), 5 Great Balls, 5 Super Potions, and 3 Parlyz Heals. Purchase quantities/prices confirmed in shop; balance ₽716. |
+| 2026-10-09 | Mauville utility items | Obtained HM06 Rock Smash from the southern house and Mach Bike from Rydel; both receipt messages observed. Still navigating on foot. |
+| 2026-10-09 | Route 117 addition | Caught female Oddish level 13 with the first Great Ball after one Taillow Quick Attack; Gotcha and Pokedex registration observed. Bag confirms Acro Bike after Rydel exchange. |
+
+| 2026-10-09 | Wally defeated | Defeated Wally and Ralts level 16. Taillow grew to level 17; Oddish received switch-training experience without damage. M10 complete with earlier May victory. |
+| 2026-10-09 | Safe checkpoint | Post-Wally healing confirmed at Mauville Center; all five party members healthy. In-game save flow completed and checkpoint root-oddish-wally-healed created. Save screen confirms 2 badges. |
