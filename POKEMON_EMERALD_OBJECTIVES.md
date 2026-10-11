@@ -72,19 +72,16 @@ Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.
 
 ## Current progress
 
-- Save inspected: Live mGBA Willow MCP gameplay on 11 October 2026; verified `emerald_en_v1` state available and atomic screenshots.
-- Verified completed objectives: M09, M10, M11, M13. Earlier unchecked objectives and M12 Strength remain unverified.
-- Last observed and saved position: Lavaridge Town Pokémon Center 1F, map group 4 / number 5 (ID 1029), tile (7, 4), facing north at the nurse counter. Stable overworld, no menu or battle active.
-- Last save: 11 October 2026, Lavaridge Town, MATT, 3 badges, Pokédex 6, playtime 30:25. Explicit “MATT saved the game.” captured. Safe checkpoint: `root-lavaridge-healed-saved-20261011`.
-- Story outcome: Defeated the remaining Mt. Chimney grunt, Tabitha, and Maxie. Maxie's Mightyena level 24, Zubat level 24, and Camerupt level 25 defeated; his defeat dialogue and ₽2000 reward observed. Magma departed, Archie thanked us, and the Meteorite was recovered from the machine. M13 complete; Flannery remains undefeated/unverified.
-- Healing / return point: Lavaridge Pokémon Center. All five party members have full HP, no status conditions, and restored move PP.
-- Party in order: Marshtomp level 33 (96/96 HP); Oddish level 15 (41/41); Whismur level 6 (23/23); Plusle level 13 (41/41); Taillow level 20 (47/47). Marshtomp: Rock Smash 15/15, Mud Shot 15/15, Rock Tomb 10/10, Water Gun 25/25. Taillow: Wing Attack, Growl, Double Team, Quick Attack. No move changes this session.
-- Supplies confirmed in live inventory: 2 Super Potions, 3 Super Repels, 3 Parlyz Heals. Four Super Potions used this session (three in Maxie battle, one in Jagged Pass double battle); one Super Repel used on Jagged Pass. Meteorite in Key Items. Current money was not inspected.
-- Next story objective: M14 — defeat Flannery at Lavaridge Gym for the Heat Badge. Gym entrance is (5,15), approach from (5,16); the earlier (12,15) note was incorrect. First attempt lost to Torkoal after Attract/paralysis stalled Marshtomp. User authorized team optimization: collect Exp. Share in Rustboro, train backups, consider a Fighting-type, and obtain Strength through Rusturf Tunnel before retrying.
-- Resume protocol: Discover the live session and observe before input; do not load an older checkpoint. Prefer supported decoded state/local maps and bounded `move_to` routes. Door tiles and Jagged Pass ledges required short raw directional input. Double-battle target cursor positions were initially misread: verify the flashing opponent, not just label position. Read `STORY_PROGRESS_NOTES.md` for this session's details.
-- Stopped at the user's explicit request to reach a good save point and leave a handoff note. MCP disconnected after saving; ordinary 1× speed restored. No gameplay input should continue until requested.
-- Main-story completion: Unverified; three badges.
-
+- Latest live observation: 11 October 2026, Rusturf Tunnel, map group 24 / number 4 (ID 6148), tile (29,16), facing north at the Verdanturf entrance. Stable overworld, no battle/menu, no human input. MCP disconnected at user's request; no further gameplay input.
+- Checkpoint preserving this exact live state: `root-rusturf-exp-share-detour-20261011`. No new in-game save was made this session. Last verified in-game save remains Lavaridge Center, three badges, 30:25; use the current live state or latest checkpoint, not that older save, to preserve this session's progress.
+- Verified objectives: M07, M09, M10, M11, M13. M14 Flannery remains incomplete after a lost first attempt. Three badges: Stone, Knuckle, Dynamo.
+- Party in order, fully healed in Verdanturf immediately before entering the tunnel: Marshtomp 35 (102/102), Oddish 16 (43/43), Whismur 6 (23/23), Plusle 13 (41/41), Swellow 22 (60/60). No status; all move PP restored. Taillow evolved into Swellow. Oddish learned Stun Spore into its empty fourth move slot. All held items are empty.
+- Supplies: 6 Super Potions, 3 Revives, 1 Parlyz Heal, 3 Super Repels; 14 Poke Balls, 5 Great Balls, 1 Premier Ball. Latest inspected money before route battles was ₽980; subsequent trainer rewards increased it, final balance not inspected.
+- **Next session's immediate objective: obtain HM Strength in Rusturf Tunnel, then continue west to Rustboro and collect Exp. Share from Mr. Stone on Devon Corporation 3F.** Delivered Steven letter flag 0xBD is set; Exp. Share receipt flag 0x110 and Strength receipt flag 0x6A are clear. Exp. Share is currently eligible but uncollected.
+- Team preparation authorized by user: use Exp. Share to strengthen backups, prioritize Swellow, and consider catching a Fighting-type (e.g. Makuhita/Machop after checking availability) for Norman. No new Pokemon was caught this session. After preparation, return to Lavaridge and defeat Flannery (M14), then Norman (M15).
+- Tunnel navigation next: entrance (29,16), north through the narrow eastern corridor toward (29,10), then (28,5), west along y4/5 toward the central rock barrier and separated couple. This is a route hypothesis requiring fresh local-map verification. Attempted target (25,8) was a wall/no-path and moved nothing; do not repeat it. Wild encounters possible; Repels available.
+- Flannery battle lesson: Marshtomp easily beat Numel/Slugma/Camerupt, but Torkoal's Attract plus Body Slam paralysis stalled it. Do not rely on one attacker; keep Revives and adequate healing, verify the actual menu cursor, and account for Sunny Day/Overheat. Gym door is Lavaridge (5,15), not the old (12,15) note.
+- Resume protocol: discover live session, connect, observe full state and compare with this note before input. Do not load an older checkpoint automatically. Current checkpoint is separate from an in-game save.
 ## Progress log
 
 | Date | Objective | Evidence / outcome |
@@ -126,3 +123,4 @@ Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.
 
 
 | 2026-10-11 | Lavaridge healed and saved; user-requested handoff | Recovered Meteorite; descended Jagged Pass; defeated Hiker Eric, Picnicker Autumn + Triathlete Julio (double), and Camper Ethan. Oddish reached level 15. Lavaridge Center restored all HP/status/PP. Explicit save-success screenshot confirms Lavaridge Town, 3 badges, 30:25. Stopped at nurse counter (7,4), checkpoint root-lavaridge-healed-saved-20261011. Next: Flannery (M14). |
+
