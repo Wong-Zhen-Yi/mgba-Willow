@@ -6,11 +6,61 @@
 #include <mgba/core/core.h>
 #include <mgba/core/serialize.h>
 #include <mgba/core/sync.h>
+#include <mgba/core/thread.h>
 #include <mgba/gba/core.h>
+#include <mgba/internal/gba/gba.h>
 #include <mgba-util/vfs.h>
+#include <atomic>
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #define CHECK(condition) do { if (!(condition)) { std::cerr << "Failed line " << __LINE__ << ": " << #condition << '\n'; std::abort(); } } while (0)
+
+static void checkInterruptedPlayback(const char* romPath) {
+	mCore* core = GBACoreCreate();
+	CHECK(core && core->init(core));
+	mCoreInitConfig(core, nullptr);
+	CHECK(core->loadROM(core, VFileOpen(romPath, O_RDONLY)));
+	mAudioBuffer playback;
+	mAudioBufferInit(&playback, 4096, 2);
+	std::atomic<unsigned> frames{0};
+	mCoreThread thread{};
+	thread.core = core;
+	thread.logger.logger = mLogGetContext();
+	thread.userData = &frames;
+	thread.frameCallback = [](mCoreThread* context) {
+		++*static_cast<std::atomic<unsigned>*>(context->userData);
+	};
+	CHECK(mCoreThreadStart(&thread));
+	mCoreThreadInterrupt(&thread);
+	core->audioPlaybackBuffer = &playback;
+	static_cast<GBA*>(core->board)->audio.externalPlayback = true;
+	thread.impl->sync.audioWait = true;
+	thread.impl->sync.audioHighWater = 512;
+	thread.impl->sync.videoFrameWait = false;
+	// The backend consumes playback, leaving raw game audio above the water
+	// mark. Continuing an inspection must not wait on the unconsumed buffer.
+	mCoreSyncLockAudio(&thread.impl->sync);
+	int16_t samples[1024 * 2]{};
+	mAudioBufferWrite(core->getAudioBuffer(core), samples, 1024);
+	mCoreSyncUnlockAudio(&thread.impl->sync);
+	unsigned start = frames.load();
+	mCoreThreadContinue(&thread);
+	auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while (frames.load() < start + 2 && std::chrono::steady_clock::now() < deadline) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	bool advanced = frames.load() >= start + 2;
+	mCoreThreadEnd(&thread);
+	mCoreThreadJoin(&thread);
+	core->audioPlaybackBuffer = nullptr;
+	mAudioBufferDeinit(&playback);
+	mCoreConfigDeinit(&core->config);
+	core->deinit(core);
+	CHECK(advanced);
+	std::cout << "Interrupted external playback resumed without waiting on raw audio.\n";
+}
 
 static QByteArray render(mCore* core, double speed) {
 	QGBA::EmeraldMusic music;
@@ -55,6 +105,7 @@ int main(int argc, char** argv) {
 		CHECK(!music.active() && !core->audioPlaybackBuffer);
 	}
 	if (argc >= 3) {
+		checkInterruptedPlayback(argv[1]);
 		VFile* rom = VFileOpen(argv[1], O_RDONLY);
 		CHECK(rom && core->loadROM(core, rom));
 		core->reset(core);

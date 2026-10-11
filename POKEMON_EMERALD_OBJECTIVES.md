@@ -18,7 +18,7 @@ Unchecked means **completion has not been verified**, not necessarily that the o
 - [ ] M04 — Defeat the Aqua grunt in Petalburg Woods.
 - [ ] M05 — Defeat Roxanne in Rustboro: Stone Badge.
 - [ ] M06 — Recover the Devon Goods and rescue Peeko in Rusturf Tunnel; receive Devon's delivery assignments and PokéNav.
-- [ ] M07 — Deliver Steven's letter in Granite Cave.
+- [x] M07 — Deliver Steven's letter in Granite Cave.
 - [ ] M08 — Defeat Brawly in Dewford: Knuckle Badge.
 - [x] M09 — Deliver the Devon Goods to Stern at Slateport's Oceanic Museum; defeat the Aqua attackers.
 - [x] M10 — Beat the Route 110 rival and Wally outside Mauville Gym.
@@ -80,7 +80,7 @@ Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.
 - Healing / return point: Lavaridge Pokémon Center. All five party members have full HP, no status conditions, and restored move PP.
 - Party in order: Marshtomp level 33 (96/96 HP); Oddish level 15 (41/41); Whismur level 6 (23/23); Plusle level 13 (41/41); Taillow level 20 (47/47). Marshtomp: Rock Smash 15/15, Mud Shot 15/15, Rock Tomb 10/10, Water Gun 25/25. Taillow: Wing Attack, Growl, Double Team, Quick Attack. No move changes this session.
 - Supplies confirmed in live inventory: 2 Super Potions, 3 Super Repels, 3 Parlyz Heals. Four Super Potions used this session (three in Maxie battle, one in Jagged Pass double battle); one Super Repel used on Jagged Pass. Meteorite in Key Items. Current money was not inspected.
-- Next story objective: M14 — defeat Flannery at Lavaridge Gym for the Heat Badge. Exit the Center south (interior exits at (6,8)/(7,8)); Gym entrance in town at (12,15), approach from (12,16). Heal and consider replenishing potions before the Gym; only two Super Potions remain. M12 Strength still needs verification before later traversal requirements.
+- Next story objective: M14 — defeat Flannery at Lavaridge Gym for the Heat Badge. Gym entrance is (5,15), approach from (5,16); the earlier (12,15) note was incorrect. First attempt lost to Torkoal after Attract/paralysis stalled Marshtomp. User authorized team optimization: collect Exp. Share in Rustboro, train backups, consider a Fighting-type, and obtain Strength through Rusturf Tunnel before retrying.
 - Resume protocol: Discover the live session and observe before input; do not load an older checkpoint. Prefer supported decoded state/local maps and bounded `move_to` routes. Door tiles and Jagged Pass ledges required short raw directional input. Double-battle target cursor positions were initially misread: verify the flashing opponent, not just label position. Read `STORY_PROGRESS_NOTES.md` for this session's details.
 - Stopped at the user's explicit request to reach a good save point and leave a handoff note. MCP disconnected after saving; ordinary 1× speed restored. No gameplay input should continue until requested.
 - Main-story completion: Unverified; three badges.

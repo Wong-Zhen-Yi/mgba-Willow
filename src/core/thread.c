@@ -327,7 +327,12 @@ static THREAD_ENTRY _mCoreThreadRun(void* context) {
 				if (impl->sync.audioWait) {
 					MutexUnlock(&impl->stateMutex);
 					mCoreSyncLockAudio(&impl->sync);
-					mCoreSyncProduceAudio(&impl->sync, core->getAudioBuffer(core));
+					// Match the buffer consumed by the audio backend. With external
+					// playback, raw game audio is discarded at frame end; waiting
+					// for it here can prevent that frame from ever completing.
+					struct mAudioBuffer* buffer = core->audioPlaybackBuffer;
+					if (!buffer) buffer = core->getAudioBuffer(core);
+					mCoreSyncProduceAudio(&impl->sync, buffer);
 					MutexLock(&impl->stateMutex);
 				}
 			}
