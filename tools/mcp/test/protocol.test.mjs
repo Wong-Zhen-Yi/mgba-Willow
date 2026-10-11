@@ -113,11 +113,15 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
   t.after(() => client.close());
   await client.connect(transport);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'act_sequence', 'set_speed', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint', 'get_game_state', 'get_local_map', 'move_to', 'press', 'wait_until'].sort());
+  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'act_sequence', 'set_speed', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint', 'get_game_state', 'get_handoff', 'get_local_map', 'move_to', 'press', 'wait_until'].sort());
   const call = (name, args = {}) => client.callTool({ name, arguments: args });
   assert.equal((await call('observe')).isError, true);
   assert.equal((await call('list_sessions')).structuredContent.sessions[0].session_id, f.id);
   const connected = await call('connect', { session_id: f.id });
+  const handoff = await call('get_handoff', { screenshot: false });
+  assert.equal(handoff.structuredContent.handoff.available, false);
+  assert.equal(calls.at(-1).method, 'get_game_state');
+  assert.equal(tools.find(tool => tool.name === 'get_handoff').annotations.readOnlyHint, true);
   assert.equal(connected.content[1].type, 'image');
   assert.equal(connected.content[1].mimeType, 'image/png');
   assert.equal(connected.structuredContent.paused, false);
@@ -197,6 +201,8 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
     ['press', { button: 'A', hold_frames: 1, release_frames: 2, screenshot: false }],
     ['move_to', { x: 3, y: 4, max_frames: 60, screenshot: false }],
     ['wait_until', { condition: 'battle_menu_ready', max_frames: 60, stable_frames: 2, screenshot: false }],
+    ['wait_until', { condition: 'battle_move_ready', max_frames: 60, screenshot: false }],
+    ['wait_until', { condition: 'battle_target_ready', max_frames: 60, screenshot: false }],
   ]) {
     assert.equal((await call(name, args)).isError, undefined);
     assert.deepEqual(calls.at(-1).args, args);

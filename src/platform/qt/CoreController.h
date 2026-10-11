@@ -15,6 +15,7 @@
 #include "VFileDevice.h"
 #include "AIGameplay.h"
 #include "EmeraldGameState.h"
+#include "EmeraldMusic.h"
 
 #include <functional>
 #include <atomic>
@@ -308,6 +309,8 @@ private:
 	std::atomic<uint64_t> m_aiActionEnd{0};
 	AIGameplay m_aiGameplay;
 	EmeraldGameState m_aiGameState;
+	EmeraldMusic m_emeraldMusic;
+	bool m_normalSpeedMusic = true;
 	AIStateAction m_aiStateAction;
 	std::atomic<unsigned> m_humanKeys{0};
 	unsigned m_effectiveKeys = 0; // Protected by m_actionMutex

@@ -42,28 +42,44 @@ bool special(int b) {
 
 const char* EmeraldGameState::romSha1() { return "f3ae088181bf583e55daf962a92bb46f4f1d07b7"; }
 
+bool EmeraldGameState::supportsSha1(const QString& sha1) {
+	// This alternate English dump was checked against a live RAM/ROM snapshot:
+	// save blocks, map/grid, callbacks, objects and encrypted party data retain
+	// the retail layout. Do not accept arbitrary BPEE headers or ROM hacks.
+	return sha1 == romSha1() || sha1 == "4c743011d7f9af0fbc1ef1de7bff157dde718f56";
+}
+
 void EmeraldGameState::identify(mCore* core) {
 	*this = EmeraldGameState();
 	if (core->platform(core) != mPLATFORM_GBA) return;
 	m_rom = backing(core, "cart0");
 	// Hash the loaded backing store, including patches, rather than the original file.
 	m_sha1 = QString::fromLatin1(QCryptographicHash::hash(m_rom, QCryptographicHash::Sha1).toHex());
-	m_supported = m_sha1 == romSha1();
+	// mGBA maps live cartridge GPIO into these three header halfwords (see
+	// gba/cart/gpio.c). They are zero in both supported dumps. Normalize only
+	// the copied buffer; never alter the emulator's ROM or clock registers.
+	if (m_rom.size() >= 0xCA) std::fill(m_rom.begin() + 0xC4, m_rom.begin() + 0xCA, '\0');
+	m_normalizedSha1 = QString::fromLatin1(QCryptographicHash::hash(m_rom, QCryptographicHash::Sha1).toHex());
+	m_supported = supportsSha1(m_normalizedSha1);
 	if (!m_supported) m_rom.clear();
 }
 
 void EmeraldGameState::capture(mCore* core, quint64 frame, unsigned human, unsigned ai, unsigned effective) {
 	if (!m_supported) return;
+	if (frame < m_frame) { m_events = {}; m_lastMessage.clear(); m_saveConfirmed = false; }
 	m_wram = backing(core, "wram");
 	m_iwram = backing(core, "iwram");
 	m_frame = frame;
 	m_human = human;
 	m_ai = ai;
 	m_effective = effective;
+	recordEvents();
 }
 
 void EmeraldGameState::setSnapshot(const QByteArray& rom, const QByteArray& wram, const QByteArray& iwram, quint64 frame) {
+	if (frame < m_frame) { m_events = {}; m_lastMessage.clear(); m_saveConfirmed = false; }
 	m_rom = rom; m_wram = wram; m_iwram = iwram; m_frame = frame;
+	recordEvents();
 }
 
 bool EmeraldGameState::contains(quint32 a, quint32 length) const {
@@ -117,20 +133,191 @@ QString EmeraldGameState::interaction() const {
 	if (read(0x020375BC)) return "dialogue";
 	for (int i = 0; i < 16; ++i) {
 		quint32 task = 0x03005E00 + i * 40;
-		if (read(task + 4) && (read(task, 4) & ~1U) == 0x0809FA34) return "menu";
+		quint32 function = read(task, 4) & ~1U;
+		if (read(task + 4) && (function == 0x0809FA34 || function == 0x0809FFD0)) return "menu";
 	}
 	if (read(0x03000F2C) || read(Avatar + 6) || (read(playerObject() + 1) & 1)) return "scripted";
 	return "overworld";
 }
 
 bool EmeraldGameState::battleMenuReady() const {
-	if (interaction() != "battle") return false;
-	for (int i : {0, 2}) if ((read(0x03005D60 + i * 4, 4) & ~1U) == 0x08057588) return true;
-	return false;
+	return menu().value("kind") == "battle_action";
+}
+
+QString EmeraldGameState::text(quint32 address, int limit) const {
+	QString result;
+	for (int i = 0; i < limit; ++i) {
+		if (!contains(address + i)) return {};
+		int c = read(address + i);
+		if (c == 0xFF) return result.trimmed();
+		if (c == 0xFD) return {}; // Unexpanded placeholders are not evidence.
+		if (c == 0xFC) {
+			if (++i >= limit || !contains(address + i)) return {};
+			int code = read(address + i);
+			if (code < 1 || code > 0x18) return {};
+			int args = code == 4 ? 3 : (code == 0x0B || code == 0x10) ? 2 :
+				(code <= 6 || code == 8 || code == 0x0C || code == 0x0D || code == 0x0E || (code >= 0x11 && code <= 0x14)) ? 1 : 0;
+			if (i + args >= limit || !contains(address + i, args + 1)) return {};
+			if (code == 0x0C) result += QChar(0xFFFD);
+			i += args; continue;
+		}
+		if (c >= 0xBB && c <= 0xD4) result += QChar('A' + c - 0xBB);
+		else if (c >= 0xD5 && c <= 0xEE) result += QChar('a' + c - 0xD5);
+		else if (c >= 0xA1 && c <= 0xAA) result += QChar('0' + c - 0xA1);
+		else if (c == 0) result += ' ';
+		else if (c >= 0xFA) result += '\n';
+		else {
+			switch (c) {
+			case 0xAB: result += '!'; break;
+			case 0xAC: result += '?'; break;
+			case 0xAD: result += '.'; break;
+			case 0xAE: result += '-'; break;
+			case 0xB4: result += '\''; break;
+			case 0xB8: result += ','; break;
+			case 0xF0: result += ':'; break;
+			default: result += QChar(0xFFFD); break;
+			}
+		}
+	}
+	return {}; // Unterminated memory must not become a message.
+}
+
+QJsonObject EmeraldGameState::menu() const {
+	QJsonObject result{{"kind", "none"}, {"input_ready", false}};
+	if (!m_supported || !hasSnapshot() || (read(0x02037FDB) & 0x80)) return result;
+	quint32 callback = read(Main + 4, 4) & ~1U;
+	if (callback == 0x081AAD5C) {
+		int pocket = read(0x0203CE5D);
+		result.insert("kind", "bag");
+		if (pocket < 5) {
+			result.insert("pocket", pocket);
+			result.insert("cursor", int(read(0x0203CE60 + pocket * 2, 2)));
+			result.insert("scroll", int(read(0x0203CE6A + pocket * 2, 2)));
+		}
+		return result; // Context menus and animations still require observation.
+	}
+	if (callback == 0x081B01B0) {
+		result.insert("kind", "party");
+		int slot = read(0x0203CED1);
+		if (slot < 6) result.insert("selected_party_slot", slot);
+		return result;
+	}
+	if (interaction() == "menu") {
+		bool saving = (read(0x03005DF4, 4) & ~1U) == 0x0809FE44;
+		for (int i = 0; i < 16; ++i) {
+			quint32 task = 0x03005E00 + i * 40;
+			if (read(task + 4) && (read(task, 4) & ~1U) == 0x0809FFD0) saving = true;
+		}
+		result.insert("kind", saving ? "save" : "start");
+		if (saving) {
+			quint32 save = read(0x0203761C, 4) & ~1U;
+			QString phase = "processing";
+			if (save == 0x080A0108) phase = "confirm";
+			else if (save == 0x080A01EC) phase = "confirm_overwrite";
+			else if (save == 0x080A024C) phase = "writing";
+			else if (save == 0x080A02B0) phase = "success_message";
+			else if (save == 0x080A02D8) phase = "saved";
+			else if (save == 0x080A02FC || save == 0x080A0324) phase = "error";
+			result.insert("phase", phase);
+		} else result.insert("cursor", int(read(0x0203760E)));
+		return result;
+	}
+	if (interaction() != "battle" || (callback != 0x08038420 && callback != 0x08036760 && callback != 0x080367D4)) return result;
+	int count = read(0x0202406C);
+	if (count < 1 || count > 4) return result;
+	for (int i = 0; i < count; ++i) {
+		int position = read(0x02024076 + i);
+		if (position > 3 || (position & 1) || !(read(0x02024068, 4) & (1U << i)) || (read(0x02024210) & (1U << i))) continue;
+		quint32 function = read(0x03005D60 + i * 4, 4) & ~1U;
+		QString kind;
+		int cursor = -1;
+		if (function == 0x08057588) { kind = "battle_action"; cursor = read(0x020244AC + i); }
+		else if (function == 0x08057BFC) { kind = "battle_move"; cursor = read(0x020244B0 + i); }
+		else if (function == 0x08057824) kind = "battle_target";
+		else continue;
+		if (cursor >= 4) continue;
+		result = {{"kind", kind}, {"input_ready", true}, {"battler_id", i}, {"position", position}};
+		if (cursor >= 0) result.insert("cursor", cursor);
+		if (kind == "battle_move") {
+			quint32 info = 0x02023064 + i * 512 + 4;
+			int move = read(info + cursor * 2, 2);
+			result.insert("selected_move", QJsonObject{{"id", move}, {"name", move <= 354 ? text(0x0831977C + move * 13, 13) : QString()},
+				{"pp", int(read(info + 8 + cursor))}, {"max_pp", int(read(info + 12 + cursor))}});
+		}
+		if (kind == "battle_target") {
+			int target = read(0x03005D74);
+			bool valid = target < count && read(0x02024076 + target) <= 3 && !(read(0x02024210) & (1U << target));
+			result.insert("target_available", valid);
+			if (valid) {
+				int targetPosition = read(0x02024076 + target);
+				result.insert("target", QJsonObject{{"battler_id", target}, {"position", targetPosition},
+					{"side", (targetPosition & 1) ? "opponent" : "player"}, {"slot", targetPosition / 2}});
+			}
+		}
+		return result;
+	}
+	return result;
+}
+
+QJsonObject EmeraldGameState::battle() const {
+	QJsonObject result{{"available", false}};
+	if (interaction() != "battle" || !hasSnapshot()) return result;
+	int count = read(0x0202406C);
+	if (count < 1 || count > 4) return result;
+	QJsonArray battlers;
+	const char* stages[] = {"hp", "attack", "defense", "speed", "special_attack", "special_defense", "accuracy", "evasion"};
+	for (int i = 0; i < count; ++i) {
+		int pos = read(0x02024076 + i);
+		quint32 mon = 0x02024084 + i * 0x58;
+		int hp = read(mon + 0x28, 2), maxHp = read(mon + 0x2C, 2);
+		bool valid = pos <= 3 && maxHp > 0 && hp <= maxHp;
+		QJsonObject battler{{"id", i}, {"available", valid}, {"absent", bool(read(0x02024210) & (1U << i))}};
+		if (valid) {
+			int species = read(mon, 2);
+			QJsonObject stats;
+			for (int j = 1; j < 8; ++j) { int value = read(mon + 0x18 + j); if (value <= 12) stats.insert(stages[j], value - 6); }
+			battler.insert("position", pos); battler.insert("side", (pos & 1) ? "opponent" : "player"); battler.insert("slot", pos / 2);
+			battler.insert("party_slot", int(read(0x0202406E + i * 2, 2)));
+			battler.insert("species_id", species); battler.insert("species_name", species < 412 ? text(0x083185C8 + species * 11, 11) : QString());
+			battler.insert("hp", hp); battler.insert("max_hp", maxHp); battler.insert("level", int(read(mon + 0x2A)));
+			battler.insert("status", double(read(mon + 0x4C, 4)));
+			battler.insert("volatile_status", double(read(mon + 0x50, 4)));
+			battler.insert("confusion_turns", int(read(mon + 0x50, 4) & 7)); battler.insert("stat_changes", stats);
+			QJsonArray moves;
+			for (int j = 0; j < 4; ++j) moves.append(QJsonObject{{"id", int(read(mon + 0x0C + j * 2, 2))}, {"pp", int(read(mon + 0x24 + j))}});
+			battler.insert("moves", moves);
+		}
+		battlers.append(battler);
+	}
+	result.insert("available", true); result.insert("battlers", battlers);
+	result.insert("type_flags", double(read(0x02022FEC, 4))); result.insert("outcome", int(read(0x0202433A)));
+	return result;
+}
+
+void EmeraldGameState::recordEvents() {
+	if (!m_supported || !hasSnapshot()) return;
+	quint32 buffer = interaction() == "battle" ? 0x02022E2C : 0x02021FC4;
+	int size = interaction() == "battle" ? 300 : 1000;
+	quint32 printer = 0x020201B0; // Message window 0; not PP/type windows.
+	quint32 current = read(printer, 4);
+	QString message;
+	if (read(printer + 0x1B) && read(printer + 4) == 0 && current >= buffer && current < buffer + size)
+		message = text(buffer, size);
+	if (!message.isEmpty() && message != m_lastMessage) {
+		m_events.append(QJsonObject{{"type", "message"}, {"frame", double(m_frame)}, {"text", message}, {"source", "expanded_message_buffer"}, {"map_id", mapId()}});
+		m_lastMessage = message;
+	}
+	if (message.isEmpty()) m_lastMessage.clear();
+	bool saved = menu().value("kind") == "save" && (read(0x0203761C, 4) & ~1U) == 0x080A02D8;
+	if (saved && !m_saveConfirmed) m_events.append(QJsonObject{{"type", "save_confirmed"}, {"frame", double(m_frame)}, {"map_id", mapId()}, {"position", coords(position())}});
+	m_saveConfirmed = saved;
+	while (m_events.size() > 16) m_events.removeFirst();
 }
 
 bool EmeraldGameState::condition(const QString& name) const {
 	if (name == "battle_menu_ready") return battleMenuReady();
+	if (name == "battle_move_ready") return menu().value("kind") == "battle_move";
+	if (name == "battle_target_ready") return menu().value("kind") == "battle_target";
 	if (name == "dialogue") return interaction() == "dialogue";
 	if (name == "overworld_ready" || name == "map_transition_complete")
 		return ready() && interaction() == "overworld" && !moving() && !(read(0x02037FD4 + 7) & 0x80);
@@ -184,7 +371,31 @@ QJsonObject EmeraldGameState::tileState(QPoint p) const {
 }
 
 bool EmeraldGameState::canWalk(QPoint from, QPoint to, bool destination) const {
+	QPoint delta = to - from;
+	int distance = qAbs(delta.x()) + qAbs(delta.y());
+	if (distance == 2 && (!delta.x() || !delta.y())) {
+		QPoint step(delta.x() / 2, delta.y() / 2);
+		int middle = tile(from + step), landing = tile(to), start = tile(from);
+		int expected = step.x() == 1 ? 0x38 : step.x() == -1 ? 0x39 : step.y() == -1 ? 0x3A : 0x3B;
+		if (start < 0 || middle < 0 || landing < 0 || behavior(middle & 0x3FF) != expected ||
+			(landing & 0xC00) || occupied(from + step) || occupied(to) || special(behavior(start & 0x3FF)) || special(behavior(landing & 0x3FF))) return false;
+		int e1 = start >> 12, e2 = landing >> 12;
+		if (e1 && e2 && e1 != 15 && e2 != 15 && e1 != e2) return false;
+		int b = behavior(landing & 0x3FF);
+		return b < 0x60 || b > 0x6F; // A jump must land on ordinary ground.
+	}
+	if (distance != 1) return false;
 	int a = tile(from), b = tile(to);
+	// Animated doors are collision tiles, activated by walking north into a warp.
+	if (destination && delta == QPoint(0, -1) && a >= 0 && b >= 0 && behavior(b & 0x3FF) == 0x69 && !occupied(to) && !special(behavior(a & 0x3FF))) {
+		quint32 events = read(MapHeader + 4, 4);
+		if (contains(events, 20)) {
+			int count = read(events + 1); quint32 warps = read(events + 8, 4);
+			if (count <= 64 && contains(warps, count * 8)) for (int i = 0; i < count; ++i)
+				if (to == QPoint(qint16(read(warps + i * 8, 2)), qint16(read(warps + i * 8 + 2, 2)))) return true;
+		}
+		return false;
+	}
 	if (a < 0 || b < 0 || (b & 0xC00) || occupied(to) || special(behavior(a & 0x3FF)) || special(behavior(b & 0x3FF))) return false;
 	int e1 = a >> 12, e2 = b >> 12;
 	if (e1 && e2 && e1 != 15 && e2 != 15 && e1 != e2) return false;
@@ -205,6 +416,8 @@ QVector<QPoint> EmeraldGameState::pathTo(QPoint target, int radius) const {
 		QPoint p = queue.dequeue();
 		for (QPoint d : {QPoint(1, 0), QPoint(-1, 0), QPoint(0, 1), QPoint(0, -1)}) {
 			QPoint next = p + d;
+			int t = tile(next);
+			if (t >= 0 && behavior(t & 0x3FF) >= 0x38 && behavior(t & 0x3FF) <= 0x3B) next += d;
 			if (qAbs(next.x() - origin.x()) > radius || qAbs(next.y() - origin.y()) > radius || parent.contains(key(next)) || !canWalk(p, next, next == target)) continue;
 			parent.insert(key(next), p);
 			if (next == target) {
@@ -290,11 +503,15 @@ QJsonObject EmeraldGameState::inventory() const {
 
 QJsonObject EmeraldGameState::state(bool details) const {
 	QJsonObject result{{"supported", m_supported}, {"adapter", m_supported ? QJsonValue("emerald_en_v1") : QJsonValue()}, {"rom_sha1", m_sha1}};
+	result.insert("normalized_rom_sha1", m_normalizedSha1);
 	if (!m_supported) { result.insert("reason", "Unsupported ROM; raw tools remain available"); return result; }
 	result.insert("frame", double(m_frame));
 	result.insert("available", ready());
 	result.insert("interaction", interaction());
 	result.insert("battle_menu_ready", battleMenuReady());
+	result.insert("menu", menu());
+	result.insert("battle", battle());
+	if (details) result.insert("recent_events", m_events);
 	if (details && contains(0x020244E9)) result.insert("party", party());
 	if (!ready()) return result;
 	quint32 s = read(Save1, 4), o = playerObject(), l = layout();
@@ -311,6 +528,13 @@ QJsonObject EmeraldGameState::state(bool details) const {
 		QJsonArray flags;
 		for (int i = 0; i < 0x12C * 8; ++i) if (read(s + 0x1270 + i / 8) & (1 << (i % 8))) flags.append(i);
 		result.insert("quest_flags", QJsonObject{{"format", "set_flag_ids"}, {"ids", flags}});
+		QJsonArray badges;
+		const char* badgeNames[] = {"Stone", "Knuckle", "Dynamo", "Heat", "Balance", "Feather", "Mind", "Rain"};
+		for (int i = 0; i < 8; ++i) {
+			int flag = 0x867 + i;
+			if (read(s + 0x1270 + flag / 8) & (1 << (flag % 8))) badges.append(badgeNames[i]);
+		}
+		result.insert("story_progress", QJsonObject{{"badges", badges}, {"badge_count", badges.size()}, {"source", "save_block_flags"}});
 	}
 	return result;
 }
@@ -347,6 +571,11 @@ bool AIStateAction::tick(const EmeraldGameState& s, unsigned human) {
 		QPoint p = s.position();
 		if (m_keys && p == m_last && !s.moving() && !s.canWalk(p, m_next, m_next == m_target)) { stop("blocked", s); return true; }
 		if (p != m_last) {
+			if (s.moving() && (m_next - m_last).manhattanLength() == 2 && p == (m_last + m_next) / 2) {
+				m_keys = 0; m_unchanged = 0;
+				if (--m_remaining <= 0) { stop("timeout", s); return true; }
+				return false;
+			}
 			++m_steps; m_unchanged = 0;
 			if (p != m_next) { stop("unexpected_movement", s); return true; }
 			m_last = p; m_keys = 0;

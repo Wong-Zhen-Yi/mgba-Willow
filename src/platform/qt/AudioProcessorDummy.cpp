@@ -63,10 +63,12 @@ void AudioProcessorDummy::refresh() {
 		return;
 	}
 
-	struct mAudioBuffer* buffer = thread->core->getAudioBuffer(thread->core);
+	mCoreSyncLockAudio(&thread->impl->sync);
+	struct mAudioBuffer* buffer = thread->core->audioPlaybackBuffer;
+	if (!buffer) buffer = thread->core->getAudioBuffer(thread->core);
 	double sampleRate = thread->core->audioSampleRate(thread->core);
 	double second = 1'000'000'000;
-	if (thread->impl->sync.fpsTarget > 0) {
+	if (!thread->core->audioPlaybackBuffer && thread->impl->sync.fpsTarget > 0) {
 		second *= mCoreCalculateFramerateRatio(thread->core, thread->impl->sync.fpsTarget);
 	}
 
@@ -74,7 +76,6 @@ void AudioProcessorDummy::refresh() {
 	qint64 elapsed = totalElapsed - m_lastRefresh;
 	m_lastRefresh = totalElapsed;
 
-	mCoreSyncLockAudio(&thread->impl->sync);
 	mAudioBufferRead(buffer, NULL, elapsed * sampleRate / second);
 	mCoreSyncConsumeAudio(&thread->impl->sync);
 }

@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QPoint>
 #include <QString>
 #include <QVector>
@@ -11,7 +12,7 @@ struct mCore;
 
 namespace QGBA {
 
-// Read-only decoder for the SHA-1 verified English retail Emerald ROM.
+// Read-only decoder for explicitly verified English Emerald ROM layouts.
 // RAM is copied at frame end. All pointers are resolved inside that copy.
 class EmeraldGameState {
 public:
@@ -37,6 +38,7 @@ public:
 	void setSnapshot(const QByteArray& rom, const QByteArray& wram, const QByteArray& iwram, quint64 frame);
 private:
 	friend struct EmeraldGameStateFixture;
+	static bool supportsSha1(const QString& sha1);
 	bool contains(quint32 address, quint32 length = 1) const;
 	quint32 read(quint32 address, int length = 1) const;
 	quint32 playerObject() const;
@@ -47,8 +49,15 @@ private:
 	QJsonObject tileState(QPoint point) const;
 	QJsonObject party() const;
 	QJsonObject inventory() const;
+	QJsonObject battle() const;
+	QJsonObject menu() const;
+	QString text(quint32 address, int limit) const;
+	void recordEvents();
+	QJsonArray m_events;
+	QString m_lastMessage;
+	bool m_saveConfirmed = false;
 	QByteArray m_rom, m_wram, m_iwram;
-	QString m_sha1;
+	QString m_sha1, m_normalizedSha1;
 	bool m_supported = false;
 	quint64 m_frame = 0;
 	unsigned m_human = 0, m_ai = 0, m_effective = 0;

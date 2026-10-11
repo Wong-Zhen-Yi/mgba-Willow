@@ -9,6 +9,15 @@ This Willow checkout includes a local MCP for playing a visible game from a
 Codex chat using Luna models. See [Play mGBA with Luna](tools/mcp/README.md) for
 setup, frame-counted controls, memory reads, checkpoints, and manual takeover.
 
+During capped AI fast-forward, supported English Emerald ROMs play background
+music at its original speed in both the SDL and Qt audio backends. A private,
+memory-only emulator runs the ROM's music driver, follows song changes, and
+suppresses sound effects, cries and fanfares. The feature is enabled by default;
+toggle **Normal-speed Emerald music during AI play** in Settings' Audio group.
+Ordinary playback resumes at 1x or when AI control is disabled. Existing mute
+and fast-forward volume settings still apply. Unbounded speed and other ROMs
+use the existing audio path with Sonic pitch-preserving time stretching.
+
 [![Build status](https://buildbot.mgba.io/badges/build-win32.svg)](https://buildbot.mgba.io)
 [![Translation status](https://hosted.weblate.org/widgets/mgba/-/svg-badge.svg)](https://hosted.weblate.org/engage/mgba)
 

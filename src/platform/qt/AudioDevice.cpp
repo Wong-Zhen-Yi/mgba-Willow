@@ -41,7 +41,7 @@ void AudioDevice::setFormat(const QAudioFormat& format) {
 	}
 	mCoreSyncLockAudio(&m_context->impl->sync);
 	mCore* core = m_context->core;
-	mAudioResamplerSetSource(&m_resampler, core->getAudioBuffer(core), core->audioSampleRate(core), true);
+	mAudioResamplerSetSource(&m_resampler, core->audioPlaybackBuffer ? core->audioPlaybackBuffer : core->getAudioBuffer(core), core->audioSampleRate(core), true);
 	m_format = format;
 	adjustResampler();
 	mCoreSyncUnlockAudio(&m_context->impl->sync);
@@ -66,7 +66,7 @@ qint64 AudioDevice::readData(char* data, qint64 maxSize) {
 	}
 
 	mCoreSyncLockAudio(&m_context->impl->sync);
-	mAudioResamplerSetSource(&m_resampler, m_context->core->getAudioBuffer(m_context->core), m_context->core->audioSampleRate(m_context->core), true);
+	adjustResampler();
 	mAudioResamplerProcess(&m_resampler);
 	mCoreSyncConsumeAudio(&m_context->impl->sync);
 	if (mAudioBufferAvailable(&m_buffer) < 32) {
@@ -125,6 +125,7 @@ void AudioDevice::update() {
 	bool wasAvailable = mAudioBufferAvailable(&m_buffer);
 
 	mCoreSyncLockAudio(&m_context->impl->sync);
+	adjustResampler();
 	mAudioResamplerProcess(&m_resampler);
 	mCoreSyncConsumeAudio(&m_context->impl->sync);
 
@@ -139,8 +140,11 @@ void AudioDevice::update() {
 
 void AudioDevice::adjustResampler() {
 	mCore* core = m_context->core;
-	double fauxClock = mCoreCalculateFramerateRatio(m_context->core, m_context->impl->sync.fpsTarget);
-	mAudioResamplerSetDestination(&m_resampler, &m_buffer, m_format.sampleRate() * fauxClock);
+	double fauxClock = core->audioPlaybackBuffer ? 1.0 : mCoreCalculateFramerateRatio(core, m_context->impl->sync.fpsTarget);
+	mAudioResamplerSetSource(&m_resampler, core->audioPlaybackBuffer ? core->audioPlaybackBuffer : core->getAudioBuffer(core), core->audioSampleRate(core), true);
+	double tempo = 1.0 / fauxClock;
+	mAudioResamplerSetTempo(&m_resampler, tempo);
+	mAudioResamplerSetDestination(&m_resampler, &m_buffer, m_format.sampleRate() * (tempo > 1.01 ? 1.0 : fauxClock));
 	m_context->impl->sync.audioHighWater = m_samples + m_resampler.highWaterMark + m_resampler.lowWaterMark;
 	m_context->impl->sync.audioHighWater *= core->audioSampleRate(core) / (m_format.sampleRate() * fauxClock);
 

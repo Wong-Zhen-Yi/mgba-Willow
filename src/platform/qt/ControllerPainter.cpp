@@ -7,9 +7,17 @@
 
 #include <QMutexLocker>
 #include <QPainter>
+#include <QDateTime>
+#include <QFontDatabase>
 #include <algorithm>
 
 using namespace QGBA;
+
+void ControllerPainter::addAIInteraction(const QString& text) {
+	QMutexLocker lock(&m_mutex);
+	m_aiInteractions.append(QDateTime::currentDateTime().toString("HH:mm:ss") + "  " + text.left(2048));
+	while (m_aiInteractions.size() > 32) m_aiInteractions.removeFirst();
+}
 
 void ControllerPainter::setKeys(unsigned keys) {
 	QMutexLocker lock(&m_mutex);
@@ -34,20 +42,53 @@ void ControllerPainter::setViewport(const QRect& viewport) {
 
 bool ControllerPainter::isVisible(const QSize& size) const {
 	QMutexLocker lock(&m_mutex);
-	return m_viewport.isValid() && size.height() - m_viewport.bottom() - 1 >= 64 && size.width() >= 240;
+	return m_viewport.isValid() && size.width() >= 240 &&
+		(m_viewport.top() >= 64 || size.height() - m_viewport.bottom() - 1 >= 64);
 }
 
 void ControllerPainter::paint(QPainter* painter, const QSize& size) {
 	unsigned keys;
 	QRect viewport;
+	QStringList interactions;
 	{
 		QMutexLocker lock(&m_mutex);
 		keys = m_keys;
 		viewport = m_viewport;
+		interactions = m_aiInteractions;
 		const auto now = Clock::now();
 		for (unsigned i = 0; i < m_pressedUntil.size(); ++i) {
 			if (now < m_pressedUntil[i]) keys |= 1U << i;
 		}
+	}
+	// Draw only in the unused top letterbox; never obscure game pixels.
+	if (viewport.isValid() && viewport.top() >= 64 && size.width() >= 240) {
+		const QRect panel(12, 8, size.width() - 24, viewport.top() - 16);
+		painter->save();
+		painter->setClipRect(panel);
+		painter->setRenderHint(QPainter::Antialiasing);
+		painter->setPen(QPen(QColor("#343d4b"), 1));
+		painter->setBrush(QColor("#151a22"));
+		painter->drawRoundedRect(panel, 8, 8);
+		QFont font = painter->font();
+		font.setPixelSize(12);
+		font.setBold(true);
+		painter->setFont(font);
+		painter->setPen(QColor("#97f9db"));
+		painter->drawText(panel.adjusted(12, 6, -12, 0), Qt::AlignLeft | Qt::AlignTop, QStringLiteral("AI / MCP INPUTS"));
+		font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+		font.setPixelSize(12);
+		painter->setFont(font);
+		const int lineHeight = painter->fontMetrics().height() + 4;
+		const int rows = std::max(0, (panel.height() - 34) / lineHeight);
+		painter->setPen(QColor("#b9c4d3"));
+		if (interactions.isEmpty()) interactions.append(QStringLiteral("Waiting for AI / MCP interactions..."));
+		const int first = std::max(0, int(interactions.size()) - rows);
+		for (int i = first; i < interactions.size(); ++i) {
+			const QString line = painter->fontMetrics().elidedText(interactions[i], Qt::ElideRight, panel.width() - 24);
+			painter->drawText(QRect(panel.x() + 12, panel.y() + 28 + (i - first) * lineHeight,
+				panel.width() - 24, lineHeight), Qt::AlignLeft | Qt::AlignVCenter, line);
+		}
+		painter->restore();
 	}
 	const QRect band(0, viewport.bottom() + 1, size.width(), size.height() - viewport.bottom() - 1);
 	if (!viewport.isValid() || band.height() < 64 || band.width() < 240) return;

@@ -97,6 +97,9 @@ CoreController::CoreController(mCore* core, QObject* parent)
 		}
 
 		controller->m_resetActions.clear();
+#ifdef M_CORE_GBA
+		if (context->core->platform(context->core) == mPLATFORM_GBA) controller->m_emeraldMusic.reset(context->core);
+#endif
 		controller->m_aiGameplay.cancel();
 		controller->m_aiKeys = 0;
 		controller->m_frameCounter = -1;
@@ -310,6 +313,7 @@ void CoreController::loadConfig(ConfigController* config) {
 	m_autofireThreshold = config->getOption("autofireThreshold", m_autofireThreshold).toInt();
 	m_fastForwardVolume = config->getOption("fastForwardVolume", -1).toInt();
 	m_fastForwardMute = config->getOption("fastForwardMute", false).toInt();
+	m_normalSpeedMusic = config->getOption("normalSpeedMusic", 1).toInt();
 	mCoreConfigCopyValue(&m_threadContext.core->config, config->config(), "volume");
 	mCoreConfigCopyValue(&m_threadContext.core->config, config->config(), "mute");
 	m_preload = config->getOption("preload", true).toInt();
@@ -612,6 +616,9 @@ bool CoreController::startAIStateAction(const QString& method, const QJsonObject
 }
 
 void CoreController::refreshAIFrame() {
+#ifdef M_CORE_GBA
+	if (m_threadContext.core->platform(m_threadContext.core) == mPLATFORM_GBA) m_emeraldMusic.reset(m_threadContext.core);
+#endif
 	// Checkpoint RAM does not correspond to a newly completed rendered frame.
 	// Invalidate decoded observations until the next frame-end capture.
 	if (m_aiControl) m_aiGameState.identify(m_threadContext.core);
@@ -754,6 +761,7 @@ void CoreController::loadState(int slot) {
 		if (mCoreLoadState(context->core, controller->m_stateSlot, controller->m_loadStateFlags)) {
 			emit controller->frameAvailable();
 			emit controller->stateLoaded();
+			if (context->core->platform(context->core) == mPLATFORM_GBA) controller->m_emeraldMusic.reset(context->core);
 		}
 	});
 }
@@ -779,6 +787,7 @@ void CoreController::loadState(const QString& path, int flags) {
 		if (mCoreLoadStateNamed(context->core, vf, controller->m_loadStateFlags)) {
 			emit controller->frameAvailable();
 			emit controller->stateLoaded();
+			if (context->core->platform(context->core) == mPLATFORM_GBA) controller->m_emeraldMusic.reset(context->core);
 		}
 		vf->close(vf);
 	});
@@ -809,6 +818,7 @@ void CoreController::loadState(QIODevice* iodev, int flags) {
 		if (mCoreLoadStateNamed(context->core, vf, controller->m_loadStateFlags)) {
 			emit controller->frameAvailable();
 			emit controller->stateLoaded();
+			if (context->core->platform(context->core) == mPLATFORM_GBA) controller->m_emeraldMusic.reset(context->core);
 		}
 		vf->close(vf);
 	});
@@ -888,6 +898,7 @@ void CoreController::loadBackupState() {
 			mLOG(STATUS, INFO, "Undid state load");
 			controller->frameAvailable();
 			controller->stateLoaded();
+			if (context->core->platform(context->core) == mPLATFORM_GBA) controller->m_emeraldMusic.reset(context->core);
 		}
 		controller->m_backupLoadState.close();
 	});
@@ -1357,6 +1368,13 @@ int CoreController::updateAutofire() {
 }
 
 void CoreController::finishFrame() {
+#ifdef M_CORE_GBA
+	if (m_threadContext.core->platform(m_threadContext.core) == mPLATFORM_GBA) {
+		double speed = 1.0 / mCoreCalculateFramerateRatio(m_threadContext.core, m_threadContext.impl->sync.fpsTarget);
+		bool capped = (m_fastForward || m_fastForwardForced) ? (m_fastForward ? m_fastForwardHeldRatio : m_fastForwardRatio) > 0 : m_aiSpeed > 0;
+		m_emeraldMusic.update(m_threadContext.core, speed, m_normalSpeedMusic && m_aiControl && capped && m_aiGameState.supported());
+	}
+#endif
 	if (!m_hwaccel) {
 		unsigned width, height;
 		m_threadContext.core->currentVideoSize(m_threadContext.core, &width, &height);

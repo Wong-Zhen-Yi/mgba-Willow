@@ -43,6 +43,7 @@ void GBAAudioInit(struct GBAAudio* audio, size_t samples) {
 	audio->forceDisableChA = false;
 	audio->forceDisableChB = false;
 	audio->masterVolume = GBA_AUDIO_VOLUME_MAX;
+	audio->externalPlayback = false;
 	audio->sampleInterval = GBA_ARM7TDMI_FREQUENCY / 0x8000;
 }
 
@@ -431,7 +432,9 @@ static void _sample(struct mTiming* timing, void* user, uint32_t cyclesLate) {
 			}
 		}
 	}
-	if (!mCoreSyncProduceAudio(audio->p->sync, &audio->psg.buffer)) {
+	if (audio->externalPlayback) {
+		mCoreSyncUnlockAudio(audio->p->sync);
+	} else if (!mCoreSyncProduceAudio(audio->p->sync, &audio->psg.buffer)) {
 		// Interrupted
 		GBAInterrupt(audio->p);
 	}

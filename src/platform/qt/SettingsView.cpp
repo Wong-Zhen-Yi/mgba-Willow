@@ -510,6 +510,7 @@ void SettingsView::updateConfig() {
 	saveSetting("mute", m_ui.mute);
 	saveSetting("fastForwardVolume", m_ui.volumeFf);
 	saveSetting("fastForwardMute", m_ui.muteFf);
+	saveSetting("normalSpeedMusic", m_ui.normalSpeedMusic);
 	saveSetting("rewindEnable", m_ui.rewind);
 	saveSetting("rewindBufferCapacity", m_ui.rewindCapacity);
 	saveSetting("rewindBufferInterval", m_ui.rewindBufferInterval);
@@ -734,6 +735,7 @@ void SettingsView::reloadConfig() {
 	loadSetting("mute", m_ui.mute, false);
 	loadSetting("fastForwardVolume", m_ui.volumeFf, m_ui.volume->value());
 	loadSetting("fastForwardMute", m_ui.muteFf, m_ui.mute->isChecked());
+	loadSetting("normalSpeedMusic", m_ui.normalSpeedMusic, true);
 	loadSetting("rewindEnable", m_ui.rewind);
 	loadSetting("rewindBufferCapacity", m_ui.rewindCapacity);
 	loadSetting("rewindBufferInterval", m_ui.rewindBufferInterval);

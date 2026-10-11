@@ -2,11 +2,12 @@
 
 ## Latest verified snapshot
 
-- Last parent-chat observation before this side conversation: southern Route 114, at the top of the rocky stairs toward Meteor Falls. This is historical evidence, not a live observation; refresh before input.
-- Last verified in-game save: Fallarbor Town, 10 October 2026, playtime 19:43, three badges. The save-success message was observed. Later Route 114 progress is not verified saved.
-- Full healing completed at Fallarbor. Last party inspection after Nancy: Marshtomp level 30, 88/88 HP; Taillow level 19, 45/45 HP; Oddish, Whismur, and Plusle healthy. Refresh current HP and PP before continuing.
-- No Super Potions remain. Berry stock totals need a fresh inspection. Meteor Falls' theft scene and the Mt. Chimney Maxie battle remain unverified.
-- The objective tracker contains the current summary; entries below are chronological snapshots and may describe earlier positions.
+- 11 October 2026: Saved successfully in Lavaridge Town Pokémon Center after full healing. Explicit “MATT saved the game.” observed; 3 badges, Pokédex 6, playtime 30:25.
+- Position: Center 1F, map group 4 / number 5, (7,4), facing north at nurse counter. No active menu/battle. Checkpoint `root-lavaridge-healed-saved-20261011`.
+- M13 is complete: Maxie defeated on Mt. Chimney, Magma and Aqua departed, Meteorite recovered.
+- Party: Marshtomp 33, Oddish 15, Whismur 6, Plusle 13, Taillow 20. All full HP, no status, PP restored. Inventory: 2 Super Potions, 3 Super Repels, 3 Parlyz Heals; Meteorite in Key Items.
+- Next: M14, Flannery and Heat Badge. Gym not attempted. Center exits south; Gym door in town (12,15), approach (12,16). Replenish healing supplies as appropriate.
+- User requested a good save point and a handoff note; AI control disconnected and game left at ordinary speed. Do not continue until requested. Older entries below are historical snapshots.
 
 ## 10 October 2026 — session start and detour
 
@@ -54,3 +55,50 @@ This log records observed outcomes and problems. The checklist in `POKEMON_EMERA
 - Updated the main objective tracker with the latest historical position, last verified save, party changes, depleted supplies, and remaining M13 prerequisites.
 - Read-only source diagnosis: `EmeraldGameState::identify` hashes the loaded cartridge backing store, including patches. The cartridge memory accessor returns the actual ROM size. The observed SHA-1 differs from the one verified retail hash; the cause of the difference remains unknown. No unfamiliar hash was whitelisted and no emulator runtime/build was changed.
 - No game-control tools were called for these improvements. The parent chat must refresh the live state before resuming.
+
+### Resumed Route 114 exploration
+- Fresh session observation confirmed the rocky Route 114 location. The western stairs led to a small alcove; doubled back and climbed the eastern stairs.
+- Difficulty: cliff edges and narrow corridors caused visual stalls. A PokéNav call interrupted travel; cleared it before resuming. The eastern corridor was a side path containing an item, rather than verified progress toward Meteor Falls.
+- Used Marshtomp's Rock Smash to clear the corridor rock. At the user's request, collected the visible Poké Ball: the game confirmed “MATT found one PROTEIN!”
+
+### Meteor Falls reached and story advanced
+- Defeated Pokémaniac Steve's level 19 Aron with Mud Shot. Defeated Kindler Bernie's level 18 Slugma and Wingull; Rock Tomb missed once, then defeated Wingull.
+- Defeated Hiker Lucas's level 18 Geodude and Numel with Water Gun. Picnicker Angelina started a separate battle immediately afterward; Taillow defeated her level 18 Lombre and reached level 20. Marshtomp defeated her Marill with Mud Shot after Taillow's attack was lowered.
+- Last battle health: Marshtomp level 30, 81/88 HP; Taillow level 20, 39/47 HP. Other three party members were healthy on the battle party screen. No status conditions shown. Useful Marshtomp PP before final Mud Shot: Mud Shot 13/15, Water Gun 22/25; Rock Tomb last used twice after its 10/10 inspection.
+- Difficulty: repeated wild encounters interrupted movement, and cliff faces made short displacements ambiguous. The early alcove and Protein corridor were detours. The successful route moved farther east around the large boulder before south, continued around the eastern cliff, then south past Bernie and west up the stairs beyond Lucas/Angelina. Passed the final trainer without battle and descended two stairs, then headed north to the cave entrance.
+- Consulted Route 114 guide and map to resolve navigation: https://www.thonky.com/pokemon-ruby-sapphire-emerald/hoenn-route-114 and https://www.guiasnintendo.com/1_GAMEBOY_ADVANCE/pokemonrubizafiro/pok_rubi_zafiro_SP/28_ruta_114.html . Live screenshots remained the position evidence.
+- Verified Meteor Falls story scene: Team Aqua confronted Team Magma, Magma departed with the Meteorite for Mt. Chimney, Archie spoke to MATT and departed, and Professor Cozmo remained. M13 is partial; Maxie victory has not occurred.
+- In-game save flow completed at Meteor Falls, three badges, playtime 22:59: overwrite accepted, Saving screen observed, then returned to overworld. The brief success text was not captured. Checkpoint `root-meteor-falls-scene-20261010` saved afterward.
+- Current position: Meteor Falls first chamber, west side of the bridge, upper ledge above Cozmo. Next: return east across the bridge and out to Route 114, heal/replenish supplies in Fallarbor, then return via Route 113/111 and Fiery Path to the Route 112 cable car for Mt. Chimney.
+
+### Read-only story reinspection after adapter fix
+- Reconnected on 10 October 2026; decoded state now reports supported and available, with atomic screenshot/state alignment. Normalized ROM hash is `4c743011d7f9af0fbc1ef1de7bff157dde718f56`; the previously observed backing hash includes changing clock GPIO registers.
+- Still in Meteor Falls first chamber, map group 24/number 0, at (13, 18), facing east. Party HP, levels and moves match the prior handoff.
+- Verified flags against pret/pokeemerald `include/constants/flags.h`: first three badge flags set, later badge flags clear; met Archie in Meteor Falls and removed the Route 112 Magma blockers; Mt. Chimney Maxie victory and HM Strength receipt flags clear. Next story objective remains Mt. Chimney, followed by Lavaridge Gym.
+- No movement, menu input, battle, save, reset or checkpoint restore performed during this inspection.
+
+### Continuing toward Mt. Chimney
+- Left Meteor Falls via the Route 114 exit; fled one wild Zubat. Pre-travel checkpoint: `root-story-mtchimney-start-20261010`.
+- Defeated Hiker Lenny's level 18 Geodude with Water Gun and level 18 Machop with Mud Shot, receiving ₽720. Marshtomp reached level 31, 84/91 HP, and declined Take Down to retain its existing coverage/HM moves. Next travel target remains Fallarbor for healing and supplies.
+- Returned to Fallarbor and completed Pokémon Center healing. Live state confirms Marshtomp 91/91 HP, Taillow 47/47 HP, all party members healthy and useful PP restored (Mud Shot 15, Water Gun 25, Rock Tomb 10). The decoded planner took long detours around Route 114 cliffs; splitting travel at the two stairways and bridge gave reliable progress. Fled a wild Lombre during the return trip.
+- Bought six Super Potions (₽4200) and six Super Repels (₽3000) at Fallarbor Mart. Purchase messages, decoded inventory (item 22 ×6, item 83 ×6) and remaining ₽8464 confirmed.
+- Used a Super Repel when leaving Fallarbor eastward. Bird Keeper Coby intercepted us on western Route 113; defeated his level 17 Skarmory with Water Gun and level 19 Swellow with Rock Tomb. Marshtomp remained 91/91 HP, received ₽760, and retains all six Super Potions.
+- Crossed Route 113 eastward and reached the Route 111/112 junction. Defeated Cooltrainer Wilton's level 17 Electrike, Wailmer and Makuhita with Mud Shot, receiving ₽816. Marshtomp remained 91/91 HP; Mud Shot now 12/15 PP. Next: west to upper Route 112, south through Fiery Path, then the cable car.
+- Used a second Super Repel at Fiery Path's north entrance, traversed the cave southward, and took the Route 112 cable car to Mt. Chimney. No wild battles in the cave. Current position on arrival: Mt. Chimney (map group 24/number 12), (17, 37). Checkpoint `root-mtchimney-before-magma-20261010` created before the Magma battles.
+
+
+## 11 October 2026 — Mt. Chimney completed; Lavaridge handoff
+
+- Native mgba MCP tools were absent from this chat, although `codex mcp list` showed the server registered. Connected through the existing stdio MCP server using a temporary local SDK client. Did not modify/reload the ROM or restart the emulator.
+- Live baseline corrected the older tracker: already on Mt. Chimney (14,16), Marshtomp level 32, all party members full HP, six Super Potions and four Super Repels. One visible Magma NPC's post-battle dialogue did not establish that all summit battles were complete.
+- Defeated a remaining grunt (Zubat 20), then Tabitha (Numel 18, Poochyena 20, Zubat 22, Numel 22). Marshtomp took no damage in these fights. Initially called Tabitha Maxie in commentary; corrected after inspecting the battle introduction.
+- Maxie was at (13,6); approached via (12,6), facing east. Defeated Mightyena 24, Zubat 24, Camerupt 25. Mightyena lowered Attack; Zubat's confusion caused repeated failed actions. Switched to Taillow and back to reset confusion/stat drops, then Rock Tomb finished Zubat. Three Super Potions used. Camerupt caused a heavy hit; Water Gun finished it after healing. Marshtomp reached level 33, 69/96 HP at victory; Taillow 17/47. Maxie's defeat dialogue and ₽2000 reward observed. M13 marked complete.
+- HP text on small screenshots was misread once (reported 19); later decoded state was used for exact HP. Treat historical commentary estimates as superseded by recorded state.
+- Maxie departed, Archie thanked us, both teams left. Took Meteorite from the machine; receipt message observed. Descended summit through (17,20), (25,30), (26,37), then Jagged Pass exit (20,41) with a short Down input.
+- Used one Super Repel at Jagged Pass entrance. `move_to` cannot jump the many south-facing ledges; used short Down holds and refreshed map/state between ledges. Defeated Hiker Eric (Geodude 20, Baltoy 20) without further damage.
+- Picnicker Autumn and Triathlete Julio triggered a double battle while crossing the middle ledges. Shroomish and Magnemite were level 21. Initial target positions were reversed: Mud Shot hit Shroomish, Poisonpowder targeted immune Magnemite. Corrected after Shroomish fainted; Mud Shot defeated Magnemite. Marshtomp was paralyzed and reached 43/96 HP; used one Super Potion to reach 93/96. Oddish grew to level 15 and was 30/41 HP. In the double-party item screen, the initial selection was Marshtomp; an unnecessary Up selected Cancel. Reopened and verified successful healing.
+- Camper Ethan intercepted at (12,35); defeated Zigzagoon 20 and Taillow 20. Marshtomp finished 83/96 HP, paralyzed. Ethan registered in PokéNav after post-battle dialogue. Avoid continuing movement while post-battle dialogue is active.
+- Jagged Pass exit: move to (14,40), press Down; arrived Route 112 (6,47). Moved to (1,51), then west across map boundary into Lavaridge (18,11). Center approach (9,7), press Up to door (9,6). Center interior entrance (7,8), nurse interaction from (7,4).
+- Healing verified by decoded full HP, no status, restored PP for all five members. Final party: Marshtomp 33 (96/96), Oddish 15 (41/41), Whismur 6 (23/23), Plusle 13 (41/41), Taillow 20 (47/47).
+- Saved at Lavaridge. At fast emulation, the success text vanished between observations; reduced AI speed to 1× and captured short no-input frame samples through the save flow. Final explicit “MATT saved the game.” screenshot: 3 badges, Pokédex 6, 30:25. Checkpoint `root-lavaridge-healed-saved-20261011` saved afterward.
+- User requested stopping at a good save point. Left at nurse counter (7,4), facing north, stable overworld. Next story objective is Flannery/Heat Badge; M12 Strength remains unverified. Two Super Potions and three Super Repels remain. Disconnected MCP; no subsequent gameplay input.

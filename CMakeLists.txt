@@ -107,6 +107,7 @@ else()
 endif()
 
 file(GLOB THIRD_PARTY_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/third-party/inih/*.c)
+list(APPEND THIRD_PARTY_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/third-party/sonic/sonic.c)
 set(CORE_VFS_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/util/vfs/vfs-mem.c ${CMAKE_CURRENT_SOURCE_DIR}/src/util/vfs/vfs-fifo.c)
 set(VFS_SRC)
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/include)

@@ -86,6 +86,8 @@ struct GBAAudio {
 	bool forceDisableChA;
 	bool forceDisableChB;
 	int masterVolume;
+	// Frontend supplies native-speed music and paces its own playback queue.
+	bool externalPlayback;
 
 	struct mTimingEvent sampleEvent;
 };

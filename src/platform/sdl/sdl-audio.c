@@ -139,14 +139,14 @@ static void _mSDLAudioCallback(void* context, Uint8* data, int len) {
 		return;
 #endif
 	}
-	struct mAudioBuffer* buffer = audioContext->core->getAudioBuffer(audioContext->core);
 	unsigned sampleRate = audioContext->core->audioSampleRate(audioContext->core);
 	double fauxClock = 1;
 	if (audioContext->sync) {
+		mCoreSyncLockAudio(audioContext->sync);
 		if (audioContext->sync->fpsTarget > 0 && audioContext->core) {
 			fauxClock = mCoreCalculateFramerateRatio(audioContext->core, audioContext->sync->fpsTarget);
 		}
-		mCoreSyncLockAudio(audioContext->sync);
+		if (audioContext->core->audioPlaybackBuffer) fauxClock = 1;
 		audioContext->sync->audioHighWater = audioContext->samples + audioContext->resampler.highWaterMark + audioContext->resampler.lowWaterMark + (audioContext->samples >> 6);
 		audioContext->sync->audioHighWater *= sampleRate / (fauxClock * audioContext->obtainedSpec.freq);
 
@@ -157,7 +157,11 @@ static void _mSDLAudioCallback(void* context, Uint8* data, int len) {
 			}
 		}
 	}
-	mAudioResamplerSetSource(&audioContext->resampler, buffer, sampleRate / fauxClock, true);
+	struct mAudioBuffer* buffer = audioContext->core->audioPlaybackBuffer;
+	if (!buffer) buffer = audioContext->core->getAudioBuffer(audioContext->core);
+	double tempo = 1.0 / fauxClock;
+	mAudioResamplerSetTempo(&audioContext->resampler, tempo);
+	mAudioResamplerSetSource(&audioContext->resampler, buffer, tempo > 1.01 ? sampleRate : sampleRate / fauxClock, true);
 	mAudioResamplerProcess(&audioContext->resampler);
 	if (audioContext->sync) {
 		mCoreSyncConsumeAudio(audioContext->sync);

@@ -7,6 +7,7 @@
 
 #include <QMutex>
 #include <QRect>
+#include <QStringList>
 #include <array>
 #include <chrono>
 
@@ -19,6 +20,7 @@ namespace QGBA {
 class ControllerPainter {
 public:
 	void setKeys(unsigned keys);
+	void addAIInteraction(const QString& text);
 	void reset();
 	void setViewport(const QRect& viewport);
 	bool isVisible(const QSize& size) const;
@@ -30,6 +32,7 @@ private:
 	unsigned m_keys = 0;
 	std::array<Clock::time_point, 10> m_pressedUntil{};
 	QRect m_viewport;
+	QStringList m_aiInteractions;
 };
 
 }

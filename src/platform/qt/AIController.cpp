@@ -160,6 +160,9 @@ void AIController::setEnabled(bool enabled) {
 
 void AIController::reply(QLocalSocket* socket, const QJsonValue& id, const QJsonObject& result, const QString& error) {
 	if (!socket || socket->state() != QLocalSocket::ConnectedState) return;
+	const QString outcome = !error.isEmpty() ? tr("error: %1").arg(error) :
+		result.value("cancelled").toBool() ? tr("cancelled: %1").arg(result.value("reason").toString()) : tr("completed");
+	m_window->showAIInteraction(tr("MCP #%1  %2").arg(id.toVariant().toString(), outcome));
 	QJsonObject response{{"id", id}};
 	if (error.isEmpty()) response.insert("result", result);
 	else response.insert("error", error);
@@ -296,6 +299,8 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 	auto args = req.value("args").toObject();
 	auto fail = [&](const QString& message) { reply(socket, id, {}, message); };
 	if (!integer(id, 1, 9007199254740991.0)) { fail(tr("Invalid request id")); return; }
+	m_window->showAIInteraction(tr("MCP #%1  %2 %3").arg(id.toVariant().toString(), method.left(128),
+		QString::fromUtf8(QJsonDocument(args).toJson(QJsonDocument::Compact))));
 	if (!m_server.isListening()) { fail(tr("MCP is disabled")); return; }
 	if (method == "session") { reply(socket, id, session()); return; }
 	if (method == "connect") {
@@ -338,7 +343,7 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		if ((args.contains("max_frames") && !integer(args.value("max_frames"), 1, 600)) ||
 			(args.contains("screenshot") && !args.value("screenshot").isBool())) { fail(tr("Expected 1–600 max_frames and boolean screenshot")); return; }
 		if (method == "move_to" && (!integer(args.value("x"), 0, 511) || !integer(args.value("y"), 0, 511))) { fail(tr("Expected map coordinates x/y 0–511")); return; }
-		const QStringList conditions{"battle_menu_ready", "overworld_ready", "map_transition_complete", "dialogue"};
+		const QStringList conditions{"battle_menu_ready", "battle_move_ready", "battle_target_ready", "overworld_ready", "map_transition_complete", "dialogue"};
 		if (method == "wait_until" && (!conditions.contains(args.value("condition").toString()) ||
 			(args.contains("stable_frames") && !integer(args.value("stable_frames"), 1, 60)))) { fail(tr("Unsupported condition or stable_frames (1–60)")); return; }
 		CoreController::Interrupter guard(m_core);

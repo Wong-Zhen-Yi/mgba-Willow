@@ -70,6 +70,7 @@ public:
 	InputController* inputController() { return &m_inputController; }
 
 	QSize contentSize(bool fallback) const;
+	void showAIInteraction(const QString& text);
 
 signals:
 	void startDrawing();

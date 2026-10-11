@@ -24,7 +24,7 @@ Unchecked means **completion has not been verified**, not necessarily that the o
 - [x] M10 — Beat the Route 110 rival and Wally outside Mauville Gym.
 - [x] M11 — Defeat Wattson: Dynamo Badge; obtain Rock Smash.
 - [ ] M12 — Clear the Rusturf Tunnel rocks and obtain Strength.
-- [ ] M13 — Witness the Meteor Falls incident; defeat Maxie at Mt. Chimney.
+- [x] M13 — Witness the Meteor Falls incident; defeat Maxie at Mt. Chimney.
 - [ ] M14 — Defeat Flannery in Lavaridge: Heat Badge.
 - [ ] M15 — Defeat Norman in Petalburg: Balance Badge; obtain Surf.
 - [ ] M16 — Cross Route 118; free the Weather Institute from Team Aqua.
@@ -72,22 +72,26 @@ Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.
 
 ## Current progress
 
-- Save inspected: Loaded game observed through mGBA MCP screenshots on 2026-10-09. ROM is unsupported by decoded state tools; verification uses visible gameplay.
-- Verified completed objectives: M09, M10, M11. Earlier objectives remain unverified in this tracker.
-- Last observed position: 10 October 2026, southern Route 114, on the rocky plateau at the top of the stairs leading toward Meteor Falls. This is the last parent-chat screenshot before the side conversation; play may subsequently move. Verify the live position before input. Meteor Falls' incident and Mt. Chimney victory remain unverified.
-- Last verified save: 10 October 2026, Fallarbor Town, 3 badges, playtime 19:43. The message “MATT saved the game” was observed. Subsequent Route 114 travel and Nancy victory have not been verified saved. Start-of-session checkpoint: `root-story-start-20261010`; it predates this travel.
-- Healing / return point: Fallarbor Pokémon Center; full-health confirmation observed before departing for Route 114.
-- Last inspected party: Marshtomp level 30, 88/88 HP; Taillow level 19, 45/45 HP; Oddish level 14, 38/38 HP; Plusle level 13, 41/41 HP; Whismur level 6, 23/23 HP. No fainted Pokémon or status conditions at that inspection, after Picnicker Nancy. Later HP/PP require refresh. Marshtomp moves: Rock Smash, Mud Shot, Rock Tomb, Water Gun. Taillow moves: Wing Attack, Growl, Double Team, Quick Attack; Double Team replaced Focus Energy.
-- Supplies: All 3 Super Potions were used during the 10 October session; no Repel was available when inspected. Both Oran and both Pecha trees on northern Route 111 were harvested, one Pecha was planted, and one was used to cure poison. Remaining berry quantities require a fresh bag inspection. HM06 Rock Smash is taught; TM34 Shock Wave was received earlier. Acro Bike remains in Key Items.
-- Next story objective: Continue through southern Route 114 to Meteor Falls and verify the theft scene; then return to the Route 112 cable car for Mt. Chimney. M13 stays unchecked until both the scene and Maxie victory are verified. M12 Strength in Rusturf Tunnel remains unverified; the earlier HM list showed Cut, Flash, Rock Smash without Strength.
-- Next supporting checks: Refresh HP, status, and useful move PP. Replenish healing/status items and Repels at a reachable shop when practical; current supplies are depleted. Read `STORY_PROGRESS_NOTES.md` for navigation and menu difficulties.
-- Resume protocol: Read this tracker and the progress notes, discover the live session, and observe before input. ROM SHA1 `11b20175dcf8f33058aa5af4571b0fe9758a82a3` differs from the adapter's verified hash `f3ae088181bf583e55daf962a92bb46f4f1d07b7`; use screenshots/raw controls. Do not reset or load an older checkpoint. Explicit released-button frames improve tap reliability. Current connection status must be discovered rather than assumed from an earlier handoff.
-- Main-story completion: Unverified.
+- Save inspected: Live mGBA Willow MCP gameplay on 11 October 2026; verified `emerald_en_v1` state available and atomic screenshots.
+- Verified completed objectives: M09, M10, M11, M13. Earlier unchecked objectives and M12 Strength remain unverified.
+- Last observed and saved position: Lavaridge Town Pokémon Center 1F, map group 4 / number 5 (ID 1029), tile (7, 4), facing north at the nurse counter. Stable overworld, no menu or battle active.
+- Last save: 11 October 2026, Lavaridge Town, MATT, 3 badges, Pokédex 6, playtime 30:25. Explicit “MATT saved the game.” captured. Safe checkpoint: `root-lavaridge-healed-saved-20261011`.
+- Story outcome: Defeated the remaining Mt. Chimney grunt, Tabitha, and Maxie. Maxie's Mightyena level 24, Zubat level 24, and Camerupt level 25 defeated; his defeat dialogue and ₽2000 reward observed. Magma departed, Archie thanked us, and the Meteorite was recovered from the machine. M13 complete; Flannery remains undefeated/unverified.
+- Healing / return point: Lavaridge Pokémon Center. All five party members have full HP, no status conditions, and restored move PP.
+- Party in order: Marshtomp level 33 (96/96 HP); Oddish level 15 (41/41); Whismur level 6 (23/23); Plusle level 13 (41/41); Taillow level 20 (47/47). Marshtomp: Rock Smash 15/15, Mud Shot 15/15, Rock Tomb 10/10, Water Gun 25/25. Taillow: Wing Attack, Growl, Double Team, Quick Attack. No move changes this session.
+- Supplies confirmed in live inventory: 2 Super Potions, 3 Super Repels, 3 Parlyz Heals. Four Super Potions used this session (three in Maxie battle, one in Jagged Pass double battle); one Super Repel used on Jagged Pass. Meteorite in Key Items. Current money was not inspected.
+- Next story objective: M14 — defeat Flannery at Lavaridge Gym for the Heat Badge. Exit the Center south (interior exits at (6,8)/(7,8)); Gym entrance in town at (12,15), approach from (12,16). Heal and consider replenishing potions before the Gym; only two Super Potions remain. M12 Strength still needs verification before later traversal requirements.
+- Resume protocol: Discover the live session and observe before input; do not load an older checkpoint. Prefer supported decoded state/local maps and bounded `move_to` routes. Door tiles and Jagged Pass ledges required short raw directional input. Double-battle target cursor positions were initially misread: verify the flashing opponent, not just label position. Read `STORY_PROGRESS_NOTES.md` for this session's details.
+- Stopped at the user's explicit request to reach a good save point and leave a handoff note. MCP disconnected after saving; ordinary 1× speed restored. No gameplay input should continue until requested.
+- Main-story completion: Unverified; three badges.
 
 ## Progress log
 
 | Date | Objective | Evidence / outcome |
 | --- | --- | --- |
+| 2026-10-10 | Read-only story reinspection | Atomic live screenshot/state confirms Meteor Falls (13, 18). Badge flags 0x867–0x869 are set, 0x86A–0x86E clear: three badges. Archie encounter flag 0xCF and cable-car blocker removal flag 0x333 are set; Mt. Chimney victory flag 0x8B and Strength receipt flag 0x6A are clear. Names verified against pret/pokeemerald `include/constants/flags.h` and Meteor Falls/Mt. Chimney scripts. No gameplay input sent. |
+| 2026-10-10 | Meteor Falls scene verified (M13 partial) | Magma departed with the Meteorite for Mt. Chimney; Archie spoke and Aqua departed; Cozmo remained. Maxie victory still outstanding. Save flow completed at Meteor Falls, 22:59; post-scene checkpoint created. |
+| 2026-10-10 | Route 114 item and battles | Collected Protein at user request. Defeated Steve, Bernie, Lucas, Angelina. Taillow reached level 20; Marshtomp 81/88 HP, Taillow 39/47 HP. See progress notes for cliff-navigation difficulties. |
 | 2026-10-10 | Fallarbor reached, healed, and saved | Full-health nurse message and “MATT saved the game” observed. Save screen confirmed Fallarbor Town, 3 badges, playtime 19:43. No new required story milestone completed. |
 | 2026-10-10 | Route 111–114 travel | See `STORY_PROGRESS_NOTES.md` for battles, berries, recovery, and difficulties. Marshtomp reached level 30; Taillow reached level 19 and learned Double Team. Defeated Picnicker Nancy's Marill and Lombre on Route 114; last observed approaching Meteor Falls via the southern rocky stairs. |
 | 2026-10-09 | M11 completed | Defeated Wattson's Voltorb, Electrike, Magneton, Manectric using Marshtomp; Dynamo Badge and TM34 Shock Wave receipt observed. In-game save confirmed 3 badges. |
@@ -115,3 +119,10 @@ Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.
 
 | 2026-10-09 | Wally defeated | Defeated Wally and Ralts level 16. Taillow grew to level 17; Oddish received switch-training experience without damage. M10 complete with earlier May victory. |
 | 2026-10-09 | Safe checkpoint | Post-Wally healing confirmed at Mauville Center; all five party members healthy. In-game save flow completed and checkpoint root-oddish-wally-healed created. Save screen confirms 2 badges. |
+
+
+
+| 2026-10-11 | M13 completed | Live MCP session began on Mt. Chimney (14,16), Marshtomp level 32/full HP. Defeated remaining grunt, Tabitha, and Maxie (Mightyena 24, Zubat 24, Camerupt 25). Maxie admitted defeat and ₽2000 reward observed; Marshtomp reached level 33. Three Super Potions used during Maxie fight. |
+
+
+| 2026-10-11 | Lavaridge healed and saved; user-requested handoff | Recovered Meteorite; descended Jagged Pass; defeated Hiker Eric, Picnicker Autumn + Triathlete Julio (double), and Camper Ethan. Oddish reached level 15. Lavaridge Center restored all HP/status/PP. Explicit save-success screenshot confirms Lavaridge Town, 3 badges, 30:25. Stopped at nurse counter (7,4), checkpoint root-lavaridge-healed-saved-20261011. Next: Flannery (M14). |

@@ -1641,6 +1641,7 @@ static void _GBACoreEndVideoLog(struct mCore* core) {
 struct mCore* GBACoreCreate(void) {
 	struct GBACore* gbacore = malloc(sizeof(*gbacore));
 	struct mCore* core = &gbacore->d;
+	core->audioPlaybackBuffer = NULL;
 	memset(&core->opts, 0, sizeof(core->opts));
 	core->cpu = NULL;
 	core->board = NULL;

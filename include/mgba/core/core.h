@@ -50,6 +50,9 @@ struct mCore {
 #endif
 	struct mCoreConfig config;
 	struct mCoreOptions opts;
+	// Optional frontend-owned, native-speed playback. Protected by audio sync.
+	// getAudioBuffer continues to expose the unmodified emulated audio.
+	struct mAudioBuffer* audioPlaybackBuffer;
 
 	struct mRTCGenericSource rtc;
 

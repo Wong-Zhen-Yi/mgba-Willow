@@ -99,6 +99,7 @@ endif()
 set(SOURCE_FILES
 	AIController.cpp
 	EmeraldGameState.cpp
+	EmeraldMusic.cpp
 	AboutScreen.cpp
 	AbstractUpdater.cpp
 	Action.cpp
@@ -600,6 +601,15 @@ debug_strip(${BINARY_NAME}-qt)
 option(BUILD_AI_TESTS "Build standalone AI gameplay and Emerald adapter tests" OFF)
 if(BUILD_SUITE OR BUILD_AI_TESTS)
 	enable_testing()
+	add_executable(test-audio-tempo ${PROJECT_SOURCE_DIR}/src/util/test/audio-tempo.c)
+	target_link_libraries(test-audio-tempo ${BINARY_NAME})
+	add_test(util-audio-tempo test-audio-tempo)
+	if(M_CORE_GBA)
+		add_executable(test-qt-emeraldmusic test/emeraldmusic.cpp EmeraldMusic.cpp EmeraldGameState.cpp)
+		target_link_libraries(test-qt-emeraldmusic ${BINARY_NAME} ${QT}::Core)
+		set_target_properties(test-qt-emeraldmusic PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
+		add_test(platform-qt-emeraldmusic test-qt-emeraldmusic)
+	endif()
 	add_executable(test-qt-aigameplay test/aigameplay.cpp)
 	add_test(platform-qt-aigameplay test-qt-aigameplay)
 	add_executable(test-qt-emeraldgamestate test/emeraldgamestate.cpp EmeraldGameState.cpp)

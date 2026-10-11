@@ -2440,6 +2440,10 @@ void WindowBackground::setDimensions(int width, int height) {
 	m_aspectHeight = height;
 }
 
+void Window::showAIInteraction(const QString& text) {
+	if (m_display) m_display->showAIInteraction(text);
+}
+
 void WindowBackground::paintEvent(QPaintEvent* event) {
 	QWidget::paintEvent(event);
 	const QPixmap& logo = pixmap();
