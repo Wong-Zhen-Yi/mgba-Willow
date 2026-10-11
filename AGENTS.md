@@ -27,8 +27,8 @@ Place C tests in the component's `test/` directory, Qt tests in `src/platform/qt
 
 For gameplay in this workspace, follow [Willow control and verification](doc/willow-control.md).
 Use one action followed by inspection at decision points, retain full state and
-merge deltas by replacing top-level fields, plan from live tiles, avoid potential
-trainer sightlines, verify movement readiness after animations, and record
+merge deltas by replacing top-level fields, plan from live tiles, allow trainer
+and wild encounters, verify movement readiness after animations, and record
 milestones immediately. Make and verify in-game saves at safe points during long
 sessions; checkpoints do not replace them.
 

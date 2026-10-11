@@ -23,7 +23,7 @@ Unchecked means **completion has not been verified**, not necessarily that the o
 - [x] M09 — Deliver the Devon Goods to Stern at Slateport's Oceanic Museum; defeat the Aqua attackers.
 - [x] M10 — Beat the Route 110 rival and Wally outside Mauville Gym.
 - [x] M11 — Defeat Wattson: Dynamo Badge; obtain Rock Smash.
-- [ ] M12 — Clear the Rusturf Tunnel rocks and obtain Strength.
+- [x] M12 — Clear the Rusturf Tunnel rocks and obtain Strength.
 - [x] M13 — Witness the Meteor Falls incident; defeat Maxie at Mt. Chimney.
 - [ ] M14 — Defeat Flannery in Lavaridge: Heat Badge.
 - [ ] M15 — Defeat Norman in Petalburg: Balance Badge; obtain Surf.
@@ -70,18 +70,35 @@ Event-ticket destinations and their Pokémon are conditional extras, outside the
 
 Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Emerald#Post-Game).
 
+## User-selected Elite Four team — 11 October 2026
+
+Required final League roster: **Swampert, Gardevoir, Breloom, Swellow, Manectric, Flygon**. This explicit user choice supersedes earlier generic team suggestions. Catch and train their evolution lines through normal gameplay. Other Pokémon may serve as temporary support/HM users; enter the League with these six.
+
+- [ ] Swampert — evolve current Marshtomp (last observed level35).
+- [ ] Gardevoir — obtain and train Ralts/Kirlia.
+- [ ] Breloom — obtain and train Shroomish.
+- [x] Swellow — already evolved, last observed level22 with Exp. Share.
+- [ ] Manectric — obtain and train Electrike.
+- [ ] Flygon — obtain and train Trapinch/Vibrava.
+
+Verify levels, moves, health and supplies before M31. Oddish, Whismur and Plusle are temporary members. Coordinate gameplay with other connected controllers.
+
 ## Current progress
 
-- Latest live observation: 11 October 2026, Rusturf Tunnel, map group 24 / number 4 (ID 6148), tile (29,16), facing north at the Verdanturf entrance. Stable overworld, no battle/menu, no human input. MCP disconnected at user's request; no further gameplay input.
-- Checkpoint preserving this exact live state: `root-rusturf-exp-share-detour-20261011`. No new in-game save was made this session. Last verified in-game save remains Lavaridge Center, three badges, 30:25; use the current live state or latest checkpoint, not that older save, to preserve this session's progress.
-- Verified objectives: M07, M09, M10, M11, M13. M14 Flannery remains incomplete after a lost first attempt. Three badges: Stone, Knuckle, Dynamo.
-- Party in order, fully healed in Verdanturf immediately before entering the tunnel: Marshtomp 35 (102/102), Oddish 16 (43/43), Whismur 6 (23/23), Plusle 13 (41/41), Swellow 22 (60/60). No status; all move PP restored. Taillow evolved into Swellow. Oddish learned Stun Spore into its empty fourth move slot. All held items are empty.
-- Supplies: 6 Super Potions, 3 Revives, 1 Parlyz Heal, 3 Super Repels; 14 Poke Balls, 5 Great Balls, 1 Premier Ball. Latest inspected money before route battles was ₽980; subsequent trainer rewards increased it, final balance not inspected.
-- **Next session's immediate objective: obtain HM Strength in Rusturf Tunnel, then continue west to Rustboro and collect Exp. Share from Mr. Stone on Devon Corporation 3F.** Delivered Steven letter flag 0xBD is set; Exp. Share receipt flag 0x110 and Strength receipt flag 0x6A are clear. Exp. Share is currently eligible but uncollected.
-- Team preparation authorized by user: use Exp. Share to strengthen backups, prioritize Swellow, and consider catching a Fighting-type (e.g. Makuhita/Machop after checking availability) for Norman. No new Pokemon was caught this session. After preparation, return to Lavaridge and defeat Flannery (M14), then Norman (M15).
-- Tunnel navigation next: entrance (29,16), north through the narrow eastern corridor toward (29,10), then (28,5), west along y4/5 toward the central rock barrier and separated couple. This is a route hypothesis requiring fresh local-map verification. Attempted target (25,8) was a wall/no-path and moved nothing; do not repeat it. Wild encounters possible; Repels available.
-- Flannery battle lesson: Marshtomp easily beat Numel/Slugma/Camerupt, but Torkoal's Attract plus Body Slam paralysis stalled it. Do not rely on one attacker; keep Revives and adequate healing, verify the actual menu cursor, and account for Sunny Day/Overheat. Gym door is Lavaridge (5,15), not the old (12,15) note.
-- Resume protocol: discover live session, connect, observe full state and compare with this note before input. Do not load an older checkpoint automatically. Current checkpoint is separate from an in-game save.
+- **Latest handoff frame521822:** human continuation in Route111 double battle (19,119); Numel defeated, poisoned Shroomish18 remains. Marshtomp35 50/102HP, Oddish17 40/45HP, Swellow23 56/62HP with Exp. Share. MCP disconnected to avoid control conflict. Finish battle and heal before further training; M14 incomplete. No new in-game save verified.
+
+- **Latest live update (frame511800): Winstrate family challenge completed**, final Vicky defeat and reward720 verified. Route111 (16,115), Start menu open. Swellow23 now holds Exp. Share,56/62HP; Marshtomp35 97/102HP, all others healthy. One Super Repel used (two remain). Training and M14 still outstanding; no new in-game save verified since Devon. Earlier handoff below is historical.
+
+- Latest verified handoff: 11 October 2026, Rustboro Devon Corporation 3F, map11/2 (2818), tile (17,4), facing south beside Mr. Stone. Stable overworld, no menu/battle; MCP disconnected after completing the detour.
+- **Strength (M12) and Exp. Share obtained.** HM04 receipt and Strength explanation observed in Rusturf Tunnel; EXP. SHARE receipt observed from Mr. Stone at frame197195. Bag confirms HM04 item342 and Exp. Share item182. Neither newly taught/equipped yet.
+- **In-game save verified here:** “MATT saved the game” frame206295 and save_confirmed frame206316, Rustboro City, 3 badges, playtime36:41. Checkpoint root-strength-exp-share-saved-20261011 adds retry protection.
+- Three badges: Stone, Knuckle, Dynamo. M14 Flannery remains incomplete after the earlier loss. Verified tracker objectives: M07, M09, M10, M11, M12, M13.
+- Party: Marshtomp35 102/102, Oddish16 43/43, Whismur6 23/23, Plusle13 41/41, Swellow22 60/60. No status; all held items empty. Marshtomp Water Gun22/25 PP; other PP unchanged from full healing.
+- Supplies unchanged: Super Potion6, Revive3, Parlyz Heal1, Super Repel3; Poke Ball14, Great Ball5, Premier Ball1. Exp. Share in Items pocket. No captures or items consumed this continuation.
+- Defeated Hiker Mike (two Geodude16, Machop16), reward640; escaped wild Whismur6, Nincada7, Taillow8 without damage. Earlier intermittent single-tap input blocker cleared on reconnect; some taps still missed, so inspect every prompt and cursor. One screenshot/cursor discrepancy opened Bag; exited without using items.
+- **Next objective: give Exp. Share to Swellow and train backups; consider catching a Fighting-type for Norman.** Then return to Lavaridge and defeat Flannery (M14), followed by Norman (M15). User authorized leveling/catching for team optimization.
+- Flannery lesson: Torkoal's Attract plus Body Slam paralysis stalled Marshtomp. Prepare another viable attacker, Revives and adequate healing. Gym door is Lavaridge (5,15).
+- Resume from live state after discover/connect/full observation. No checkpoint loading needed; new in-game save now includes the detour progress.
 ## Progress log
 
 | Date | Objective | Evidence / outcome |
@@ -123,4 +140,17 @@ Postgame reference: [Emerald walkthrough, postgame sections](https://bulbapedia.
 
 
 | 2026-10-11 | Lavaridge healed and saved; user-requested handoff | Recovered Meteorite; descended Jagged Pass; defeated Hiker Eric, Picnicker Autumn + Triathlete Julio (double), and Camper Ethan. Oddish reached level 15. Lavaridge Center restored all HP/status/PP. Explicit save-success screenshot confirms Lavaridge Town, 3 badges, 30:25. Stopped at nurse counter (7,4), checkpoint root-lavaridge-healed-saved-20261011. Next: Flannery (M14). |
+
+
+### Latest continuation — input blocker, 11 October 2026
+- Current live state supersedes entrance handoff: Rusturf Tunnel (29,13), battling Hiker Mike. First Geodude16 defeated; Marshtomp35 remains102/102, Water Gun24 PP. Other party unchanged and healthy.
+- Pending prompt: Hiker Mike is about to use another Geodude. Single-frame confirmation taps fail intermittently/repeatedly; longer holds rejected by MCP. Stopped safely and disconnected, checkpoint root-rusturf-mike-input-blocker-20261011. No new in-game save.
+- Immediate next action: resolve input blocker and finish Mike. Then obtain Strength (M12), collect Exp. Share at Devon3F, train backups before Flannery. Neither item acquired this continuation.
+
+
+### Detour objectives completed — 11 October 2026
+- Strength (M12) and Exp. Share received; explicit HM04/Strength and EXP. SHARE messages observed. Live position Devon3F (17,4), map11/2. Party unchanged, fully healthy, Marshtomp35 Water Gun22 PP. No supplies consumed. Preparing in-game save before handoff.
+
+
+
 

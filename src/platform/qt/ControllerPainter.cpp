@@ -91,26 +91,34 @@ void ControllerPainter::paint(QPainter* painter, const QSize& size) {
 		painter->restore();
 	}
 	const QRect band(0, viewport.bottom() + 1, size.width(), size.height() - viewport.bottom() - 1);
-	if (!viewport.isValid() || band.height() < 64 || band.width() < 240) return;
-	const qreal scale = std::min({qreal(1.25), (band.width() - 24) / 420., (band.height() - 16) / 112.});
+	if (!viewport.isValid() || band.height() < 64 || band.width() < 240)
+		return;
+	const qreal scale = std::min({ qreal(1.25), (band.width() - 24) / 736., (band.height() - 16) / 112. });
 	painter->save();
 	painter->setClipRect(band);
 	painter->setRenderHint(QPainter::Antialiasing);
-	painter->translate(band.center().x() - 210 * scale, band.center().y() - 56 * scale);
+	painter->translate(band.left() + 12, band.center().y() - 56 * scale);
 	painter->scale(scale, scale);
 	painter->setPen(QPen(QColor("#343d4b"), 1.5));
 	painter->setBrush(QColor("#151a22"));
+	const QRectF objectivePanel(436, 0, (band.width() - 24) / scale - 436, 112);
+	painter->drawRoundedRect(objectivePanel, 8, 8);
 	painter->drawRoundedRect(QRectF(0, 8, 420, 104), 38, 38);
 	QFont font = painter->font();
 	font.setPixelSize(12);
 	font.setBold(true);
 	painter->setFont(font);
+	painter->setPen(QColor("#97f9db"));
+	painter->drawText(objectivePanel.adjusted(12, 8, -12, -8), Qt::AlignLeft | Qt::AlignTop,
+	                  QStringLiteral("Objective:"));
 	const auto button = [&](const QRectF& rect, unsigned bit, const QString& label, bool round = false) {
 		const bool down = keys & (1U << bit);
 		painter->setPen(QPen(down ? QColor("#97f9db") : QColor("#455165"), down ? 2 : 1));
 		painter->setBrush(down ? QColor("#36d6a6") : QColor("#252e3b"));
-		if (round) painter->drawEllipse(rect);
-		else painter->drawRoundedRect(rect, 5, 5);
+		if (round)
+			painter->drawEllipse(rect);
+		else
+			painter->drawRoundedRect(rect, 5, 5);
 		painter->setPen(down ? QColor("#08261d") : QColor("#b9c4d3"));
 		painter->drawText(rect, Qt::AlignCenter, label);
 	};

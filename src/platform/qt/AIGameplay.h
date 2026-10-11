@@ -12,7 +12,7 @@ public:
 	struct Step { unsigned keys; int frames; };
 	static constexpr std::size_t MaxSteps = 200;
 
-	bool start(const std::vector<Step>& steps, uint64_t frame) {
+	bool start(const std::vector<Step>& steps, uint64_t frame, bool alignToBoundary = false) {
 		if (pending() || steps.empty() || steps.size() > MaxSteps) return false;
 		int total = 0;
 		for (const auto& step : steps) {
@@ -23,14 +23,20 @@ public:
 		m_steps = steps;
 		m_completed = 0;
 		m_remaining = steps.front().frames;
-		m_start = frame;
-		m_end = frame + total;
+		m_waitForBoundary = alignToBoundary;
+		m_start = frame + (alignToBoundary ? 1 : 0);
+		m_end = m_start + total;
 		return true;
 	}
 
 	// Called after each completed emulated frame. True only on final completion.
 	bool finishFrame() {
-		if (!pending() || --m_remaining) return false;
+		if (pending() && m_waitForBoundary) {
+			m_waitForBoundary = false;
+			return false;
+		}
+		if (!pending() || --m_remaining)
+			return false;
 		++m_completed;
 		if (m_completed == m_steps.size()) return true;
 		m_remaining = m_steps[m_completed].frames;
@@ -38,7 +44,7 @@ public:
 	}
 	void cancel() { m_remaining = 0; }
 	bool pending() const { return m_remaining > 0; }
-	unsigned keys() const { return pending() ? m_steps[m_completed].keys : 0; }
+	unsigned keys() const { return pending() && !m_waitForBoundary ? m_steps[m_completed].keys : 0; }
 	std::size_t completed() const { return m_completed; }
 	uint64_t startFrame() const { return m_start; }
 	uint64_t endFrame() const { return m_end; }
@@ -56,6 +62,7 @@ private:
 	std::vector<Step> m_steps;
 	std::size_t m_completed = 0;
 	int m_remaining = 0;
+	bool m_waitForBoundary = false;
 	uint64_t m_start = 0;
 	uint64_t m_end = 0;
 };

@@ -36,13 +36,17 @@ route, not repeated directional guesses. Gym holes, geysers, and forced movement
 need explicit observation and short controls; a visible hole does not prove an
 active warp. Refresh the map after any transition or unexpected displacement.
 
-`move_to` avoids potential trainer sightlines by default and rechecks the next
-edge while moving. This conservative rule covers all four cardinal rays within
-each active trainer's range, including possible rotation. It does not decode
-defeat flags or prove that walls block sight; defeated trainers can cause a
-detour or no-path result. Use `avoid_trainers:false` only after inspecting the
-route and deciding that a battle or this potential exposure is acceptable.
-Replan after `trainer_sightline`, blockage, encounters, or any incomplete route.
+For this playthrough, allow trainer and wild encounters during normal travel.
+Use `move_to` with `avoid_trainers:false` after inspecting the live route; the
+tool otherwise avoids potential trainer sightlines by default. Do not detour
+around trainers or encounter terrain, buy or use Repels, or flee battles solely
+to avoid encounters or shorten travel. Handle encounters as part of the
+playthrough, inspecting each battle prompt before acting. If the party needs
+recovery, heal and replenish supplies before continuing.
+
+Movement still stops on encounters and other decision points. Inspect the new
+state, handle the battle or interaction, then replan after `trainer_sightline`,
+blockage, encounters, or any incomplete route.
 
 ## Readiness and animation
 

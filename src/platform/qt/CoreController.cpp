@@ -593,7 +593,11 @@ bool CoreController::advanceAI(const std::vector<AIGameplay::Step>& steps) {
 	if (!hasStarted() || mCoreThreadHasExited(&m_threadContext) || !m_aiControl) return false;
 	Interrupter interrupter(this);
 	QMutexLocker locker(&m_actionMutex);
-	if (isPaused() || m_moreFrames >= 0 || m_aiStateAction.pending() || !m_aiGameplay.start(steps, m_frameCounter)) return false;
+	// Interruption can occur after the game's input poll. Start at the next
+	// completed frame so even a one-frame tap spans a full polling interval.
+	if (isPaused() || m_moreFrames >= 0 || m_aiStateAction.pending() ||
+	    !m_aiGameplay.start(steps, m_frameCounter, true))
+		return false;
 	m_aiKeys = m_aiGameplay.keys();
 	m_aiActionEnd = m_aiGameplay.endFrame();
 	updateKeys();

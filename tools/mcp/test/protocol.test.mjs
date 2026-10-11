@@ -238,4 +238,20 @@ test('verified Emerald MCP rejects batch confirmation and refreshes before a tap
   assert.equal(calls.at(-1).method, 'press');
   assert.equal(tapped.structuredContent.state_format, 'full');
   assert.equal(tapped.structuredContent.game_state.battle.battlers[0].hp, 7);
+  // Preconditions use a new bridge snapshot, even when the client's previous
+  // observation still shows the expected cursor.
+  game_state.menu.cursor = 1;
+  const actionsBefore = calls.filter(call => call.method === 'press').length;
+  const stale = await client.callTool({ name: 'press', arguments: {
+    button: 'A', expected_menu: { kind: 'battle_action', cursor: 0 },
+  } });
+  assert.equal(stale.isError, true);
+  assert.match(stale.content[0].text, /Menu changed/);
+  assert.equal(calls.at(-1).method, 'get_game_state');
+  assert.equal(calls.filter(call => call.method === 'press').length, actionsBefore);
+  const checked = await client.callTool({ name: 'press', arguments: {
+    button: 'Down', expected_menu: { kind: 'battle_action', cursor: 1 },
+  } });
+  assert.equal(checked.isError, undefined);
+  assert.equal(calls.at(-1).method, 'press');
 });

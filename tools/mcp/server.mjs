@@ -47,7 +47,7 @@ function call(method, args) {
 
 async function controlledInput(method, args) {
   // Refresh known supported state: the game runs between MCP requests.
-  if (stateResponses.previous?.supported === true) {
+  if (stateResponses.previous?.supported === true || args.expected_menu) {
     const observation = await call('get_game_state', { screenshot: false });
     return guardedVerifiedInput(call, method, args, observation);
   }
@@ -97,9 +97,11 @@ register('wait_until', 'Advance with no AI buttons until a decoded Emerald condi
   condition: z.enum(['battle_menu_ready', 'battle_move_ready', 'battle_target_ready', 'overworld_ready', 'map_transition_complete', 'dialogue']),
   max_frames: z.number().int().min(1).max(600).optional(), stable_frames: z.number().int().min(1).max(60).optional(),
 }, false, args => call('wait_until', args));
-register('press', 'Tap one button, then keep AI input released for an explicit interval. Defaults to a one-frame hold and two-frame release; works on supported and unsupported ROMs. No screenshot by default.', {
+register('press', 'Tap one button, then keep AI input released for an explicit interval. Defaults to a one-frame hold and two-frame release; works on supported and unsupported ROMs. Optional expected_menu checks fresh verified menu kind, cursor or party slot before sending input; a mismatch advances no action frames. Inspect after each tap. No screenshot by default.', {
   ...observationSchema, button: z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R']),
   hold_frames: z.number().int().min(1).max(60).optional(), release_frames: z.number().int().min(1).max(60).optional(),
+  expected_menu: z.object({ kind: z.string().min(1), cursor: z.number().int().min(0).max(65535).optional(),
+    selected_party_slot: z.number().int().min(0).max(5).optional() }).optional(),
 }, false, args => controlledInput('press', args));
 const actionSchema = {
   buttons: z.array(z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R'])).max(10),

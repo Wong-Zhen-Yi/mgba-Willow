@@ -1,6 +1,16 @@
 // Validate verified Emerald input before advancing any frames. Raw tools remain
 // available for other games, whose decision boundaries we cannot decode.
 export function inputProblem(state, method, args) {
+  if (args.expected_menu) {
+    if (state?.supported !== true || state.available !== true) {
+      return 'Menu preconditions require available verified game state. Observe before pressing.';
+    }
+    for (const [field, value] of Object.entries(args.expected_menu)) {
+      if (state.menu?.[field] !== value) {
+        return `Menu changed: expected ${field}=${value}, observed ${state.menu?.[field] ?? 'unavailable'}. Observe and decide again; no input sent.`;
+      }
+    }
+  }
   if (state?.supported !== true) return;
   const actions = method === 'press'
     ? [{ buttons: [args.button], frames: args.hold_frames ?? 1 }]

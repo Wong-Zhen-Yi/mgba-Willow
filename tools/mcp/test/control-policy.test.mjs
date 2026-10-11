@@ -5,6 +5,25 @@ import { inputProblem, guardedVerifiedInput } from '../control-policy.mjs';
 const state = { supported: true, available: true, interaction: 'overworld', movement_available: true,
   map: { id: 1 }, menu: { kind: 'none' }, player: { moving: false }, recent_events: [] };
 
+test('menu preconditions reject stale selections without sending input', async () => {
+  const current = { ...state, interaction: 'menu', menu: { kind: 'start', cursor: 2 } };
+  let calls = 0;
+  const request = async () => { calls++; return { game_state: current }; };
+  for (const expected_menu of [{ kind: 'bag' }, { kind: 'start', cursor: 1 },
+    { kind: 'party', selected_party_slot: 1 }]) {
+    await assert.rejects(guardedVerifiedInput(request, 'press', { button: 'A', expected_menu },
+      { game_state: current }), /Menu changed/);
+  }
+  assert.equal(calls, 0);
+  await guardedVerifiedInput(request, 'press', { button: 'Down', expected_menu: { kind: 'start', cursor: 2 } },
+    { game_state: current });
+  assert.equal(calls, 1);
+  assert.match(inputProblem({ supported: false }, 'press', { button: 'A', expected_menu: { kind: 'start' } }), /available verified/);
+  assert.match(inputProblem({ ...current, available: false }, 'press', { button: 'A', expected_menu: { kind: 'start' } }), /available verified/);
+  assert.equal(inputProblem({ ...current, menu: { kind: 'party', selected_party_slot: 1 } }, 'press',
+    { button: 'A', expected_menu: { kind: 'party', selected_party_slot: 1 } }), undefined);
+});
+
 test('decision batches are rejected before any frames advance', async () => {
   const actions = [{ buttons: ['A'], frames: 1 }, { buttons: [], frames: 2 }, { buttons: ['A'], frames: 1 }];
   let calls = 0;

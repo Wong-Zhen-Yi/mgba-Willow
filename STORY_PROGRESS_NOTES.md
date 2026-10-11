@@ -128,3 +128,37 @@ This log records observed outcomes and problems. The checklist in `POKEMON_EMERA
 - Exp. Share eligibility confirmed from live flags and pret/pokeemerald source: FLAG_DELIVERED_STEVEN_LETTER=0xBD set; FLAG_RECEIVED_EXP_SHARE=0x110 clear; FLAG_RECEIVED_HM_STRENGTH=0x6A clear. M07 marked verified. Exp. Share item is not present; key-item numeric272 is a different item, not receipt evidence.
 - Navigation lessons: Route117 trainers stand south of the main path and can see along long vertical lines; offset the route when avoiding battles. Warp lists may contain inactive Gym pits, so check tile behavior. Geyser spawn avatar state can require a short raw step before planner movement.
 - Do not resume gameplay until the user requests it. Start from current live state; if restarting, latest checkpoint preserves the handoff. No older checkpoint restored this session.
+
+## 11 October 2026 — Rusturf continuation input blocker
+- Reconnected at Rusturf Tunnel (29,16). North route requires crossing trainer risk at (29,13); fully healed party justified deliberate exposure. Hiker Mike challenged us.
+- Marshtomp35 defeated Mike's first Geodude16 with Water Gun, gained294 EXP, remains102/102 HP; Water Gun24 PP. No other party damage or supply consumption.
+- Stopped at “HIKER MIKE is about to use GEODUDE.” in battle, map24/4, (29,13). Single-frame A/B taps repeatedly failed to advance this prompt. Longer confirmation holds are rejected by bridge decision-input validation. Reduced AI speed from8 to1, then2; failures persisted. No emulator reset or checkpoint load.
+- Checkpoint root-rusturf-mike-input-blocker-20261011 preserves current battle. No new in-game save. Strength and Exp. Share remain uncollected. Next: resolve confirmation-input blocker, finish Hiker Mike, then continue Strength -> Rustboro Devon3F Exp. Share.
+
+## 11 October 2026 — Strength obtained
+- Resumed successfully: single confirmation taps advanced again. Defeated Hiker Mike's remaining Geodude16 and Machop16; reward640 observed. Marshtomp35 remains102/102, Water Gun22 PP. No supplies used.
+- Smashed Rusturf Tunnel boulder at (24,5), interacting west from (25,5). Couple thanked us; “Obtained the HM04!” observed at frame147967. M12 verified complete. Next: finish dialogue, west to Rustboro and collect Exp. Share at Devon3F.
+
+## 11 October 2026 — Exp. Share obtained
+- Reached Rustboro via Route116, escaped wild Whismur6, Nincada7 and Taillow8 without damage; no supplies used. Hiker Mike defeated earlier for640.
+- Devon Corporation3F, map11/2, (17,4), facing south to Mr. Stone (17,5). Delivered-letter thanks observed, then “Obtained the EXP. SHARE!” at frame197195. Strength and Exp. Share detour complete. Next: equip/train Swellow and strengthen backups before Flannery; consider a Fighting-type for Norman.
+
+## Latest handoff — Strength and Exp. Share saved, 11 October 2026
+- In-game save success “MATT saved the game” observed frame206295, save_confirmed206316. Rustboro City, Devon3F map11/2 (2818), (17,4), facing south; 3 badges, playtime36:41. Latest handoff frame207480 stable overworld. Checkpoint root-strength-exp-share-saved-20261011; disconnected afterward.
+- Inventory confirms Exp. Share182 and HM04 Strength342. Both unequipped/untaught. All five Pokemon fully healthy, no status, held items empty; Marshtomp35 Water Gun22PP. Supplies unchanged. No captures this continuation.
+- Next: give Exp. Share to Swellow22, train backups and consider a Fighting-type for Norman, then retry Flannery. Current objectives section in tracker supersedes earlier handoffs and input-blocker notes.
+
+## 11 October 2026 — Flannery preparation resumed
+- Swellow22 given Exp. Share: explicit held-item message and held_item_id182 verified at frame246371, Devon3F (17,4). All party healthy; supplies unchanged. Bag submenu directional taps failed; party > Item > Give worked. Continuing training before Flannery (M14).
+
+## 11 October 2026 — user-selected League roster
+- User requires Swampert, Gardevoir, Breloom, Swellow, Manectric and Flygon for the Elite Four. Tracker updated with acquisition/evolution checklist. Swellow22 holds Exp. Share; Marshtomp35 remains unevolved; other desired lines not verified acquired.
+- Read-only inspection frame323089: map0/31, (29,17), stable overworld, all five party members healthy, three badges. Another MCP controller is actively advancing gameplay; no gameplay inputs sent by this thread. Existing save remains the latest verified save. Ongoing controller should follow this roster when catching/training.
+
+- Winstrate Victor defeated (Taillow16, Zigzagoon16), reward640; Victoria defeated (Roselia17), reward680. Swellow switched in and OHKO Roselia with Wing Attack, reached23 at frame451253, now56/62HP. Marshtomp35 97/102HP. No healing used; one Super Repel consumed crossing Rusturf, two remain. Continuing family series at (13,115), Route111 map26; Vivi dialogue active.
+
+## 11 October 2026 — Winstrate family completed after manual continuation
+- User reported the Winstrate house defeated. Fresh live observation at frame511800 corroborates final battle: "Player defeated WINSTRATE VICKY!" frame500936; reward720 frame501127; final invitation dialogue frame501311. Family series complete; do not revisit as an undefeated training opportunity. Victor/Victoria were verified earlier; Vivi completion inferred from reaching and defeating final family member Vicky.
+- Live location Route111 map26, (16,115), facing north, Start menu open (MATT selected); no battle. Swellow23 holds Exp. Share182, 56/62HP, Wing Attack32PP. Marshtomp35 97/102HP, Rock Smash11, Mud Shot14, Rock Tomb8, Water Gun21PP. Other members full HP/no status. No new in-game save yet verified after the training.
+- Next: continue finding stronger training opportunities for a reliable backup, heal and save preparation, then Flannery/Heat Badge (M14). Winstrate family is complete, not a remaining training target.
+- Subsequent human continuation moved into Route111 double battle at (19,119). Last handoff frame521822: Numel18 defeated, poisoned Shroomish18 22/49HP remains; Marshtomp35 50/102HP (no status), Oddish grew17 40/45HP, Swellow23 56/62HP holds Exp. Share. Supplies: Super Potion6, Revive3, Parlyz Heal1, Super Repel2; new item36 present (name not verified here). No new save evidence retained. MCP disconnected to avoid conflicting with ongoing human controls. Resume from fresh observation; finish battle, heal, continue backup training, then M14.

@@ -60,5 +60,23 @@ int main() {
 		CHECK(game.finishFrame() == (i == 199));
 	}
 	CHECK(!game.pending() && game.keys() == 0 && game.completed() == 200 && game.endFrame() == 1600);
-	std::cout << "PASS: shared directional priority, contiguous exact frame steps, limits, cancellation, input release, and restart\n";
+	// A request arriving after the current frame's input poll must not spend
+	// its one-frame tap on that partial frame. Every poll gets the full step.
+	CHECK(game.start({ { Down, 1 }, { 0, 2 } }, 2000, true));
+	CHECK(game.startFrame() == 2001 && game.endFrame() == 2004);
+	CHECK(game.pending() && game.keys() == 0 && game.completed() == 0);
+	CHECK(!game.finishFrame());
+	CHECK(game.keys() == Down && game.completed() == 0);
+	CHECK(!game.finishFrame());
+	CHECK(game.keys() == 0 && game.completed() == 1);
+	CHECK(!game.finishFrame());
+	CHECK(game.finishFrame() && game.completed() == 2);
+	CHECK(game.start({ { A, 1 } }, 3000, true));
+	game.cancel();
+	CHECK(!game.pending() && game.keys() == 0 && game.completed() == 0);
+	CHECK(!game.finishFrame());
+	CHECK(game.start({ { B, 1 } }, 4000));
+	CHECK(game.keys() == B && game.finishFrame());
+	std::cout << "PASS: shared directional priority, frame-aligned taps, contiguous exact frame steps, limits, "
+	             "cancellation, input release, and restart\n";
 }
