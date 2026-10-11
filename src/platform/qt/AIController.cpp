@@ -343,6 +343,10 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		if ((args.contains("max_frames") && !integer(args.value("max_frames"), 1, 600)) ||
 			(args.contains("screenshot") && !args.value("screenshot").isBool())) { fail(tr("Expected 1–600 max_frames and boolean screenshot")); return; }
 		if (method == "move_to" && (!integer(args.value("x"), 0, 511) || !integer(args.value("y"), 0, 511))) { fail(tr("Expected map coordinates x/y 0–511")); return; }
+		if (method == "move_to" && args.contains("avoid_trainers") && !args.value("avoid_trainers").isBool()) {
+			fail(tr("Expected boolean avoid_trainers"));
+			return;
+		}
 		const QStringList conditions{"battle_menu_ready", "battle_move_ready", "battle_target_ready", "overworld_ready", "map_transition_complete", "dialogue"};
 		if (method == "wait_until" && (!conditions.contains(args.value("condition").toString()) ||
 			(args.contains("stable_frames") && !integer(args.value("stable_frames"), 1, 60)))) { fail(tr("Unsupported condition or stable_frames (1–60)")); return; }

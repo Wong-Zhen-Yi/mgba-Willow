@@ -4,6 +4,28 @@ This local MCP controls a visible game in this checkout's Qt mGBA app. It provid
 
 ## Structured Emerald state and navigation
 
+Follow [Willow control and verification](../../doc/willow-control.md) for prompt
+inspection, battle-state reconciliation, live route planning, and milestone/save
+logging. Verified Emerald rejects repeated or held confirmation inputs: use one
+`press`, inspect the new prompt, then choose the next input. Raw travel checks
+decoded state between input frames and stops with `decision_point`,
+`movement_restricted`, or `human_input` when inspection is needed. Only completed
+sequence steps are returned. This adds IPC overhead; prefer `move_to` for travel.
+
+`move_to` now defaults to `avoid_trainers:true`. Live tiles expose `trainer_risk`
+and NPCs expose trainer type, range, and facing. Potential sightlines are
+conservative cardinal rays that account for rotation; defeat flags and sight
+occlusion are not decoded. Inspect before using `avoid_trainers:false` for an
+intentional battle or a route past a known defeated trainer. New hazards stop
+movement with `trainer_sightline`.
+
+`movement_available` reports the strengthened overworld readiness check, including
+single/held movement animations, tile transitions, and forced movement. Battle,
+dialogue, and decoded menu responses always carry full state; ordinary overworld
+responses continue to use per-client deltas. `act` and `act_sequence` also accept
+`full_state:true`. Restart the MCP server to load control-policy changes and
+rebuild/relaunch the emulator to load decoder and routing changes.
+
 The read-only `emerald_en_v1` adapter supports two exact English Pokémon Emerald ROM hashes: retail `f3ae088181bf583e55daf962a92bb46f4f1d07b7` and the alternate dump `4c743011d7f9af0fbc1ef1de7bff157dde718f56`. The alternate layout was checked against a read-only live snapshot for save pointers, map/grid, player objects, overworld callback and encrypted party checksums. It hashes the loaded ROM backing store after zeroing only the three cartridge GPIO header halfwords at `0xC4–0xC9` in a private copy: mGBA stores changing clock registers there, so hashing them directly would reject even supported games after they run. Responses retain the original backing hash as `rom_sha1` and report the hash used for identification as `normalized_rom_sha1`. A matching header alone or any other patched ROM does not enable the adapter. Other ROMs report `game_state.supported: false` and retain every raw tool. No ROM is supplied or downloaded.
 
 - `get_game_state({full_state:true})` returns map coordinates, interaction, party HP/status/moves/PP, inventory, and numeric event flags. `battle.battlers` adds current HP, side/slot, party index, confusion counters, and stat changes relative to neutral. `menu` distinguishes battle action/move/target input, bag, party, start, and save phases. Battle readiness requires a live player controller, its execution bit, a valid cursor and no palette fade; stale callback pointers are insufficient. Battler IDs are resolved through positions, so target side is never guessed from an ID or screenshot. ROM tables provide move/species names where valid; secure party data and encrypted bag quantities retain their validation.
@@ -16,7 +38,7 @@ The read-only `emerald_en_v1` adapter supports two exact English Pokémon Emeral
 
 Before confirming an attack, read `menu.selected_move` and, when present, `menu.target`; check current battler HP and confusion before choosing to stay in or switch. After a story milestone, preserve the relevant message evidence and reconcile it with flags instead of treating incidental trainer battles as progress. At a stopping point, heal, perform the in-game save, verify `save_confirmed`, obtain `get_handoff`, update the story notes with the next objective and any uncertain milestones, then disconnect.
 
-New tools return metadata without screenshots by default; request `screenshot:true` when needed. All observations and action results include decoded state. The first response has `state_format:"full"` and `game_state`. Later responses use `state_format:"delta"`, `base_frame`, `game_state_changes`, and `removed_state_fields`: replace each changed top-level field and remove the listed fields. `full_state:true` refreshes the baseline. Each MCP client has its own baseline, which resets on connect, checkpoint restore, map changes and backward frame changes. `observe` retains its screenshot default and accepts `screenshot:false`.
+New tools return metadata without screenshots by default; request `screenshot:true` when needed. All observations and action results include decoded state. The first response has `state_format:"full"` and `game_state`. Later ordinary overworld responses use `state_format:"delta"`, `base_frame`, `game_state_changes`, and `removed_state_fields`: replace each changed top-level field and remove the listed fields. `full_state:true` refreshes the baseline. Each MCP client has its own baseline, which resets on connect, checkpoint restore, map changes and backward frame changes. `observe` retains its screenshot default and accepts `screenshot:false`.
 
 RAM is copied at completed frame boundaries during AI control; dynamic pointers are resolved exclusively within that copy. With software rendering, `atomic:true` certifies that screenshot and state share the indicated frame. Hardware rendering reports `atomic:false` because a matching completed framebuffer is not guaranteed. Immediately after connecting or restoring a checkpoint, state may be unavailable until a frame completes, including while manually paused. The game continues after an observation, so use fresh state before deciding. A route's `progress.stop_frame` is its stop frame; the returned observation may be later.
 

@@ -605,7 +605,9 @@ bool CoreController::startAIStateAction(const QString& method, const QJsonObject
 	QMutexLocker locker(&m_actionMutex);
 	if (!hasStarted() || !m_aiControl || isPaused() || m_moreFrames >= 0 || aiActionPending() || !m_aiGameState.supported() || m_humanKeys) return false;
 	if (method == "move_to") {
-		if (!m_aiStateAction.startMove(m_aiGameState, QPoint(args.value("x").toInt(), args.value("y").toInt()), args.value("max_frames").toInt(600))) return false;
+		if (!m_aiStateAction.startMove(m_aiGameState, QPoint(args.value("x").toInt(), args.value("y").toInt()),
+		                               args.value("max_frames").toInt(600), args.value("avoid_trainers").toBool(true)))
+			return false;
 	} else {
 		m_aiStateAction.startWait(m_aiGameState, args.value("condition").toString(), args.value("max_frames").toInt(600), args.value("stable_frames").toInt(2));
 	}

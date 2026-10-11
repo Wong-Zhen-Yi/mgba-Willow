@@ -6,7 +6,11 @@ export class StateResponses {
     if (!state) return result;
     const previous = this.previous;
     this.previous = structuredClone(state);
-    if (full || !previous || !state.available || previous.adapter !== state.adapter ||
+    // Decision snapshots retain complete battle/menu context, including HP and
+    // selected targets, without relying on a consumer's earlier delta history.
+    if (full || state.interaction === 'battle' || state.interaction === 'dialogue' ||
+        (state.menu?.kind && state.menu.kind !== 'none') ||
+        !previous || !state.available || previous.adapter !== state.adapter ||
         previous.map?.id !== state.map?.id || state.frame <= previous.frame) {
       return { ...result, state_format: 'full' };
     }

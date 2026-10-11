@@ -38,3 +38,16 @@ test('deltas explicitly list removed state fields and do not retain mutable refe
   assert.deepEqual(delta.game_state_changes, { frame: 2 });
   assert.deepEqual(delta.removed_state_fields, ['inventory']);
 });
+
+test('battle and menu decisions always carry complete HP and cursor context', () => {
+  const responses = new StateResponses();
+  responses.apply({ game_state: state(1) });
+  for (const [index, context] of [{ interaction: 'battle', battle: { battlers: [{ hp: 7 }] } },
+    { interaction: 'dialogue' }, { menu: { kind: 'party', selected_party_slot: 2 } }].entries()) {
+    const snapshot = { ...state(index + 2, 7), ...context };
+    const result = responses.apply({ game_state: snapshot });
+    assert.equal(result.state_format, 'full');
+    assert.deepEqual(result.game_state, snapshot);
+    assert.equal(result.game_state_changes, undefined);
+  }
+});

@@ -123,7 +123,10 @@ QPoint EmeraldGameState::position() const {
 	return p ? QPoint(qint16(read(p + 16, 2)) - 7, qint16(read(p + 18, 2)) - 7) : QPoint(-1, -1);
 }
 int EmeraldGameState::mapId() const { quint32 s = read(Save1, 4); return ready() ? int((read(s + 4) << 8) | read(s + 5)) : -1; }
-bool EmeraldGameState::moving() const { return read(Avatar + 3) == 1 || ((read(playerObject()) & 0x40) && !(read(playerObject()) & 0x80)); }
+bool EmeraldGameState::moving() const {
+	return read(Avatar + 3) != 0 || (read(playerObject()) & 2) ||
+	    ((read(playerObject()) & 0x40) && !(read(playerObject()) & 0x80));
+}
 
 QString EmeraldGameState::interaction() const {
 	quint32 callback = read(Main + 4, 4) & ~1U;
@@ -320,7 +323,8 @@ bool EmeraldGameState::condition(const QString& name) const {
 	if (name == "battle_target_ready") return menu().value("kind") == "battle_target";
 	if (name == "dialogue") return interaction() == "dialogue";
 	if (name == "overworld_ready" || name == "map_transition_complete")
-		return ready() && interaction() == "overworld" && !moving() && !(read(0x02037FD4 + 7) & 0x80);
+		return ready() && interaction() == "overworld" && !moving() && !(read(Avatar) & 0x40) &&
+		    !(read(0x02037FD4 + 7) & 0x80);
 	return false;
 }
 
@@ -362,6 +366,7 @@ QJsonObject EmeraldGameState::tileState(QPoint p) const {
 	result.insert("behavior", b);
 	result.insert("occupied", occupied(p));
 	result.insert("special_traversal", special(b));
+	result.insert("trainer_risk", trainerRisk(p));
 	if (b >= 0x38 && b <= 0x3F) {
 		const char* ledges[] = {"east", "west", "north", "south", "northeast", "northwest", "southeast", "southwest"};
 		result.insert("one_way_ledge", ledges[b - 0x38]);
@@ -405,7 +410,22 @@ bool EmeraldGameState::canWalk(QPoint from, QPoint to, bool destination) const {
 	return true;
 }
 
-QVector<QPoint> EmeraldGameState::pathTo(QPoint target, int radius) const {
+bool EmeraldGameState::trainerRisk(QPoint point) const {
+	// Conservative potential sightlines: rotating and defeated trainers are not
+	// distinguished. Do not claim that a battle is guaranteed or walls hide us.
+	for (int i = 0; i < 16; ++i) {
+		quint32 o = Objects + i * 36;
+		if (!(read(o) & 1) || o == playerObject() || int((read(o + 10) << 8) | read(o + 9)) != mapId() || !read(o + 7))
+			continue;
+		QPoint p(qint16(read(o + 16, 2)) - 7, qint16(read(o + 18, 2)) - 7);
+		QPoint delta = point - p;
+		if ((!delta.x() || !delta.y()) && delta.manhattanLength() <= int(read(o + 29)))
+			return true;
+	}
+	return false;
+}
+
+QVector<QPoint> EmeraldGameState::pathTo(QPoint target, int radius, bool avoidTrainers) const {
 	const QPoint origin = position();
 	if (origin == target) return {};
 	QQueue<QPoint> queue; queue.enqueue(origin);
@@ -419,6 +439,8 @@ QVector<QPoint> EmeraldGameState::pathTo(QPoint target, int radius) const {
 			int t = tile(next);
 			if (t >= 0 && behavior(t & 0x3FF) >= 0x38 && behavior(t & 0x3FF) <= 0x3B) next += d;
 			if (qAbs(next.x() - origin.x()) > radius || qAbs(next.y() - origin.y()) > radius || parent.contains(key(next)) || !canWalk(p, next, next == target)) continue;
+			if (avoidTrainers && (trainerRisk(next) || ((next - p).manhattanLength() == 2 && trainerRisk(p + d))))
+				continue;
 			parent.insert(key(next), p);
 			if (next == target) {
 				QVector<QPoint> path;
@@ -442,7 +464,13 @@ QJsonObject EmeraldGameState::localMap(int radius) const {
 		if (!(read(o) & 1) || o == playerObject() || int((read(o + 10) << 8) | read(o + 9)) != mapId()) continue;
 		QPoint p(qint16(read(o + 16, 2)) - 7, qint16(read(o + 18, 2)) - 7);
 		if (qAbs(p.x() - pos.x()) > radius || qAbs(p.y() - pos.y()) > radius) continue;
-		auto n = coords(p); n.insert("local_id", int(read(o + 8))); n.insert("graphics_id", int(read(o + 5))); npcs.append(n);
+		auto n = coords(p);
+		n.insert("local_id", int(read(o + 8)));
+		n.insert("graphics_id", int(read(o + 5)));
+		n.insert("trainer_type", int(read(o + 7)));
+		n.insert("trainer_range", int(read(o + 29)));
+		n.insert("facing_direction", int(read(o + 24) & 15));
+		npcs.append(n);
 	}
 	quint32 events = read(MapHeader + 4, 4);
 	if (contains(events, 20)) {
@@ -509,6 +537,7 @@ QJsonObject EmeraldGameState::state(bool details) const {
 	result.insert("available", ready());
 	result.insert("interaction", interaction());
 	result.insert("battle_menu_ready", battleMenuReady());
+	result.insert("movement_available", condition("overworld_ready"));
 	result.insert("menu", menu());
 	result.insert("battle", battle());
 	if (details) result.insert("recent_events", m_events);
@@ -539,12 +568,13 @@ QJsonObject EmeraldGameState::state(bool details) const {
 	return result;
 }
 
-bool AIStateAction::startMove(const EmeraldGameState& s, QPoint target, int maxFrames) {
+bool AIStateAction::startMove(const EmeraldGameState& s, QPoint target, int maxFrames, bool avoidTrainers) {
 	*this = AIStateAction();
+	m_avoidTrainers = avoidTrainers;
 	m_origin = m_last = s.position(); m_target = target; m_map = s.mapId(); m_start = s.frame(); m_remaining = maxFrames;
 	if (!s.condition("overworld_ready") || !(s.state(false).value("player").toObject().value("avatar_flags").toInt() & 1)) { m_reason = "overworld_not_ready"; return false; }
 	if (m_origin == target) { m_reason = "arrived"; m_end = s.frame(); return true; }
-	m_path = s.pathTo(target);
+	m_path = s.pathTo(target, 16, m_avoidTrainers);
 	if (m_path.isEmpty()) { m_reason = "no_path"; m_end = s.frame(); return true; }
 	m_pending = true; m_next = m_path.takeFirst(); m_keys = direction(m_origin, m_next);
 	return true;
@@ -568,7 +598,16 @@ bool AIStateAction::tick(const EmeraldGameState& s, unsigned human) {
 		if (!s.ready()) { stop("state_unavailable", s); return true; }
 		if (s.mapId() != m_map) { stop("map_transition", s); return true; }
 		if (s.interaction() != "overworld") { stop(s.interaction(), s); return true; }
+		if (!s.moving() && !s.condition("overworld_ready")) {
+			stop("movement_restricted", s);
+			return true;
+		}
 		QPoint p = s.position();
+		if (m_avoidTrainers && m_keys &&
+		    (s.trainerRisk(m_next) || ((m_next - p).manhattanLength() == 2 && s.trainerRisk((p + m_next) / 2)))) {
+			stop("trainer_sightline", s);
+			return true;
+		}
 		if (m_keys && p == m_last && !s.moving() && !s.canWalk(p, m_next, m_next == m_target)) { stop("blocked", s); return true; }
 		if (p != m_last) {
 			if (s.moving() && (m_next - m_last).manhattanLength() == 2 && p == (m_last + m_next) / 2) {
@@ -584,6 +623,11 @@ bool AIStateAction::tick(const EmeraldGameState& s, unsigned human) {
 			if (p == m_target) { stop("arrived", s); return true; }
 			if (m_path.isEmpty()) { stop("route_interrupted", s); return true; }
 			m_next = m_path.takeFirst();
+			if (m_avoidTrainers &&
+			    (s.trainerRisk(m_next) || ((m_next - p).manhattanLength() == 2 && s.trainerRisk((p + m_next) / 2)))) {
+				stop("trainer_sightline", s);
+				return true;
+			}
 			if (!s.canWalk(p, m_next, m_next == m_target)) { stop("blocked", s); return true; }
 			m_keys = direction(p, m_next); m_unchanged = 0;
 		}

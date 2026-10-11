@@ -23,6 +23,15 @@ Follow `CONTRIBUTING.md` and `.clang-format`: tabs for C/C++ indentation, four-c
 
 Place C tests in the component's `test/` directory, Qt tests in `src/platform/qt/test/`, and Node tests in `tools/mcp/test/*.test.mjs` using `node:test`. Add regression cases for changed behavior; no numeric coverage threshold is documented. Use synthetic Emerald fixtures where possible. Live smoke tests advance gameplay and create checkpoints: run them only against disposable sessions.
 
+## Gameplay Control and Verification
+
+For gameplay in this workspace, follow [Willow control and verification](doc/willow-control.md).
+Use one action followed by inspection at decision points, retain full state and
+merge deltas by replacing top-level fields, plan from live tiles, avoid potential
+trainer sightlines, verify movement readiness after animations, and record
+milestones immediately. Make and verify in-game saves at safe points during long
+sessions; checkpoints do not replace them.
+
 ## Commit & Pull Request Guidelines
 
 Use concise imperative subjects. History includes plain Willow subjects and component prefixes such as `Core:`, `Qt:`, and `GB Video:`; prefer a component prefix for code changes. Describe the problem, resulting behavior, and validation; link relevant issues and include screenshots for UI changes. Preserve MPL-2.0 licensing. Consult `CONTRIBUTING.md` before upstream submissions, which reject AI-generated code.

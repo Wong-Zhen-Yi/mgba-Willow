@@ -211,3 +211,31 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
   await call('disconnect');
   assert.equal(errors, '');
 });
+
+test('verified Emerald MCP rejects batch confirmation and refreshes before a tap', async t => {
+  const calls = [];
+  const game_state = { supported: true, available: true, adapter: 'emerald_en_v1', frame: 10,
+    interaction: 'battle', menu: { kind: 'battle_action', cursor: 0 }, battle: { battlers: [{ hp: 7 }] } };
+  const f = await fixture(t, (socket, req, id) => {
+    calls.push(req);
+    socket.write(JSON.stringify({ id: req.id, result: req.method === 'session'
+      ? { session_id: id, started: true } : { game_state } }) + '\n');
+  });
+  const transport = new StdioClientTransport({ command: process.execPath,
+    args: [path.resolve('server.mjs')], env: { ...process.env, LOCALAPPDATA: f.root }, stderr: 'pipe' });
+  const client = new Client({ name: 'verified-control-tests', version: '1.0' });
+  t.after(() => client.close());
+  await client.connect(transport);
+  await client.callTool({ name: 'connect', arguments: { session_id: f.id } });
+  const rejected = await client.callTool({ name: 'act_sequence', arguments: {
+    actions: [{ buttons: ['A'], frames: 1 }, { buttons: ['A'], frames: 1 }],
+  } });
+  assert.equal(rejected.isError, true);
+  assert.equal(calls.at(-1).method, 'get_game_state');
+  assert.ok(!calls.some(call => ['act', 'act_sequence', 'press'].includes(call.method)));
+  const tapped = await client.callTool({ name: 'press', arguments: { button: 'A', screenshot: false } });
+  assert.equal(calls.at(-2).method, 'get_game_state');
+  assert.equal(calls.at(-1).method, 'press');
+  assert.equal(tapped.structuredContent.state_format, 'full');
+  assert.equal(tapped.structuredContent.game_state.battle.battlers[0].hp, 7);
+});

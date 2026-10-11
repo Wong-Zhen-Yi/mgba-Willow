@@ -32,7 +32,8 @@ public:
 	bool battleMenuReady() const;
 	bool condition(const QString& name) const;
 	bool canWalk(QPoint from, QPoint to, bool destination = false) const;
-	QVector<QPoint> pathTo(QPoint target, int radius = 16) const;
+	QVector<QPoint> pathTo(QPoint target, int radius = 16, bool avoidTrainers = true) const;
+	bool trainerRisk(QPoint point) const;
 
 	// Also used by fixture tests; production data comes only from backing RAM/ROM.
 	void setSnapshot(const QByteArray& rom, const QByteArray& wram, const QByteArray& iwram, quint64 frame);
@@ -66,7 +67,7 @@ private:
 // Frame-thread state machine. No timer or IPC round trip participates in movement.
 class AIStateAction {
 public:
-	bool startMove(const EmeraldGameState& state, QPoint target, int maxFrames);
+	bool startMove(const EmeraldGameState& state, QPoint target, int maxFrames, bool avoidTrainers = true);
 	void startWait(const EmeraldGameState& state, const QString& condition, int maxFrames, int stableFrames);
 	bool tick(const EmeraldGameState& state, unsigned human);
 	void cancel(const QString& reason, quint64 frame = 0);
@@ -76,6 +77,7 @@ public:
 private:
 	void stop(const QString& reason, const EmeraldGameState& state);
 	bool m_pending = false, m_wait = false;
+	bool m_avoidTrainers = true;
 	unsigned m_keys = 0;
 	int m_remaining = 0, m_stable = 0, m_requiredStable = 1, m_unchanged = 0, m_steps = 0;
 	quint64 m_start = 0, m_end = 0;

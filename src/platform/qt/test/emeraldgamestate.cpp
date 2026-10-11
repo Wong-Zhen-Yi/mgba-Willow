@@ -97,6 +97,34 @@ int main(int argc, char** argv) {
 	CHECK(f.game.ready()); CHECK(f.game.position() == QPoint(1, 1)); CHECK(f.game.mapId() == 0x0102);
 	CHECK(f.game.state().value("player").toObject().value("facing") == "east");
 	CHECK(f.game.condition("overworld_ready"));
+	// A stable overworld callback alone cannot certify movement during animation.
+	for (int lock = 0; lock < 3; ++lock) {
+		if (lock == 0)
+			f.put(0x02037590, 0x41, 1); // forced movement
+		if (lock == 1)
+			f.put(0x02037350, 3, 1); // single movement animation
+		if (lock == 2)
+			f.put(0x02037593, 2, 1); // tile transition / ledge hop
+		f.sync();
+		CHECK(!f.game.condition("overworld_ready"));
+		CHECK(!f.game.state().value("movement_available").toBool());
+		AIStateAction locked;
+		CHECK(!locked.startMove(f.game, { 3, 1 }, 100));
+		f.put(0x02037590, 1, 1);
+		f.put(0x02037350, 1, 1);
+		f.put(0x02037593, 0, 1);
+	}
+	f.sync();
+	CHECK(f.game.condition("overworld_ready"));
+	AIStateAction interrupted;
+	CHECK(interrupted.startMove(f.game, { 3, 1 }, 100));
+	f.put(0x02037590, 0x41, 1);
+	f.sync();
+	CHECK(interrupted.tick(f.game, 0));
+	CHECK(interrupted.result().value("reason") == "movement_restricted");
+	CHECK(interrupted.keys() == 0);
+	f.put(0x02037590, 1, 1);
+	f.sync();
 	// Block the direct route; BFS must go around it using the live grid.
 	f.tile(2, 1, 0x400); f.sync();
 	CHECK(!f.game.canWalk({1,1}, {2,1}));
@@ -175,6 +203,30 @@ int main(int argc, char** argv) {
 	f.put(npc+16,9,2); f.put(npc+18,8,2); f.put(npc+20,9,2); f.put(npc+22,8,2); f.sync();
 	CHECK(!f.game.canWalk({1,1},{2,1}));
 	CHECK(f.game.localMap(2).value("npcs").toArray().size() == 1);
+	// Potential trainer sightlines are live route hazards, including rotation.
+	f.put(npc + 7, 1, 1);
+	f.put(npc + 29, 2, 1);
+	f.sync();
+	CHECK(f.game.trainerRisk({ 3, 1 }));
+	CHECK(!f.game.trainerRisk({ 3, 2 }));
+	CHECK(f.game.pathTo({ 3, 1 }).isEmpty());
+	CHECK(!f.game.pathTo({ 3, 1 }, 16, false).isEmpty());
+	const auto safeRoute = f.game.pathTo({ 4, 2 });
+	CHECK(!safeRoute.isEmpty());
+	CHECK(safeRoute.size() > f.game.pathTo({ 4, 2 }, 16, false).size());
+	for (const auto& point : safeRoute)
+		CHECK(!f.game.trainerRisk(point));
+	CHECK(f.game.localMap(2).value("npcs").toArray().first().toObject().value("trainer_range") == 2);
+	f.put(npc + 7, 0, 1);
+	f.sync();
+	CHECK(move.startMove(f.game, { 3, 1 }, 100));
+	f.put(npc + 7, 1, 1);
+	f.put(npc + 16, 8, 2);
+	f.put(npc + 18, 10, 2);
+	f.sync();
+	CHECK(move.tick(f.game, 0));
+	CHECK(move.result().value("reason") == "trainer_sightline");
+	CHECK(move.keys() == 0);
 	f.put(npc,0,1); f.sync(); CHECK(move.startMove(f.game,{3,1},100));
 	f.tile(2,1,0x400); f.sync(); CHECK(move.tick(f.game,0)); CHECK(move.result().value("reason") == "blocked");
 	f.put(0x08000402,0x38,2); f.tile(2,1,1); f.put(0x08000404,0x61,2); f.tile(1,2,2);
