@@ -185,14 +185,24 @@ void AIController::receive(QLocalSocket* socket) {
 
 QJsonObject AIController::session() const {
 	auto core = m_window->controller();
-	return {{"session_id", m_id}, {"title", core ? core->title() : QString()},
-		{"platform", core ? (core->platform() == mPLATFORM_GBA ? "GBA" : "GB/GBC") : "none"},
-		{"started", core && core->hasStarted()}, {"ai_control", core && core->aiControl()},
-		{"frame", core ? double(core->frameCounter()) : 0}, {"paused", core && core->isPaused()},
-		{"connected", !m_clients.isEmpty()}, {"connected_clients", int(m_clients.size())}, {"mcp_enabled", m_server.isListening()},
-		{"ai_speed", m_window->config()->getOption("aiSpeed", 4).toInt() == -1 ? QJsonValue("maximum") : QJsonValue(m_window->config()->getOption("aiSpeed", 4).toInt())},
-		{"human_keys", core ? int(core->humanKeys()) : 0}, {"ai_keys", core ? int(core->aiKeys()) : 0},
-		{"effective_keys", core ? int(AIGameplay::mergeKeys(core->humanKeys(), core->aiKeys())) : 0}};
+	return { { "session_id", m_id },
+	         { "title", core ? core->title() : QString() },
+	         { "platform", core ? (core->platform() == mPLATFORM_GBA ? "GBA" : "GB/GBC") : "none" },
+	         { "started", core && core->hasStarted() },
+	         { "ai_control", core && core->aiControl() },
+	         { "frame", core ? double(core->frameCounter()) : 0 },
+	         { "paused", core && core->isPaused() },
+	         { "connected", !m_clients.isEmpty() },
+	         { "connected_clients", int(m_clients.size()) },
+	         { "mcp_enabled", m_server.isListening() },
+	         { "objective", m_window->aiObjective() },
+	         { "ai_speed",
+		       m_window->config()->getOption("aiSpeed", 4).toInt() == -1 ?
+		           QJsonValue("maximum") :
+		           QJsonValue(m_window->config()->getOption("aiSpeed", 4).toInt()) },
+	         { "human_keys", core ? int(core->humanKeys()) : 0 },
+	         { "ai_keys", core ? int(core->aiKeys()) : 0 },
+	         { "effective_keys", core ? int(AIGameplay::mergeKeys(core->humanKeys(), core->aiKeys())) : 0 } };
 }
 
 QJsonObject AIController::observation(bool screenshot) {
@@ -318,6 +328,16 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		const bool paused = m_core->isPaused();
 		disconnectClient(socket); reply(socket, id, {{"paused", paused}}); return;
 	}
+	if (method == "set_objective") {
+		const auto text = args.value("text");
+		if (!text.isString() || text.toString().size() > 512) {
+			fail(tr("Expected objective text of at most 512 characters"));
+			return;
+		}
+		m_window->setAIObjective(text.toString());
+		reply(socket, id, { { "objective", m_window->aiObjective() } });
+		return;
+	}
 	if (method == "observe" || method == "get_game_state" || method == "get_local_map") {
 		if (args.contains("screenshot") && !args.value("screenshot").isBool()) { fail(tr("Expected boolean screenshot")); return; }
 		if (method == "get_local_map" && args.contains("radius") && !integer(args.value("radius"), 1, 16)) { fail(tr("Expected radius 1–16")); return; }
@@ -360,12 +380,20 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		return;
 	}
 	if (method == "press") {
-		if (!args.value("button").isString() || (args.contains("hold_frames") && !integer(args.value("hold_frames"), 1, 60)) ||
-			(args.contains("release_frames") && !integer(args.value("release_frames"), 1, 60))) { fail(tr("Expected button, hold_frames and release_frames (1–60)")); return; }
-		args.insert("actions", QJsonArray{
-			QJsonObject{{"buttons", QJsonArray{args.value("button")}}, {"frames", args.value("hold_frames").toInt(1)}},
-			QJsonObject{{"buttons", QJsonArray{}}, {"frames", args.value("release_frames").toInt(2)}}});
-		if (!args.contains("screenshot")) args.insert("screenshot", false);
+		if (!args.value("button").isString() ||
+		    (args.contains("hold_frames") && !integer(args.value("hold_frames"), 1, 60)) ||
+		    (args.contains("release_frames") && !integer(args.value("release_frames"), 1, 60))) {
+			fail(tr("Expected button, hold_frames and release_frames (1–60)"));
+			return;
+		}
+		args.insert("actions",
+		            QJsonArray { QJsonObject { { "buttons", QJsonArray {} }, { "frames", 2 } },
+		                         QJsonObject { { "buttons", QJsonArray { args.value("button") } },
+		                                       { "frames", args.value("hold_frames").toInt(2) } },
+		                         QJsonObject { { "buttons", QJsonArray {} },
+		                                       { "frames", args.value("release_frames").toInt(2) } } });
+		if (!args.contains("screenshot"))
+			args.insert("screenshot", false);
 		method = "act_sequence";
 	}
 	if (method == "act" || method == "act_sequence") {

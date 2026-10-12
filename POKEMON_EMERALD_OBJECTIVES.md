@@ -85,6 +85,8 @@ Verify levels, moves, health and supplies before M31. Oddish, Whismur and Plusle
 
 ## Current progress
 
+- **Latest verified handoff — 12 October 2026, frame212214:** Verdanturf Center map6/4 (1540), (7,4), facing north, stable overworld. In-game save success at frame197109 and `save_confirmed`197130; playtime39:29, three badges. Swellow25 leads, holds Exp. Share,67/67HP; Marshtomp35 102/102HP; both no status, full PP. Only these two are in the live party; do not assume earlier members remain carried. No captures or supplies consumed during this 50-turn test. Next: continue required-roster acquisition/training, then Flannery (M14). Earlier Route111 handoff below is historical; this run did not verify the intervening human progress.
+
 - **Latest handoff frame521822:** human continuation in Route111 double battle (19,119); Numel defeated, poisoned Shroomish18 remains. Marshtomp35 50/102HP, Oddish17 40/45HP, Swellow23 56/62HP with Exp. Share. MCP disconnected to avoid control conflict. Finish battle and heal before further training; M14 incomplete. No new in-game save verified.
 
 - **Latest live update (frame511800): Winstrate family challenge completed**, final Vicky defeat and reward720 verified. Route111 (16,115), Start menu open. Swellow23 now holds Exp. Share,56/62HP; Marshtomp35 97/102HP, all others healthy. One Super Repel used (two remain). Training and M14 still outstanding; no new in-game save verified since Devon. Earlier handoff below is historical.

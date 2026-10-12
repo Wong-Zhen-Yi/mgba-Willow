@@ -71,6 +71,8 @@ public:
 
 	QSize contentSize(bool fallback) const;
 	void showAIInteraction(const QString& text);
+	void setAIObjective(const QString& text);
+	QString aiObjective() const { return m_aiObjective; }
 
 signals:
 	void startDrawing();
@@ -206,6 +208,7 @@ private:
 	std::unique_ptr<AudioProcessor> m_audioProcessor;
 
 	std::unique_ptr<QGBA::Display> m_display;
+	QString m_aiObjective;
 	QSize m_initialSize;
 	QSize m_savedSize;
 	int m_savedScale;

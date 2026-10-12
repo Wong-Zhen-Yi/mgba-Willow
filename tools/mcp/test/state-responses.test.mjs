@@ -5,6 +5,24 @@ import { StateResponses } from '../state-responses.mjs';
 const state = (frame, hp = 20, map = 1) => ({ supported: true, available: true, adapter: 'emerald_en_v1', frame,
   map: { id: map }, player: { x: 1, y: 2 }, party: [{ hp }], inventory: { items: [] } });
 
+test('compact decisions omit bulky fields, retain a full local baseline and only report new events', () => {
+  const responses = new StateResponses();
+  const first = { ...state(1), interaction: 'battle', menu: { kind: 'battle_move', selected_move: { id: 1, pp: 5 } },
+    battle: { battlers: [{ hp: 7, status: 1 }], target: 1 }, quest_flags: { ids: [1, 2] },
+    recent_events: [{ frame: 1, text: 'Ready' }] };
+  const compact = responses.apply({ game_state: first }, false, true);
+  assert.equal(compact.state_format, 'compact');
+  assert.equal(compact.game_state.inventory, undefined);
+  assert.equal(compact.game_state.quest_flags, undefined);
+  assert.deepEqual(compact.game_state.battle, first.battle);
+  assert.deepEqual(responses.previous, first);
+  const next = { ...first, frame: 2, recent_events: [...first.recent_events, { frame: 2, text: 'Attack' }] };
+  assert.deepEqual(responses.apply({ game_state: next }, false, true).new_events, [{ frame: 2, text: 'Attack' }]);
+  assert.deepEqual(responses.apply({ game_state: next }, true, true).game_state, next);
+  responses.reset();
+  assert.equal(responses.apply({ game_state: next }, false, true).new_events.length, 2);
+});
+
 test('compact state responses have isolated, reconstructible per-client baselines', () => {
   const a = new StateResponses(), b = new StateResponses();
   assert.equal(a.apply({ game_state: state(1) }).state_format, 'full');

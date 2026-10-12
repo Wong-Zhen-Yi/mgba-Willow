@@ -4,6 +4,19 @@ This local MCP controls a visible game in this checkout's Qt mGBA app. It provid
 
 ## Structured Emerald state and navigation
 
+After connecting, use `set_objective({text:"Heal the party, then challenge the next Gym"})`
+to update the Objective box beneath the game. Text wraps inside the panel; keep
+goals short enough to fit. Up to 512 characters are accepted; `text:""` clears it.
+The objective is shared by all connected agents in that window (latest update
+wins), survives disconnects and display driver changes, and is returned as
+`objective` in session and observation responses. It lasts until the window closes
+or another update replaces it; it is not a saved objective tracker or story note.
+Updates do not send game input and can run while another agent's action is active.
+Rebuild/relaunch mGBA and restart the MCP server to load this tool.
+`Launch mGBA.cmd` detects these source changes and rebuilds automatically. If the
+old app is still running, the launcher asks you to save and close it before
+retrying, instead of failing while replacing the locked executable.
+
 Follow [Willow control and verification](../../doc/willow-control.md) for prompt
 inspection, battle-state reconciliation, live route planning, and milestone/save
 logging. Verified Emerald rejects repeated or held confirmation inputs: use one
@@ -33,13 +46,13 @@ The read-only `emerald_en_v1` adapter supports two exact English Pokémon Emeral
 - `recent_events` retains the latest 16 expanded messages seen by the active message-window printer and save-success callbacks, with frame and location. Message-buffer text can contain pages still being printed and is not proof that an item, healing or victory completed. Save success requires the active save flow to reach its verified success callback. History resets on identification, checkpoint restore and backward snapshots; screenshots are not retained. Control codes are bounded and unsupported/unexpanded strings are omitted.
 - `get_local_map({radius:4})` returns a square of nearby live collision tiles, elevations, behavior IDs, NPC positions, ladders, one-way ledges, warp destinations and map connections. Radius is 1–16. Coordinates omit Emerald's seven-tile internal border. Out-of-map or invalid backing pointers produce unknown tiles rather than walkable tiles.
 - `move_to({x:12,y:8})` plans within 16 tiles of the starting position on the current map. It rechecks each next step and releases directions when movement starts. It stops at battle, dialogue, script locks, map changes, unexpected movement, human input, new obstacles, 60 frames without progress, or `max_frames` (1–600, default 600). Inspect `progress.reason` and `progress.completed` before continuing. Cardinal ledges are directional two-tile edges with validated landing collision, elevation and NPC occupancy. Animated doors are permitted only northward, as the requested destination, with a matching warp event; a transition still stops the route and requires a fresh observation. Other special traversal remains excluded; exits are never intermediate route tiles.
-- `press({button:"A"})` holds for one frame, then explicitly releases for two frames. Raw button actions start at the next completed frame boundary so a one-frame tap spans a full game input-polling interval; the initial partial frame is excluded from the reported action boundaries. `hold_frames` and `release_frames` each accept 1–60. This tool also works on unsupported ROMs.
+- `press({button:"A"})` releases for two frames, holds for two frames, then releases for two frames. The leading release creates a clean input edge and the hold spans either phase of two-frame input polling. Actions start at the next completed frame boundary; the initial partial frame is excluded from action boundaries. `hold_frames` and `release_frames` each accept 1–60 on raw games; verified decision taps permit at most two held frames. This tool also works on unsupported ROMs.
 - `press({button:"A",expected_menu:{kind:"battle_move",cursor:0},screenshot:true})` optionally checks fresh verified menu state before input. `expected_menu` requires `kind` and optionally accepts `cursor` or `selected_party_slot`. A stale selection or unavailable decoder rejects the press without sending buttons. The check describes the menu before the tap; always inspect the resulting prompt. Bag/party context menus remain only partially decoded, so these checks do not establish their submenu selection or readiness.
 - `wait_until({condition:"battle_menu_ready"})` sends no AI buttons and evaluates action-menu readiness after every frame. Use `battle_move_ready` after choosing Fight and `battle_target_ready` when target selection opens. Other conditions are `overworld_ready`, `map_transition_complete`, and `dialogue`. `stable_frames` defaults to 2 (1–60); `max_frames` defaults to 600 (1–600). Human input and manual pause interrupt the wait. Bag/party context menus are identified but do not claim input readiness.
 
 Before confirming an attack, read `menu.selected_move` and, when present, `menu.target`; check current battler HP and confusion before choosing to stay in or switch. After a story milestone, preserve the relevant message evidence and reconcile it with flags instead of treating incidental trainer battles as progress. At a stopping point, heal, perform the in-game save, verify `save_confirmed`, obtain `get_handoff`, update the story notes with the next objective and any uncertain milestones, then disconnect.
 
-New tools return metadata without screenshots by default; request `screenshot:true` when needed. All observations and action results include decoded state. The first response has `state_format:"full"` and `game_state`. Later ordinary overworld responses use `state_format:"delta"`, `base_frame`, `game_state_changes`, and `removed_state_fields`: replace each changed top-level field and remove the listed fields. `full_state:true` refreshes the baseline. Each MCP client has its own baseline, which resets on connect, checkpoint restore, map changes and backward frame changes. `observe` retains its screenshot default and accepts `screenshot:false`.
+New tools return metadata without screenshots by default; request `screenshot:true` when needed. All observations and action results include decoded state. With `compact:false`, the first response has `state_format:"full"` and `game_state`. Later ordinary overworld responses use `state_format:"delta"`, `base_frame`, `game_state_changes`, and `removed_state_fields`: replace each changed top-level field and remove the listed fields. `full_state:true` refreshes the baseline. Each MCP client has its own baseline, which resets on connect, checkpoint restore, map changes and backward frame changes. `observe` uses selective screenshots for supported games and accepts `screenshot:false`.
 
 RAM is copied at completed frame boundaries during AI control; dynamic pointers are resolved exclusively within that copy. With software rendering, `atomic:true` certifies that screenshot and state share the indicated frame. Hardware rendering reports `atomic:false` because a matching completed framebuffer is not guaranteed. Immediately after connecting or restoring a checkpoint, state may be unavailable until a frame completes, including while manually paused. The game continues after an observation, so use fresh state before deciding. A route's `progress.stop_frame` is its stop frame; the returned observation may be later.
 
@@ -90,4 +103,34 @@ Checkpoint names use 1–64 letters, digits, underscores, or hyphens. `save_chec
 - `test-qt-emeraldgamestate <rom> <wram> <iwram>` additionally checks an offline overworld snapshot against the supported hash list, initialized map/grid, player position, callback and party checksums. Snapshot files are local QA inputs and are not bundled with the tests.
 
 The bridge uses a Windows named pipe restricted to the current user. There is no network listener or public service.
+
+# Token-efficient gameplay
+
+State tools now default to `state_format:compact`: full snapshots remain in the
+server, while text and structured results contain location/readiness, menu,
+party HP/status, live battlers, selected move/target, and only new events.
+Each compact view replaces the previous view. Use `full_state:true` to inspect
+flags, inventory, and complete party moves; `compact:false` retains the legacy
+full/delta response protocol.
+
+Supported decoded states omit screenshots automatically; unknown prompts get
+images. Use `screenshot:true` for puzzles or inconsistent state and
+`screenshot:false` to suppress images explicitly. Unsupported games retain their
+raw screenshot behavior. Native taps now release for two frames before a
+two-frame hold and two-frame release; no confirmation is automatically retried.
+
+Prefer `move_to` for live-map-verified travel and `wait_until` for animations.
+Read one current handoff and maintain `CURRENT_HANDOFF.md` at milestones.
+`get_handoff` defaults to a brief summary; `full_state:true` includes inventory
+and complete party details.
+
+`train_battle` accepts an explicit `move_slot` (0–3) and optional `max_actions`
+(1–100, default 30). It runs only in a single wild battle, verifies each menu
+before one tap, and stops at fainting, party/move changes, unknown prompts,
+status effects, human input, cancellation, unverified taps, or its bounded
+budget. It does not acknowledge move learning/evolution or choose replacements.
+Inspect `training.reason` and the final state before proceeding.
+
+Restart the MCP server for the new tools/output and rebuild/relaunch mGBA for
+the native tap change. Token savings depend on gameplay and require measurement.
 

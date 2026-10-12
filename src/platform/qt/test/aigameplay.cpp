@@ -18,12 +18,29 @@ int main() {
 	CHECK(AIGameplay::mergeKeys(Left | A, 0) == (Left | A));
 
 	AIGameplay game;
+	// A tap is visible to either phase of a game that polls input every two frames,
+	// even when the previous input was the same button. It produces just one edge.
+	for (unsigned phase = 0; phase < 2; ++phase) {
+		AIGameplay tap;
+		CHECK(tap.start({ { 0, 2 }, { A, 2 }, { 0, 2 } }, 0));
+		unsigned previous = A, edges = 0;
+		for (unsigned frame = 0; frame < 6; ++frame) {
+			if (frame % 2 == phase) {
+				unsigned keys = tap.keys();
+				if ((keys & A) && !(previous & A))
+					++edges;
+				previous = keys;
+			}
+			tap.finishFrame();
+		}
+		CHECK(edges == 1 && previous == 0 && !tap.pending());
+	}
 	CHECK(!game.start({}, 0));
-	CHECK(!game.start({{A, 0}}, 0));
-	CHECK(!game.start({{A, 601}}, 0));
-	CHECK(!game.start({{0x400, 1}}, 0));
-	CHECK(!game.start({{A, 600}, {B, 1}}, 0));
-	CHECK(!game.start(std::vector<AIGameplay::Step>(201, {A, 1}), 0));
+	CHECK(!game.start({ { A, 0 } }, 0));
+	CHECK(!game.start({ { A, 601 } }, 0));
+	CHECK(!game.start({ { 0x400, 1 } }, 0));
+	CHECK(!game.start({ { A, 600 }, { B, 1 } }, 0));
+	CHECK(!game.start(std::vector<AIGameplay::Step>(201, { A, 1 }), 0));
 	CHECK(game.start({{Right, 2}, {A, 1}, {0, 2}}, 100));
 	CHECK(game.startFrame() == 100 && game.endFrame() == 105);
 	CHECK(!game.start({{B, 1}}, 100));

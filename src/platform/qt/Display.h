@@ -90,6 +90,10 @@ public slots:
 
 	void showMessage(const QString& message);
 	void showAIInteraction(const QString& text) { m_controllerPainter.addAIInteraction(text); forceDraw(); }
+	void setAIObjective(const QString& text) {
+		m_controllerPainter.setObjective(text);
+		forceDraw();
+	}
 
 protected:
 	virtual void resizeEvent(QResizeEvent*) override;

@@ -16,6 +16,9 @@ if not exist "%~dp0tools\launch-windows.ps1" (
 echo Opening the latest mGBA Willow build with multi-agent MCP support.
 echo Changed emulator sources will be rebuilt automatically.
 echo After opening a ROM, multiple agents can connect; button actions run one at a time.
+echo Connected agents can update the Objective box with the set_objective MCP tool.
+echo After an update, restart the MCP server so agents discover the latest tools.
+echo If mGBA is already running, save and close it before rebuilding changed sources.
 echo.
 if exist "%~dp0POKEMON_EMERALD_OBJECTIVES.md" (
     echo Pokemon Emerald source of truth: "%~dp0POKEMON_EMERALD_OBJECTIVES.md"

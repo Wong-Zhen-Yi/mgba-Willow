@@ -1,0 +1,6868 @@
+{
+  "stats": {
+    "turns": 50,
+    "byTool": {
+      "press": 32,
+      "move_to": 8,
+      "wait_until": 8,
+      "train_battle": 1,
+      "act": 1
+    },
+    "imageTurns": 30,
+    "noImageTurns": 20,
+    "textChars": 69714,
+    "fullTextChars": 6012,
+    "compactTextChars": 891,
+    "reductionPercent": 85.2,
+    "nativeSixFrameTaps": 8,
+    "waitTimeouts": 2
+  },
+  "turns": [
+    {
+      "tool": "press",
+      "args": {
+        "button": "Start",
+        "screenshot": true
+      },
+      "action_end_frame": 37452,
+      "action_start_frame": 37446,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 37452,
+      "height": 160,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 37448,
+          "action_start_frame": 37446
+        },
+        {
+          "action_end_frame": 37450,
+          "action_start_frame": 37448
+        },
+        {
+          "action_end_frame": 37452,
+          "action_start_frame": 37450
+        }
+      ],
+      "title": "POKEMON EMER",
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 37452,
+        "interaction": "scripted",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1156,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 0
+        }
+      },
+      "action_end_frame": 40614,
+      "action_start_frame": 40608,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 40614,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": false,
+        "unchanged_attempts": 1
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 40610,
+          "action_start_frame": 40608
+        },
+        {
+          "action_end_frame": 40612,
+          "action_start_frame": 40610
+        },
+        {
+          "action_end_frame": 40614,
+          "action_start_frame": 40612
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 40614,
+        "interaction": "menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "cursor": 1,
+          "input_ready": false,
+          "kind": "start"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1277,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 1
+        }
+      },
+      "action_end_frame": 41994,
+      "action_start_frame": 41988,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 41994,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 41990,
+          "action_start_frame": 41988
+        },
+        {
+          "action_end_frame": 41992,
+          "action_start_frame": 41990
+        },
+        {
+          "action_end_frame": 41994,
+          "action_start_frame": 41992
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 41994,
+        "interaction": "menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1152,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 0
+        }
+      },
+      "action_end_frame": 45721,
+      "action_start_frame": 45715,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 45721,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": false,
+        "unchanged_attempts": 2
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 45717,
+          "action_start_frame": 45715
+        },
+        {
+          "action_end_frame": 45719,
+          "action_start_frame": 45717
+        },
+        {
+          "action_end_frame": 45721,
+          "action_start_frame": 45719
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 45721,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1304,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 1
+        }
+      },
+      "action_end_frame": 47545,
+      "action_start_frame": 47539,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 47545,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 47541,
+          "action_start_frame": 47539
+        },
+        {
+          "action_end_frame": 47543,
+          "action_start_frame": 47541
+        },
+        {
+          "action_end_frame": 47545,
+          "action_start_frame": 47543
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 47545,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1191,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 1
+        }
+      },
+      "action_end_frame": 50551,
+      "action_start_frame": 50545,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 50551,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": true,
+        "unchanged_attempts": 3
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 50547,
+          "action_start_frame": 50545
+        },
+        {
+          "action_end_frame": 50549,
+          "action_start_frame": 50547
+        },
+        {
+          "action_end_frame": 50551,
+          "action_start_frame": 50549
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 50551,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1303,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "hold_frames": 2,
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 1
+        }
+      },
+      "action_end_frame": 57890,
+      "action_start_frame": 57874,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 57890,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": true,
+        "unchanged_attempts": 4
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 57876,
+          "action_start_frame": 57874
+        },
+        {
+          "action_end_frame": 57878,
+          "action_start_frame": 57876
+        },
+        {
+          "action_end_frame": 57890,
+          "action_start_frame": 57878
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 57890,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1303,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Up",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 1
+        }
+      },
+      "action_end_frame": 60202,
+      "action_start_frame": 60186,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 60202,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": false,
+        "unchanged_attempts": 1
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 60188,
+          "action_start_frame": 60186
+        },
+        {
+          "action_end_frame": 60190,
+          "action_start_frame": 60188
+        },
+        {
+          "action_end_frame": 60202,
+          "action_start_frame": 60190
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 60202,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1304,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 1
+        }
+      },
+      "action_end_frame": 62965,
+      "action_start_frame": 62949,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 62965,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 62951,
+          "action_start_frame": 62949
+        },
+        {
+          "action_end_frame": 62953,
+          "action_start_frame": 62951
+        },
+        {
+          "action_end_frame": 62965,
+          "action_start_frame": 62953
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 62965,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1191,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Up",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 1
+        }
+      },
+      "action_end_frame": 64796,
+      "action_start_frame": 64780,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 64796,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": false,
+        "unchanged_attempts": 2
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 64782,
+          "action_start_frame": 64780
+        },
+        {
+          "action_end_frame": 64784,
+          "action_start_frame": 64782
+        },
+        {
+          "action_end_frame": 64796,
+          "action_start_frame": 64784
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 64796,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1304,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 1
+        }
+      },
+      "action_end_frame": 67354,
+      "action_start_frame": 67338,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 67354,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 67340,
+          "action_start_frame": 67338
+        },
+        {
+          "action_end_frame": 67342,
+          "action_start_frame": 67340
+        },
+        {
+          "action_end_frame": 67354,
+          "action_start_frame": 67342
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 67354,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "party",
+          "selected_party_slot": 1
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1191,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "B",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "party",
+          "selected_party_slot": 0
+        }
+      },
+      "action_end_frame": 70813,
+      "action_start_frame": 70797,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 70813,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 70799,
+          "action_start_frame": 70797
+        },
+        {
+          "action_end_frame": 70801,
+          "action_start_frame": 70799
+        },
+        {
+          "action_end_frame": 70813,
+          "action_start_frame": 70801
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 70813,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1166,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "B",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 1
+        }
+      },
+      "action_end_frame": 74405,
+      "action_start_frame": 74389,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 74405,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 74391,
+          "action_start_frame": 74389
+        },
+        {
+          "action_end_frame": 74393,
+          "action_start_frame": 74391
+        },
+        {
+          "action_end_frame": 74405,
+          "action_start_frame": 74393
+        }
+      ],
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 74405,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "east",
+          "moving": false,
+          "x": 23,
+          "y": 9
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1131,
+      "images": 0
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 18,
+        "y": 13,
+        "avoid_trainers": false,
+        "screenshot": false
+      },
+      "action_end_frame": 80747,
+      "action_start_frame": 80568,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 80747,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 80568,
+        "completed": true,
+        "last_position": {
+          "x": 18,
+          "y": 13
+        },
+        "position_unchanged": false,
+        "reason": "arrived",
+        "steps_moved": 9,
+        "stop_frame": 80747,
+        "target": {
+          "x": 18,
+          "y": 13
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 80747,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "south",
+          "moving": false,
+          "x": 18,
+          "y": 13
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1155,
+      "images": 0
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 19,
+        "y": 16,
+        "avoid_trainers": false
+      },
+      "action_end_frame": 84549,
+      "action_start_frame": 84460,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 84549,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 84460,
+        "completed": true,
+        "last_position": {
+          "x": 19,
+          "y": 16
+        },
+        "position_unchanged": false,
+        "reason": "arrived",
+        "steps_moved": 4,
+        "stop_frame": 84549,
+        "target": {
+          "x": 19,
+          "y": 16
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 84549,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "south",
+          "moving": false,
+          "x": 19,
+          "y": 16
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1155,
+      "images": 0
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 17,
+        "y": 14,
+        "avoid_trainers": false
+      },
+      "action_end_frame": 85932,
+      "action_start_frame": 85860,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 85932,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 85860,
+        "completed": false,
+        "last_position": {
+          "x": 17,
+          "y": 15
+        },
+        "position_unchanged": false,
+        "reason": "transition_or_menu",
+        "steps_moved": 3,
+        "stop_frame": 85932,
+        "target": {
+          "x": 17,
+          "y": 14
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 85932,
+        "interaction": "transition_or_menu",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1201,
+      "images": 1
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "battle_menu_ready",
+        "screenshot": false
+      },
+      "action_end_frame": 88606,
+      "action_start_frame": 88006,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 88606,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 88006,
+        "completed": false,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "timeout",
+        "steps_moved": 0,
+        "stop_frame": 88606,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 88606,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 30
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 37,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 86232,
+          "map_id": 32,
+          "source": "expanded_message_buffer",
+          "text": "Wild ODDISH appeared!",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 2124,
+      "images": 0
+    },
+    {
+      "tool": "train_battle",
+      "args": {
+        "move_slot": 0,
+        "max_actions": 10,
+        "screenshot": false
+      },
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 92744,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "training": {
+        "reason": "unexpected_battle",
+        "actions": 0,
+        "waited_frames": 0,
+        "requires_inspection": true
+      },
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 92744,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 30
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 37,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1851,
+      "images": 0
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "screenshot": true
+      },
+      "action_end_frame": 97016,
+      "action_start_frame": 97000,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 97016,
+      "height": 160,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 97002,
+          "action_start_frame": 97000
+        },
+        {
+          "action_end_frame": 97004,
+          "action_start_frame": 97002
+        },
+        {
+          "action_end_frame": 97016,
+          "action_start_frame": 97004
+        }
+      ],
+      "title": "POKEMON EMER",
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 97016,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 30
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 37,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 97006,
+          "map_id": 32,
+          "source": "expanded_message_buffer",
+          "text": "Go! SWELLOW!",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 2120,
+      "images": 1
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "battle_menu_ready",
+        "screenshot": false
+      },
+      "action_end_frame": 98351,
+      "action_start_frame": 98349,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 98351,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 98349,
+        "completed": true,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "condition_met",
+        "steps_moved": 0,
+        "stop_frame": 98351,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 98351,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": true,
+        "menu": {
+          "battler_id": 0,
+          "cursor": 0,
+          "input_ready": true,
+          "kind": "battle_action",
+          "position": 0
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 30
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 37,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 2065,
+      "images": 0
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "expected_menu": {
+          "kind": "battle_action",
+          "cursor": 0
+        },
+        "screenshot": false
+      },
+      "action_end_frame": 104793,
+      "action_start_frame": 104787,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 104793,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 104789,
+          "action_start_frame": 104787
+        },
+        {
+          "action_end_frame": 104791,
+          "action_start_frame": 104789
+        },
+        {
+          "action_end_frame": 104793,
+          "action_start_frame": 104791
+        }
+      ],
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 104793,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 30
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 37,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 2004,
+      "images": 0
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "battle_move_ready",
+        "screenshot": false
+      },
+      "action_end_frame": 109771,
+      "action_start_frame": 109769,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 109771,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 109769,
+        "completed": true,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "condition_met",
+        "steps_moved": 0,
+        "stop_frame": 109771,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 109771,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "battler_id": 0,
+          "cursor": 0,
+          "input_ready": true,
+          "kind": "battle_move",
+          "position": 0,
+          "selected_move": {
+            "id": 17,
+            "max_pp": 35,
+            "name": "WING ATTACK",
+            "pp": 30
+          }
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 30
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 37,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 2137,
+      "images": 0
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "expected_menu": {
+          "kind": "battle_move",
+          "cursor": 0
+        },
+        "screenshot": false
+      },
+      "action_end_frame": 111263,
+      "action_start_frame": 111257,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 111263,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 111259,
+          "action_start_frame": 111257
+        },
+        {
+          "action_end_frame": 111261,
+          "action_start_frame": 111259
+        },
+        {
+          "action_end_frame": 111263,
+          "action_start_frame": 111261
+        }
+      ],
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 111263,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 30
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 37,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 2004,
+      "images": 0
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "battle_menu_ready",
+        "max_frames": 600,
+        "screenshot": false
+      },
+      "action_end_frame": 113148,
+      "action_start_frame": 112548,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 113148,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 112548,
+        "completed": false,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "timeout",
+        "steps_moved": 0,
+        "stop_frame": 113148,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 113148,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 29
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 0,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 111270,
+          "map_id": 32,
+          "source": "expanded_message_buffer",
+          "text": "SWELLOW used\nWING ATTACK!",
+          "type": "message"
+        },
+        {
+          "frame": 111426,
+          "map_id": 32,
+          "source": "expanded_message_buffer",
+          "text": "It's super effective!",
+          "type": "message"
+        },
+        {
+          "frame": 111599,
+          "map_id": 32,
+          "source": "expanded_message_buffer",
+          "text": "Wild ODDISH\nfainted!",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 2359,
+      "images": 0
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "screenshot": true
+      },
+      "action_end_frame": 115540,
+      "action_start_frame": 115524,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 115540,
+      "height": 160,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 115526,
+          "action_start_frame": 115524
+        },
+        {
+          "action_end_frame": 115528,
+          "action_start_frame": 115526
+        },
+        {
+          "action_end_frame": 115540,
+          "action_start_frame": 115528
+        }
+      ],
+      "title": "POKEMON EMER",
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 115540,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 29
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 0,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 115540,
+          "map_id": 32,
+          "source": "expanded_message_buffer",
+          "text": "SWELLOW gained\n144 EXP. Points!",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 2150,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "screenshot": false
+      },
+      "action_end_frame": 119196,
+      "action_start_frame": 119180,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 119196,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 119182,
+          "action_start_frame": 119180
+        },
+        {
+          "action_end_frame": 119184,
+          "action_start_frame": 119182
+        },
+        {
+          "action_end_frame": 119196,
+          "action_start_frame": 119184
+        }
+      ],
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 119196,
+        "interaction": "battle",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": true,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": true,
+          "battlers": [
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 67,
+              "id": 0,
+              "level": 25,
+              "max_hp": 67,
+              "moves": [
+                {
+                  "id": 17,
+                  "pp": 29
+                },
+                {
+                  "id": 45,
+                  "pp": 40
+                },
+                {
+                  "id": 104,
+                  "pp": 15
+                },
+                {
+                  "id": 98,
+                  "pp": 30
+                }
+              ],
+              "party_slot": 0,
+              "position": 0,
+              "side": "player",
+              "slot": 0,
+              "species_id": 305,
+              "species_name": "SWELLOW",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            },
+            {
+              "absent": false,
+              "available": true,
+              "confusion_turns": 0,
+              "hp": 0,
+              "id": 1,
+              "level": 13,
+              "max_hp": 37,
+              "moves": [
+                {
+                  "id": 71,
+                  "pp": 20
+                },
+                {
+                  "id": 230,
+                  "pp": 20
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                },
+                {
+                  "id": 0,
+                  "pp": 0
+                }
+              ],
+              "party_slot": 0,
+              "position": 1,
+              "side": "opponent",
+              "slot": 0,
+              "species_id": 43,
+              "species_name": "ODDISH",
+              "stat_changes": {
+                "accuracy": 0,
+                "attack": 0,
+                "defense": 0,
+                "evasion": 0,
+                "special_attack": 0,
+                "special_defense": 0,
+                "speed": 0
+              },
+              "status": 0,
+              "volatile_status": 0
+            }
+          ],
+          "outcome": 0,
+          "type_flags": 4
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 2003,
+      "images": 0
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "overworld_ready",
+        "screenshot": false
+      },
+      "action_end_frame": 120899,
+      "action_start_frame": 120897,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 120899,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 120897,
+        "completed": true,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "condition_met",
+        "steps_moved": 0,
+        "stop_frame": 120899,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 120899,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "north",
+          "moving": false,
+          "x": 17,
+          "y": 15
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1164,
+      "images": 0
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 6,
+        "y": 9,
+        "avoid_trainers": false,
+        "screenshot": false
+      },
+      "action_end_frame": 127427,
+      "action_start_frame": 127053,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 127427,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 127053,
+        "completed": true,
+        "last_position": {
+          "x": 6,
+          "y": 9
+        },
+        "position_unchanged": false,
+        "reason": "arrived",
+        "steps_moved": 19,
+        "stop_frame": 127427,
+        "target": {
+          "x": 6,
+          "y": 9
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 127427,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 6,
+          "y": 9
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1156,
+      "images": 0
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 0,
+        "y": 9,
+        "avoid_trainers": false,
+        "screenshot": false
+      },
+      "action_end_frame": 132712,
+      "action_start_frame": 132595,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 132712,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 132595,
+        "completed": true,
+        "last_position": {
+          "x": 0,
+          "y": 9
+        },
+        "position_unchanged": false,
+        "reason": "arrived",
+        "steps_moved": 6,
+        "stop_frame": 132712,
+        "target": {
+          "x": 0,
+          "y": 9
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 132712,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 32,
+          "number": 32,
+          "width": 60
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "west",
+          "moving": false,
+          "x": 0,
+          "y": 9
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1154,
+      "images": 0
+    },
+    {
+      "tool": "act",
+      "args": {
+        "buttons": [
+          "Left"
+        ],
+        "frames": 20,
+        "screenshot": false
+      },
+      "action_end_frame": 134561,
+      "action_start_frame": 134560,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 134561,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": true,
+        "position_unchanged": false,
+        "repeated_movement_loop": false,
+        "unchanged_attempts": 0,
+        "completed": false,
+        "reason": "decision_point",
+        "requires_inspection": true
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 134561,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 14,
+          "number": 14,
+          "width": 20
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "west",
+          "moving": true,
+          "x": -1,
+          "y": 9
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1146,
+      "images": 0
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "overworld_ready",
+        "screenshot": false
+      },
+      "action_end_frame": 135857,
+      "action_start_frame": 135855,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 135857,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 135855,
+        "completed": true,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "condition_met",
+        "steps_moved": 0,
+        "stop_frame": 135857,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 135857,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 14,
+          "number": 14,
+          "width": 20
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "west",
+          "moving": false,
+          "x": 19,
+          "y": 9
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1161,
+      "images": 0
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 16,
+        "y": 4,
+        "avoid_trainers": false,
+        "screenshot": true
+      },
+      "action_end_frame": 142969,
+      "action_start_frame": 142817,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 142969,
+      "height": 160,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 142817,
+        "completed": true,
+        "last_position": {
+          "x": 16,
+          "y": 4
+        },
+        "position_unchanged": false,
+        "reason": "arrived",
+        "steps_moved": 8,
+        "stop_frame": 142969,
+        "target": {
+          "x": 16,
+          "y": 4
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 142969,
+        "interaction": "overworld",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 14,
+          "number": 14,
+          "width": 20
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 16,
+          "y": 4
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1183,
+      "images": 1
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 16,
+        "y": 3,
+        "avoid_trainers": false,
+        "screenshot": false
+      },
+      "action_end_frame": 145169,
+      "action_start_frame": 145168,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 145169,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 145168,
+        "completed": false,
+        "last_position": {
+          "x": 16,
+          "y": 4
+        },
+        "position_unchanged": true,
+        "reason": "scripted",
+        "steps_moved": 0,
+        "stop_frame": 145169,
+        "target": {
+          "x": 16,
+          "y": 3
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 145169,
+        "interaction": "scripted",
+        "map": {
+          "group": 0,
+          "height": 20,
+          "id": 14,
+          "number": 14,
+          "width": 20
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 16,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1159,
+      "images": 0
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "overworld_ready",
+        "screenshot": false
+      },
+      "action_end_frame": 146773,
+      "action_start_frame": 146771,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 146773,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 146771,
+        "completed": true,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "condition_met",
+        "steps_moved": 0,
+        "stop_frame": 146773,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 146773,
+        "interaction": "overworld",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 33,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 8
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1162,
+      "images": 0
+    },
+    {
+      "tool": "move_to",
+      "args": {
+        "x": 7,
+        "y": 4,
+        "avoid_trainers": false,
+        "screenshot": false
+      },
+      "action_end_frame": 151504,
+      "action_start_frame": 151432,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 151504,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 151432,
+        "completed": true,
+        "last_position": {
+          "x": 7,
+          "y": 4
+        },
+        "position_unchanged": false,
+        "reason": "arrived",
+        "steps_moved": 4,
+        "stop_frame": 151504,
+        "target": {
+          "x": 7,
+          "y": 4
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 151504,
+        "interaction": "overworld",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1155,
+      "images": 0
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12
+      },
+      "action_end_frame": 152920,
+      "action_start_frame": 152904,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 152920,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 152906,
+          "action_start_frame": 152904
+        },
+        {
+          "action_end_frame": 152908,
+          "action_start_frame": 152906
+        },
+        {
+          "action_end_frame": 152920,
+          "action_start_frame": 152908
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 152920,
+        "interaction": "dialogue",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 152909,
+          "map_id": 1540,
+          "source": "expanded_message_buffer",
+          "text": "Hello, and welcome to\nthe POK�MON CENTER.\nWe restore your tired POK�MON\nto full health.\nWould you like to rest your POK�MON?",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 1385,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12
+      },
+      "action_end_frame": 155862,
+      "action_start_frame": 155846,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 155862,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 155848,
+          "action_start_frame": 155846
+        },
+        {
+          "action_end_frame": 155850,
+          "action_start_frame": 155848
+        },
+        {
+          "action_end_frame": 155862,
+          "action_start_frame": 155850
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 155862,
+        "interaction": "dialogue",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1165,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12
+      },
+      "action_end_frame": 159076,
+      "action_start_frame": 159060,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 159076,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 159062,
+          "action_start_frame": 159060
+        },
+        {
+          "action_end_frame": 159064,
+          "action_start_frame": 159062
+        },
+        {
+          "action_end_frame": 159076,
+          "action_start_frame": 159064
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 159076,
+        "interaction": "dialogue",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1165,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12
+      },
+      "action_end_frame": 163472,
+      "action_start_frame": 163456,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 163472,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 163458,
+          "action_start_frame": 163456
+        },
+        {
+          "action_end_frame": 163460,
+          "action_start_frame": 163458
+        },
+        {
+          "action_end_frame": 163472,
+          "action_start_frame": 163460
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 163472,
+        "interaction": "dialogue",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 98,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 163460,
+          "map_id": 1540,
+          "source": "expanded_message_buffer",
+          "text": "Okay, I'll take your POK�MON\nfor a few seconds.",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 1305,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12
+      },
+      "action_end_frame": 169974,
+      "action_start_frame": 169958,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 169974,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 169960,
+          "action_start_frame": 169958
+        },
+        {
+          "action_end_frame": 169962,
+          "action_start_frame": 169960
+        },
+        {
+          "action_end_frame": 169974,
+          "action_start_frame": 169962
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 169974,
+        "interaction": "dialogue",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1166,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12
+      },
+      "action_end_frame": 172931,
+      "action_start_frame": 172915,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 172931,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 172917,
+          "action_start_frame": 172915
+        },
+        {
+          "action_end_frame": 172919,
+          "action_start_frame": 172917
+        },
+        {
+          "action_end_frame": 172931,
+          "action_start_frame": 172919
+        }
+      ],
+      "title": "POKEMON EMER",
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 172931,
+        "interaction": "overworld",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1141,
+      "images": 0
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Start",
+        "release_frames": 12
+      },
+      "action_end_frame": 175342,
+      "action_start_frame": 175326,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 175342,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 175328,
+          "action_start_frame": 175326
+        },
+        {
+          "action_end_frame": 175330,
+          "action_start_frame": 175328
+        },
+        {
+          "action_end_frame": 175342,
+          "action_start_frame": 175330
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 175342,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "cursor": 1,
+          "input_ready": false,
+          "kind": "start"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1174,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 1
+        }
+      },
+      "action_end_frame": 179505,
+      "action_start_frame": 179489,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 179505,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": false,
+        "unchanged_attempts": 1
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 179491,
+          "action_start_frame": 179489
+        },
+        {
+          "action_end_frame": 179493,
+          "action_start_frame": 179491
+        },
+        {
+          "action_end_frame": 179505,
+          "action_start_frame": 179493
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 179505,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "cursor": 2,
+          "input_ready": false,
+          "kind": "start"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1287,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 2
+        }
+      },
+      "action_end_frame": 182261,
+      "action_start_frame": 182245,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 182261,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": false,
+        "unchanged_attempts": 2
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 182247,
+          "action_start_frame": 182245
+        },
+        {
+          "action_end_frame": 182249,
+          "action_start_frame": 182247
+        },
+        {
+          "action_end_frame": 182261,
+          "action_start_frame": 182249
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 182261,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "cursor": 3,
+          "input_ready": false,
+          "kind": "start"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1287,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 3
+        }
+      },
+      "action_end_frame": 185323,
+      "action_start_frame": 185307,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 185323,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": true,
+        "unchanged_attempts": 3
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 185309,
+          "action_start_frame": 185307
+        },
+        {
+          "action_end_frame": 185311,
+          "action_start_frame": 185309
+        },
+        {
+          "action_end_frame": 185323,
+          "action_start_frame": 185311
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 185323,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "cursor": 4,
+          "input_ready": false,
+          "kind": "start"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1286,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "Down",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 4
+        }
+      },
+      "action_end_frame": 187829,
+      "action_start_frame": 187813,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 187829,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "map_changed": false,
+        "position_unchanged": true,
+        "repeated_movement_loop": true,
+        "unchanged_attempts": 4
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 187815,
+          "action_start_frame": 187813
+        },
+        {
+          "action_end_frame": 187817,
+          "action_start_frame": 187815
+        },
+        {
+          "action_end_frame": 187829,
+          "action_start_frame": 187817
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 187829,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "cursor": 5,
+          "input_ready": false,
+          "kind": "start"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [],
+      "isError": false,
+      "text_chars": 1286,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "start",
+          "cursor": 5
+        }
+      },
+      "action_end_frame": 190497,
+      "action_start_frame": 190481,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 190497,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 190483,
+          "action_start_frame": 190481
+        },
+        {
+          "action_end_frame": 190485,
+          "action_start_frame": 190483
+        },
+        {
+          "action_end_frame": 190497,
+          "action_start_frame": 190485
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 190497,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "save",
+          "phase": "processing"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 190490,
+          "map_id": 1540,
+          "source": "expanded_message_buffer",
+          "text": "Would you like to save the game?",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 1307,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "save"
+        }
+      },
+      "action_end_frame": 193633,
+      "action_start_frame": 193617,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 193633,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 193619,
+          "action_start_frame": 193617
+        },
+        {
+          "action_end_frame": 193621,
+          "action_start_frame": 193619
+        },
+        {
+          "action_end_frame": 193633,
+          "action_start_frame": 193621
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 193633,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "save",
+          "phase": "processing"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 193621,
+          "map_id": 1540,
+          "source": "expanded_message_buffer",
+          "text": "There is already a saved file.\nIs it okay to overwrite it?",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 1334,
+      "images": 1
+    },
+    {
+      "tool": "press",
+      "args": {
+        "button": "A",
+        "release_frames": 12,
+        "expected_menu": {
+          "kind": "save"
+        }
+      },
+      "action_end_frame": 196824,
+      "action_start_frame": 196808,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 196824,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "steps": [
+        {
+          "action_end_frame": 196810,
+          "action_start_frame": 196808
+        },
+        {
+          "action_end_frame": 196812,
+          "action_start_frame": 196810
+        },
+        {
+          "action_end_frame": 196824,
+          "action_start_frame": 196812
+        }
+      ],
+      "title": "POKEMON EMER",
+      "height": 160,
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 196824,
+        "interaction": "menu",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": false,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "save",
+          "phase": "writing"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 196812,
+          "map_id": 1540,
+          "source": "expanded_message_buffer",
+          "text": "SAVING�\nDON'T TURN OFF THE POWER.",
+          "type": "message"
+        }
+      ],
+      "isError": false,
+      "text_chars": 1306,
+      "images": 1
+    },
+    {
+      "tool": "wait_until",
+      "args": {
+        "condition": "overworld_ready",
+        "max_frames": 600,
+        "screenshot": true
+      },
+      "action_end_frame": 198617,
+      "action_start_frame": 198615,
+      "ai_control": true,
+      "ai_keys": 0,
+      "ai_speed": 8,
+      "atomic": true,
+      "cancelled": false,
+      "connected": true,
+      "connected_clients": 1,
+      "effective_keys": 0,
+      "frame": 198617,
+      "height": 160,
+      "human_keys": 0,
+      "keys": 0,
+      "mcp_enabled": true,
+      "paused": false,
+      "platform": "GBA",
+      "progress": {
+        "action_start_frame": 198615,
+        "completed": true,
+        "last_position": {
+          "x": 0,
+          "y": 0
+        },
+        "position_unchanged": false,
+        "reason": "condition_met",
+        "steps_moved": 0,
+        "stop_frame": 198617,
+        "target": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "session_id": "c96c05be-4fc7-4cc6-aaaa-a12ff2b3454d",
+      "started": true,
+      "title": "POKEMON EMER",
+      "width": 240,
+      "state_format": "compact",
+      "game_state": {
+        "supported": true,
+        "available": true,
+        "adapter": "emerald_en_v1",
+        "frame": 198617,
+        "interaction": "overworld",
+        "map": {
+          "group": 6,
+          "height": 9,
+          "id": 1540,
+          "number": 4,
+          "width": 14
+        },
+        "player": {
+          "avatar_flags": 1,
+          "facing": "north",
+          "moving": false,
+          "x": 7,
+          "y": 4
+        },
+        "movement_available": true,
+        "battle_menu_ready": false,
+        "menu": {
+          "input_ready": false,
+          "kind": "none"
+        },
+        "battle": {
+          "available": false
+        },
+        "party": {
+          "available": true,
+          "members": [
+            {
+              "slot": 0,
+              "species_id": 305,
+              "level": 25,
+              "hp": 67,
+              "max_hp": 67,
+              "status": 0
+            },
+            {
+              "slot": 1,
+              "species_id": 284,
+              "level": 35,
+              "hp": 102,
+              "max_hp": 102,
+              "status": 0
+            }
+          ]
+        }
+      },
+      "new_events": [
+        {
+          "frame": 197109,
+          "map_id": 1540,
+          "source": "expanded_message_buffer",
+          "text": "MATT saved the game.",
+          "type": "message"
+        },
+        {
+          "frame": 197130,
+          "map_id": 1540,
+          "position": {
+            "x": 7,
+            "y": 4
+          },
+          "type": "save_confirmed"
+        }
+      ],
+      "isError": false,
+      "text_chars": 1379,
+      "images": 1
+    }
+  ],
+  "final_state": {
+    "adapter": "emerald_en_v1",
+    "available": true,
+    "battle": {
+      "available": false
+    },
+    "battle_menu_ready": false,
+    "frame": 212214,
+    "input": {
+      "ai_keys": 0,
+      "effective_keys": 0,
+      "human_keys": 0
+    },
+    "interaction": "overworld",
+    "inventory": {
+      "berries": [
+        {
+          "item_id": 133,
+          "quantity": 4
+        },
+        {
+          "item_id": 134,
+          "quantity": 1
+        },
+        {
+          "item_id": 138,
+          "quantity": 2
+        },
+        {
+          "item_id": 139,
+          "quantity": 7
+        },
+        {
+          "item_id": 148,
+          "quantity": 6
+        }
+      ],
+      "items": [
+        {
+          "item_id": 64,
+          "quantity": 1
+        },
+        {
+          "item_id": 79,
+          "quantity": 1
+        },
+        {
+          "item_id": 74,
+          "quantity": 1
+        },
+        {
+          "item_id": 18,
+          "quantity": 1
+        },
+        {
+          "item_id": 22,
+          "quantity": 6
+        },
+        {
+          "item_id": 83,
+          "quantity": 2
+        },
+        {
+          "item_id": 24,
+          "quantity": 3
+        },
+        {
+          "item_id": 36,
+          "quantity": 1
+        },
+        {
+          "item_id": 77,
+          "quantity": 1
+        }
+      ],
+      "key_items": [
+        {
+          "item_id": 262,
+          "quantity": 1
+        },
+        {
+          "item_id": 261,
+          "quantity": 1
+        },
+        {
+          "item_id": 259,
+          "quantity": 1
+        },
+        {
+          "item_id": 280,
+          "quantity": 1
+        }
+      ],
+      "poke_balls": [
+        {
+          "item_id": 4,
+          "quantity": 14
+        },
+        {
+          "item_id": 3,
+          "quantity": 5
+        },
+        {
+          "item_id": 12,
+          "quantity": 1
+        }
+      ],
+      "tm_hm": [
+        {
+          "item_id": 296,
+          "quantity": 1
+        },
+        {
+          "item_id": 322,
+          "quantity": 1
+        },
+        {
+          "item_id": 334,
+          "quantity": 1
+        },
+        {
+          "item_id": 335,
+          "quantity": 1
+        },
+        {
+          "item_id": 339,
+          "quantity": 1
+        },
+        {
+          "item_id": 342,
+          "quantity": 1
+        },
+        {
+          "item_id": 343,
+          "quantity": 1
+        },
+        {
+          "item_id": 344,
+          "quantity": 1
+        }
+      ]
+    },
+    "map": {
+      "group": 6,
+      "height": 9,
+      "id": 1540,
+      "number": 4,
+      "width": 14
+    },
+    "menu": {
+      "input_ready": false,
+      "kind": "none"
+    },
+    "movement_available": true,
+    "normalized_rom_sha1": "4c743011d7f9af0fbc1ef1de7bff157dde718f56",
+    "party": {
+      "available": true,
+      "members": [
+        {
+          "held_item_id": 182,
+          "hp": 67,
+          "level": 25,
+          "max_hp": 67,
+          "moves": [
+            {
+              "id": 17,
+              "pp": 35
+            },
+            {
+              "id": 45,
+              "pp": 40
+            },
+            {
+              "id": 104,
+              "pp": 15
+            },
+            {
+              "id": 98,
+              "pp": 30
+            }
+          ],
+          "slot": 0,
+          "species_id": 305,
+          "status": 0
+        },
+        {
+          "held_item_id": 0,
+          "hp": 102,
+          "level": 35,
+          "max_hp": 102,
+          "moves": [
+            {
+              "id": 249,
+              "pp": 15
+            },
+            {
+              "id": 341,
+              "pp": 15
+            },
+            {
+              "id": 317,
+              "pp": 10
+            },
+            {
+              "id": 55,
+              "pp": 25
+            }
+          ],
+          "slot": 1,
+          "species_id": 284,
+          "status": 0
+        }
+      ]
+    },
+    "player": {
+      "avatar_flags": 1,
+      "facing": "north",
+      "moving": false,
+      "x": 7,
+      "y": 4
+    },
+    "quest_flags": {
+      "format": "set_flag_ids",
+      "ids": [
+        80,
+        81,
+        82,
+        86,
+        87,
+        88,
+        90,
+        106,
+        107,
+        109,
+        115,
+        116,
+        130,
+        132,
+        137,
+        139,
+        143,
+        144,
+        147,
+        148,
+        149,
+        159,
+        165,
+        166,
+        167,
+        174,
+        175,
+        176,
+        177,
+        178,
+        179,
+        180,
+        181,
+        182,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        199,
+        207,
+        211,
+        214,
+        215,
+        246,
+        253,
+        257,
+        269,
+        272,
+        274,
+        281,
+        288,
+        301,
+        303,
+        304,
+        305,
+        306,
+        344,
+        348,
+        352,
+        355,
+        356,
+        362,
+        367,
+        368,
+        369,
+        377,
+        378,
+        383,
+        385,
+        393,
+        395,
+        402,
+        403,
+        409,
+        414,
+        415,
+        467,
+        468,
+        469,
+        544,
+        562,
+        563,
+        700,
+        702,
+        719,
+        720,
+        722,
+        723,
+        724,
+        725,
+        726,
+        727,
+        728,
+        730,
+        731,
+        732,
+        734,
+        735,
+        738,
+        739,
+        740,
+        742,
+        743,
+        745,
+        746,
+        747,
+        748,
+        749,
+        750,
+        751,
+        752,
+        754,
+        755,
+        756,
+        757,
+        759,
+        760,
+        761,
+        762,
+        763,
+        765,
+        766,
+        767,
+        768,
+        769,
+        770,
+        771,
+        774,
+        776,
+        777,
+        778,
+        779,
+        780,
+        781,
+        784,
+        786,
+        789,
+        790,
+        791,
+        792,
+        793,
+        794,
+        795,
+        797,
+        798,
+        799,
+        802,
+        803,
+        804,
+        805,
+        807,
+        811,
+        812,
+        814,
+        815,
+        816,
+        817,
+        818,
+        819,
+        823,
+        824,
+        826,
+        827,
+        828,
+        829,
+        830,
+        831,
+        832,
+        833,
+        834,
+        835,
+        837,
+        838,
+        840,
+        841,
+        843,
+        844,
+        845,
+        846,
+        848,
+        849,
+        851,
+        853,
+        854,
+        855,
+        856,
+        858,
+        859,
+        860,
+        861,
+        862,
+        863,
+        866,
+        867,
+        869,
+        870,
+        872,
+        874,
+        875,
+        876,
+        878,
+        879,
+        880,
+        881,
+        882,
+        883,
+        884,
+        885,
+        886,
+        887,
+        888,
+        889,
+        891,
+        892,
+        894,
+        895,
+        896,
+        897,
+        898,
+        900,
+        901,
+        902,
+        903,
+        904,
+        906,
+        909,
+        910,
+        911,
+        912,
+        915,
+        919,
+        920,
+        921,
+        922,
+        923,
+        925,
+        926,
+        927,
+        929,
+        930,
+        931,
+        934,
+        938,
+        939,
+        940,
+        942,
+        944,
+        945,
+        948,
+        949,
+        950,
+        965,
+        967,
+        968,
+        973,
+        979,
+        983,
+        992,
+        995,
+        996,
+        997,
+        998,
+        999,
+        1001,
+        1007,
+        1015,
+        1016,
+        1020,
+        1048,
+        1050,
+        1058,
+        1116,
+        1117,
+        1135,
+        1142,
+        1264,
+        1265,
+        1266,
+        1290,
+        1296,
+        1300,
+        1301,
+        1317,
+        1344,
+        1358,
+        1374,
+        1394,
+        1416,
+        1423,
+        1426,
+        1459,
+        1471,
+        1474,
+        1476,
+        1481,
+        1484,
+        1486,
+        1493,
+        1496,
+        1497,
+        1507,
+        1512,
+        1545,
+        1546,
+        1547,
+        1560,
+        1567,
+        1572,
+        1579,
+        1582,
+        1592,
+        1598,
+        1599,
+        1600,
+        1601,
+        1602,
+        1603,
+        1606,
+        1607,
+        1613,
+        1614,
+        1617,
+        1619,
+        1620,
+        1624,
+        1649,
+        1699,
+        1705,
+        1706,
+        1714,
+        1752,
+        1763,
+        1771,
+        1781,
+        1809,
+        1810,
+        1818,
+        1825,
+        1846,
+        1851,
+        1852,
+        1853,
+        1854,
+        1859,
+        1877,
+        1880,
+        1882,
+        1883,
+        1884,
+        1886,
+        1895,
+        1896,
+        1897,
+        1901,
+        1907,
+        1908,
+        1909,
+        1911,
+        1912,
+        1915,
+        1928,
+        1929,
+        1936,
+        1957,
+        1977,
+        1979,
+        1981,
+        1984,
+        1985,
+        1986,
+        1987,
+        1989,
+        1992,
+        1995,
+        2026,
+        2027,
+        2033,
+        2034,
+        2082,
+        2144,
+        2145,
+        2146,
+        2151,
+        2152,
+        2153,
+        2159,
+        2160,
+        2161,
+        2162,
+        2163,
+        2164,
+        2166,
+        2167,
+        2168,
+        2169,
+        2192,
+        2193,
+        2194,
+        2197,
+        2205,
+        2211,
+        2218,
+        2234,
+        2239,
+        2240,
+        2276
+      ]
+    },
+    "recent_events": [
+      {
+        "frame": 86232,
+        "map_id": 32,
+        "source": "expanded_message_buffer",
+        "text": "Wild ODDISH appeared!",
+        "type": "message"
+      },
+      {
+        "frame": 97006,
+        "map_id": 32,
+        "source": "expanded_message_buffer",
+        "text": "Go! SWELLOW!",
+        "type": "message"
+      },
+      {
+        "frame": 111270,
+        "map_id": 32,
+        "source": "expanded_message_buffer",
+        "text": "SWELLOW used\nWING ATTACK!",
+        "type": "message"
+      },
+      {
+        "frame": 111426,
+        "map_id": 32,
+        "source": "expanded_message_buffer",
+        "text": "It's super effective!",
+        "type": "message"
+      },
+      {
+        "frame": 111599,
+        "map_id": 32,
+        "source": "expanded_message_buffer",
+        "text": "Wild ODDISH\nfainted!",
+        "type": "message"
+      },
+      {
+        "frame": 115540,
+        "map_id": 32,
+        "source": "expanded_message_buffer",
+        "text": "SWELLOW gained\n144 EXP. Points!",
+        "type": "message"
+      },
+      {
+        "frame": 152909,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "Hello, and welcome to\nthe POK�MON CENTER.\nWe restore your tired POK�MON\nto full health.\nWould you like to rest your POK�MON?",
+        "type": "message"
+      },
+      {
+        "frame": 163460,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "Okay, I'll take your POK�MON\nfor a few seconds.",
+        "type": "message"
+      },
+      {
+        "frame": 163743,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "Thank you for waiting.\nWe've restored your POK�MON\nto full health.",
+        "type": "message"
+      },
+      {
+        "frame": 170062,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "We hope to see you again!",
+        "type": "message"
+      },
+      {
+        "frame": 190490,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "Would you like to save the game?",
+        "type": "message"
+      },
+      {
+        "frame": 193621,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "There is already a saved file.\nIs it okay to overwrite it?",
+        "type": "message"
+      },
+      {
+        "frame": 196812,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "SAVING�\nDON'T TURN OFF THE POWER.",
+        "type": "message"
+      },
+      {
+        "frame": 197109,
+        "map_id": 1540,
+        "source": "expanded_message_buffer",
+        "text": "MATT saved the game.",
+        "type": "message"
+      },
+      {
+        "frame": 197130,
+        "map_id": 1540,
+        "position": {
+          "x": 7,
+          "y": 4
+        },
+        "type": "save_confirmed"
+      }
+    ],
+    "rom_sha1": "11b20175dcf8f33058aa5af4571b0fe9758a82a3",
+    "story_progress": {
+      "badge_count": 3,
+      "badges": [
+        "Stone",
+        "Knuckle",
+        "Dynamo"
+      ],
+      "source": "save_block_flags"
+    },
+    "supported": true
+  }
+}

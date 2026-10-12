@@ -2,14 +2,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { Bridge, descriptors, listSessions } from './bridge.mjs';
-import { StateResponses } from './state-responses.mjs';
+import { StateResponses, compactState } from './state-responses.mjs';
 import { guardedMovement } from './visual-movement.mjs';
 import { handoff } from './handoff.mjs';
 import { guardedVerifiedInput } from './control-policy.mjs';
+import { trainBattle } from './training.mjs';
 
 const instructions = `Control a visible mGBA game with shared human input. Multiple agents can connect to the same window; coordinate goals because they share game progress, speed, and checkpoints. Only one action runs at a time: if busy, observe and retry after completion. Observations and memory reads remain available during another agent's action. The bridge is enabled automatically while mGBA is open; the user can disable it in AI > MCP Enabled. Start with list_sessions and connect. Human directions override conflicting AI directions; other buttons combine. AI speed defaults to 4x and can be changed with set_speed or AI > AI Speed. The emulator runs while you think, so observations become stale quickly. Use short observe/action cycles near hazards. Use act_sequence for predictable movement to reduce model/tool round trips, with up to 200 steps and at most 600 total frames. Use screenshot:false only when a fresh image is unnecessary; obtain a new observation before uncertain decisions. Cancelled actions report cancelled:true and only completed sequence steps; do not assume planned moves completed. A manual pause must be resumed by the user. Disconnect cancels only your pending action; other connected agents retain control. The last agent disconnecting restores ordinary speed without pausing or clearing human buttons. Save a checkpoint before risky moves, using agent-specific names to avoid overwriting another agent's checkpoint. Use memory_map before reading memory: bytes are not labeled health or coordinates unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game. This MCP does not select or invoke a model.`;
-const verification = `For verified Emerald, use one press then inspect each new prompt, including switch and move-learning prompts. Confirmation batches are rejected. Raw travel checks state between input frames and stops at new decision evidence; prefer move_to for efficient collision-aware travel. Inspect live tiles, behavior, occupancy and reachable paths before selecting a destination; do not repeat no-path targets or assume Gym holes are active. move_to avoids potential trainer sightlines by default; avoid_trainers:false permits deliberate exposure. movement_available checks animation restrictions as well as overworld state; verify coordinate progress after geysers or forced movement. Battle, dialogue and menu responses always contain full state. For other deltas, replace changed top-level fields and delete removed_state_fields; verify base_frame and request full_state:true if it does not match. Inspect live battler HP, cursor, selected move and target; request a full screenshot observation when they seem inconsistent. Record milestones and evidence immediately in story notes and the objective tracker. During long sessions, make in-game saves at safe points and verify save_confirmed; checkpoints are separate. Obtain get_handoff before stopping.`;
-const server = new McpServer({ name: 'mgba-willow', version: '1.1.0' }, { instructions: `${instructions} ${verification} Only atomic:true certifies screenshot/state frame alignment. Unsupported ROMs retain raw tools.` });
+const verification = `For verified Emerald, use one press then inspect each new prompt, including switch and move-learning prompts. Confirmation batches are rejected. Raw travel checks state between input frames and stops at new decision evidence; prefer move_to for efficient collision-aware travel. Inspect live tiles, behavior, occupancy and reachable paths before selecting a destination; do not repeat no-path targets or assume Gym holes are active. move_to avoids potential trainer sightlines by default; avoid_trainers:false permits deliberate exposure. movement_available checks animation restrictions as well as overworld state; verify coordinate progress after geysers or forced movement. Compact output is the default: full state stays local, and each decision view contains location, menu, party HP/status, live battlers, selected move/target and new events. Compact views replace the previous view; they are not deltas. full_state:true returns all fields; compact:false enables legacy full/delta responses. Screenshots are omitted for decoded states and requested for unfamiliar prompts; screenshot:false explicitly suppresses them. Use move_to for verified route segments and wait_until for animations. train_battle uses a caller-selected move in single wild battles and stops at exceptions. Read one current handoff before consulting older history. For other deltas, replace changed top-level fields and delete removed_state_fields; verify base_frame and request full_state:true if it does not match. Inspect live battler HP, cursor, selected move and target; request a full screenshot observation when they seem inconsistent. Record milestones and evidence immediately in story notes and the objective tracker. During long sessions, make in-game saves at safe points and verify save_confirmed; checkpoints are separate. Obtain get_handoff before stopping.`;
+const server = new McpServer({ name: 'mgba-willow', version: '1.1.0' }, { instructions: `${instructions} ${verification} After connecting, use set_objective to display the current goal in the window and update it when the goal changes. Keep it short; this shared display does not replace story notes. Only atomic:true certifies screenshot/state frame alignment. Unsupported ROMs retain raw tools.` });
 let bridge;
 const stateResponses = new StateResponses();
 let queue = Promise.resolve();
@@ -32,12 +33,27 @@ function register(name, description, inputSchema, readOnly, callback) {
     annotations: { readOnlyHint: readOnly, destructiveHint: false, openWorldHint: false, idempotentHint: readOnly },
   }, args => {
     const run = queue.then(async () => {
-      try { return content(stateResponses.apply(await callback(args), args.full_state === true)); }
+      try {
+        const selective = 'screenshot' in inputSchema && args.screenshot === undefined &&
+          stateResponses.previous?.supported === true;
+        let result = await callback(selective ? { ...args, screenshot: false } : args);
+        if (selective && needsImage(result.game_state)) {
+          result = { ...result, ...await call('observe', { screenshot: true }) };
+        }
+        return content(stateResponses.apply(result, args.full_state === true, args.compact !== false));
+      }
       catch (error) { return { content: [{ type: 'text', text: error.message }], isError: true }; }
     });
     queue = run.catch(() => {});
     return run;
   });
+}
+
+function needsImage(state) {
+  return !state?.available || !state.supported ||
+    (state.interaction === 'battle' && !state.menu?.input_ready && state.menu?.kind !== 'none') ||
+    (state.menu?.kind !== 'none' && !state.menu?.input_ready) ||
+    !['overworld', 'battle'].includes(state.interaction);
 }
 
 function call(method, args) {
@@ -73,16 +89,25 @@ register('connect', 'Join shared AI control of one game window, preserve its pau
     return result;
   } catch (error) { candidate.close(); throw error; }
 });
-const observationSchema = { screenshot: z.boolean().optional(), full_state: z.boolean().optional() };
-register('observe', 'Get a screenshot and decoded state. atomic:true certifies a shared completed emulated frame; hardware rendering reports atomic:false. Unsupported ROMs retain screenshots and raw tools. State changes use a per-client baseline; full_state:true returns the complete state.', observationSchema, true,
+const observationSchema = { screenshot: z.boolean().optional(), full_state: z.boolean().optional(), compact: z.boolean().optional() };
+register('set_objective', 'Set the shared Objective box in the connected game window. Use a short current goal; an empty string clears it. The latest connected agent update wins. This only updates display text and does not advance gameplay or save notes.', {
+  text: z.string().max(512),
+}, false, args => call('set_objective', args));
+register('observe', 'Read a compact decision view with new events; full state stays local. Screenshots are selective for decoded games; request screenshot:true for puzzles or discrepancies. full_state:true returns all fields; compact:false uses legacy deltas. Only atomic:true certifies screenshot/state frame alignment.', observationSchema, true,
   args => call('observe', args));
-register('get_game_state', 'Read verified Emerald map coordinates, facing, interaction state, party HP and moves, bag inventory, and numeric event flags. No screenshot by default. Subsequent responses contain top-level state changes; full_state:true refreshes the baseline. Unsupported ROMs report supported:false.', observationSchema, true,
+register('get_game_state', 'Read compact verified Emerald location, menu, party HP/status, live battlers, selected move/target and new events. full_state:true includes party moves, inventory and flags; compact:false uses legacy full/delta responses. Unsupported ROMs report supported:false.', observationSchema, true,
   args => call('get_game_state', args));
-register('get_handoff', 'Read a fresh complete snapshot and return location, party, inventory, verified badge progress, bounded message evidence and the last observed save confirmation. Does not advance frames, save the game, or write notes. Save evidence is historical and may be unavailable after restart or restore.', {
-  screenshot: z.boolean().optional(),
+register('get_handoff', 'Read one current handoff: location, party HP/status, badge progress, last five events and historical save evidence. full_state:true includes inventory and full party details. Does not save the game or write notes. Save evidence may be unavailable after restart or restore.', {
+  ...observationSchema,
 }, true, async args => {
   const result = await call('get_game_state', args);
-  return { ...result, handoff: handoff(result.game_state) };
+  const summary = handoff(result.game_state);
+  if (args.full_state !== true && args.compact !== false) {
+    delete summary.inventory;
+    summary.party = compactState(result.game_state ?? {}).party ?? null;
+    summary.recent_events = summary.recent_events?.slice(-5);
+  }
+  return { ...result, handoff: summary };
 });
 register('get_local_map', 'Read a radius of live Emerald collision tiles, elevations, behaviors, ladders, one-way ledges, active NPCs, warps and map connections. Coordinates exclude the game’s seven-tile border. Unknown tiles are never assumed passable.', {
   ...observationSchema, radius: z.number().int().min(1).max(16).optional(),
@@ -97,12 +122,16 @@ register('wait_until', 'Advance with no AI buttons until a decoded Emerald condi
   condition: z.enum(['battle_menu_ready', 'battle_move_ready', 'battle_target_ready', 'overworld_ready', 'map_transition_complete', 'dialogue']),
   max_frames: z.number().int().min(1).max(600).optional(), stable_frames: z.number().int().min(1).max(60).optional(),
 }, false, args => call('wait_until', args));
-register('press', 'Tap one button, then keep AI input released for an explicit interval. Defaults to a one-frame hold and two-frame release; works on supported and unsupported ROMs. Optional expected_menu checks fresh verified menu kind, cursor or party slot before sending input; a mismatch advances no action frames. Inspect after each tap. No screenshot by default.', {
+register('press', 'Release for two frames, tap one button for two frames, then release for two frames. A single edge avoids missed polling frames; never automatically retries confirmations. Optional expected_menu checks fresh verified menu kind, cursor or party slot before input. Inspect after each tap. No screenshot by default.', {
   ...observationSchema, button: z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R']),
   hold_frames: z.number().int().min(1).max(60).optional(), release_frames: z.number().int().min(1).max(60).optional(),
   expected_menu: z.object({ kind: z.string().min(1), cursor: z.number().int().min(0).max(65535).optional(),
     selected_party_slot: z.number().int().min(0).max(5).optional() }).optional(),
 }, false, args => controlledInput('press', args));
+register('train_battle', 'Run a bounded local routine in a verified single wild battle using an explicitly chosen move slot (0–3). Inspect every menu before one tap. Stop on any fainting, changed party/moves, move learning, evolution, dialogue, unknown state, human input, cancellation or budget. Never chooses replacements or retries a confirmation. No screenshot by default.', {
+  ...observationSchema, move_slot: z.number().int().min(0).max(3),
+  max_actions: z.number().int().min(1).max(100).optional(),
+}, false, args => trainBattle(call, args));
 const actionSchema = {
   buttons: z.array(z.enum(['A', 'B', 'Start', 'Select', 'Up', 'Down', 'Left', 'Right', 'L', 'R'])).max(10),
   frames: z.number().int().min(1).max(600),

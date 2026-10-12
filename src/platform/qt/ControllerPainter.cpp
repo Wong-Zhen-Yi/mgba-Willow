@@ -28,6 +28,11 @@ void ControllerPainter::setKeys(unsigned keys) {
 	m_keys = keys;
 }
 
+void ControllerPainter::setObjective(const QString& text) {
+	QMutexLocker lock(&m_mutex);
+	m_objective = text;
+}
+
 void ControllerPainter::reset() {
 	QMutexLocker lock(&m_mutex);
 	m_keys = 0;
@@ -50,11 +55,13 @@ void ControllerPainter::paint(QPainter* painter, const QSize& size) {
 	unsigned keys;
 	QRect viewport;
 	QStringList interactions;
+	QString objective;
 	{
 		QMutexLocker lock(&m_mutex);
 		keys = m_keys;
 		viewport = m_viewport;
 		interactions = m_aiInteractions;
+		objective = m_objective;
 		const auto now = Clock::now();
 		for (unsigned i = 0; i < m_pressedUntil.size(); ++i) {
 			if (now < m_pressedUntil[i]) keys |= 1U << i;
@@ -111,6 +118,14 @@ void ControllerPainter::paint(QPainter* painter, const QSize& size) {
 	painter->setPen(QColor("#97f9db"));
 	painter->drawText(objectivePanel.adjusted(12, 8, -12, -8), Qt::AlignLeft | Qt::AlignTop,
 	                  QStringLiteral("Objective:"));
+	painter->save();
+	const QRectF objectiveText = objectivePanel.adjusted(12, 30, -12, -8);
+	painter->setClipRect(objectiveText, Qt::IntersectClip);
+	font.setBold(false);
+	painter->setFont(font);
+	painter->setPen(QColor("#b9c4d3"));
+	painter->drawText(objectiveText, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, objective);
+	painter->restore();
 	const auto button = [&](const QRectF& rect, unsigned bit, const QString& label, bool round = false) {
 		const bool down = keys & (1U << bit);
 		painter->setPen(QPen(down ? QColor("#97f9db") : QColor("#455165"), down ? 2 : 1));

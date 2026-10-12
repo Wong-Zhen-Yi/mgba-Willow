@@ -13,12 +13,13 @@ export function inputProblem(state, method, args) {
   }
   if (state?.supported !== true) return;
   const actions = method === 'press'
-    ? [{ buttons: [args.button], frames: args.hold_frames ?? 1 }]
+    ? [{ buttons: [args.button], frames: args.hold_frames ?? 2 }]
     : method === 'act' ? [args] : args.actions;
   const inputs = actions.filter(action => action.buttons.length);
   if (!inputs.length) return;
   const decision = action => action.buttons.some(button => ['A', 'B', 'Start', 'Select'].includes(button));
-  if (inputs.some(decision) && (inputs.length > 1 || inputs.some(action => action.frames > 1 || action.buttons.length > 1))) {
+  const tapFrames = method === 'press' ? 2 : 1;
+  if (inputs.some(decision) && (inputs.length > 1 || inputs.some(action => action.frames > tapFrames || action.buttons.length > 1))) {
     return 'Decision input requires one single-button tap. Use press, inspect the new prompt/menu, then decide again.';
   }
   const direction = action => action.buttons.some(button => ['Up', 'Down', 'Left', 'Right'].includes(button));
@@ -26,7 +27,7 @@ export function inputProblem(state, method, args) {
     if (state.interaction === 'overworld' && state.movement_available === false) {
       return 'Movement is still restricted. Wait with no buttons and inspect readiness before moving.';
     }
-    if (state.interaction !== 'overworld' && (inputs.length > 1 || inputs.some(action => action.frames > 1 || action.buttons.length > 1))) {
+    if (state.interaction !== 'overworld' && (inputs.length > 1 || inputs.some(action => action.frames > tapFrames || action.buttons.length > 1))) {
       return 'Menu or animation input requires one single-button tap followed by inspection.';
     }
   }

@@ -80,6 +80,7 @@ test('session discovery ignores stale and invalid descriptors', async t => {
 test('MCP handshake, tools, schema validation, images, and reconnect', async t => {
   let frame = 10;
   let speed = 4;
+  let objective = '';
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
   const calls = [];
   const f = await fixture(t, (socket, req, id) => {
@@ -92,10 +93,12 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
       return { action_start_frame: begin, action_end_frame: frame };
     });
     if (req.method === 'set_speed') speed = req.args.multiplier;
+    if (req.method === 'set_objective') objective = req.args.text;
     const result = req.method === 'session' ? { session_id: id, started: true, title: 'Test', mcp_enabled: true, ai_speed: speed }
       : req.method === 'disconnect' ? { paused: false }
       : req.method === 'read_memory' ? { hex: '0001' }
-      : { ...(req.args.screenshot === false ? {} : { png }), frame, paused: false, ai_speed: speed,
+      : req.method === 'set_objective' ? { objective }
+      : { ...(req.args.screenshot === false ? {} : { png }), frame, paused: false, ai_speed: speed, objective,
         human_keys: 0, ai_keys: 0, effective_keys: 0,
         ...(['act', 'act_sequence'].includes(req.method) ? { action_start_frame: start, action_end_frame: frame, cancelled: false } : {}),
         ...(steps ? { steps } : {}) };
@@ -113,9 +116,10 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
   t.after(() => client.close());
   await client.connect(transport);
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'act_sequence', 'set_speed', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint', 'get_game_state', 'get_handoff', 'get_local_map', 'move_to', 'press', 'wait_until'].sort());
+  assert.deepEqual(tools.map(tool => tool.name).sort(), ['act', 'act_sequence', 'set_speed', 'set_objective', 'connect', 'disconnect', 'list_sessions', 'load_checkpoint', 'memory_map', 'observe', 'read_memory', 'save_checkpoint', 'get_game_state', 'get_handoff', 'get_local_map', 'move_to', 'press', 'train_battle', 'wait_until'].sort());
   const call = (name, args = {}) => client.callTool({ name, arguments: args });
   assert.equal((await call('observe')).isError, true);
+  assert.equal((await call('set_objective', { text: 'Reach the next town' })).isError, true);
   assert.equal((await call('list_sessions')).structuredContent.sessions[0].session_id, f.id);
   const connected = await call('connect', { session_id: f.id });
   const handoff = await call('get_handoff', { screenshot: false });
@@ -126,6 +130,21 @@ test('MCP handshake, tools, schema validation, images, and reconnect', async t =
   assert.equal(connected.content[1].mimeType, 'image/png');
   assert.equal(connected.structuredContent.paused, false);
   assert.equal(connected.structuredContent.png, undefined);
+  assert.equal(tools.find(tool => tool.name === 'set_objective').annotations.readOnlyHint, false);
+  for (const text of ['Reach the next town', 'Heal the party\nThen challenge the Gym', 'x'.repeat(512), '']) {
+    const before = frame;
+    const updated = await call('set_objective', { text });
+    assert.deepEqual(updated.structuredContent, { objective: text });
+    assert.equal(updated.content.length, 1);
+    assert.deepEqual(calls.at(-1).args, { text });
+    assert.equal((await call('observe', { screenshot: false })).structuredContent.objective, text);
+    assert.equal(frame, before, 'Updating the objective must not advance gameplay');
+  }
+  const beforeInvalid = calls.length;
+  for (const args of [{}, { text: 42 }, { text: 'x'.repeat(513) }]) {
+    assert.equal((await call('set_objective', args)).isError, true);
+  }
+  assert.equal(calls.length, beforeInvalid, 'Invalid objectives must not reach the bridge');
   const result = await call('act', { buttons: ['A', 'Up'], frames: 3 });
   assert.equal(result.structuredContent.frame, 13);
   for (const args of [{ buttons: ['X'], frames: 1 }, { buttons: [], frames: 0 }, { buttons: [], frames: 601 }, { buttons: [], frames: 1.5 }]) {
@@ -236,7 +255,7 @@ test('verified Emerald MCP rejects batch confirmation and refreshes before a tap
   const tapped = await client.callTool({ name: 'press', arguments: { button: 'A', screenshot: false } });
   assert.equal(calls.at(-2).method, 'get_game_state');
   assert.equal(calls.at(-1).method, 'press');
-  assert.equal(tapped.structuredContent.state_format, 'full');
+  assert.equal(tapped.structuredContent.state_format, 'compact');
   assert.equal(tapped.structuredContent.game_state.battle.battlers[0].hp, 7);
   // Preconditions use a new bridge snapshot, even when the client's previous
   // observation still shows the expected cursor.
@@ -250,8 +269,22 @@ test('verified Emerald MCP rejects batch confirmation and refreshes before a tap
   assert.equal(calls.at(-1).method, 'get_game_state');
   assert.equal(calls.filter(call => call.method === 'press').length, actionsBefore);
   const checked = await client.callTool({ name: 'press', arguments: {
-    button: 'Down', expected_menu: { kind: 'battle_action', cursor: 1 },
+    button: 'Down', screenshot: false, expected_menu: { kind: 'battle_action', cursor: 1 },
   } });
   assert.equal(checked.isError, undefined);
   assert.equal(calls.at(-1).method, 'press');
+  game_state.menu.input_ready = true;
+  game_state.inventory = { items: [{ item_id: 1, quantity: 10 }] };
+  game_state.quest_flags = { ids: [1, 2, 3] };
+  const lean = await client.callTool({ name: 'observe', arguments: {} });
+  assert.equal(calls.at(-1).args.screenshot, false);
+  assert.equal(lean.structuredContent.game_state.inventory, undefined);
+  assert.equal(JSON.parse(lean.content[0].text).game_state.quest_flags, undefined);
+  const full = await client.callTool({ name: 'observe', arguments: { full_state: true } });
+  assert.deepEqual(full.structuredContent.game_state.inventory, game_state.inventory);
+  game_state.menu = { kind: 'party', input_ready: false };
+  await client.callTool({ name: 'observe', arguments: {} });
+  assert.equal(calls.at(-1).args.screenshot, true, 'Unfamiliar menus request a screenshot');
+  await client.callTool({ name: 'observe', arguments: { screenshot: false } });
+  assert.equal(calls.at(-1).args.screenshot, false, 'Explicit suppression is respected');
 });

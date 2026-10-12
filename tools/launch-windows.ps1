@@ -156,6 +156,14 @@ try {
             -not (Test-Path -LiteralPath $buildReady) -or
             (Get-Content -LiteralPath $buildReady -ErrorAction SilentlyContinue) -ne $buildRecipe -or
             -not (Test-Path -LiteralPath (Join-Path $msysRoot 'ucrt64\bin\Qt6Core.dll'))) {
+            # Windows locks a running executable. Preserve the user's game and
+            # explain how to finish the update before downloading or compiling.
+            $runningApp = Get-Process -Name mGBA -ErrorAction SilentlyContinue | Where-Object {
+                $_.Path -eq $appPath
+            }
+            if ($runningApp) {
+                throw 'This checkout needs a rebuild, but its mGBA window is still running. Save your game, close that window, then run Launch mGBA.cmd again.'
+            }
             Write-Host 'Setting up mGBA automatically. Keep this window open until the app starts.'
             Write-Host 'The first run needs internet access and several GB of free disk space.'
             Install-BuildTools
@@ -173,7 +181,9 @@ try {
         }
         Set-MsysEnvironment
     }
-    Write-Host '[4/4] Opening mGBA...'
+    Write-Host '[4/4] Opening mGBA with MCP objective updates...'
+    Write-Host 'Connected agents can use set_objective to update the Objective box.'
+    Write-Host 'Restart the MCP server after updating this checkout to discover new tools.'
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $appPath
     $startInfo.WorkingDirectory = Split-Path -Parent $appPath

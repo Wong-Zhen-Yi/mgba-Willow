@@ -1116,6 +1116,7 @@ void Window::reloadDisplayDriver() {
 	}
 #endif
 
+	m_display->setAIObjective(m_aiObjective);
 	connect(m_display.get(), &QGBA::Display::hideCursor, [this]() {
 		if (centralWidget() == m_display.get()) {
 			centralWidget()->setCursor(Qt::BlankCursor);
@@ -2442,6 +2443,12 @@ void WindowBackground::setDimensions(int width, int height) {
 
 void Window::showAIInteraction(const QString& text) {
 	if (m_display) m_display->showAIInteraction(text);
+}
+
+void Window::setAIObjective(const QString& text) {
+	m_aiObjective = text;
+	if (m_display)
+		m_display->setAIObjective(text);
 }
 
 void WindowBackground::paintEvent(QPaintEvent* event) {
