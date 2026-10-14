@@ -25,7 +25,7 @@ Unchecked means **completion has not been verified**, not necessarily that the o
 - [x] M11 — Defeat Wattson: Dynamo Badge; obtain Rock Smash.
 - [x] M12 — Clear the Rusturf Tunnel rocks and obtain Strength.
 - [x] M13 — Witness the Meteor Falls incident; defeat Maxie at Mt. Chimney.
-- [ ] M14 — Defeat Flannery in Lavaridge: Heat Badge.
+- [x] M14 — Defeat Flannery in Lavaridge: Heat Badge.
 - [ ] M15 — Defeat Norman in Petalburg: Balance Badge; obtain Surf.
 - [ ] M16 — Cross Route 118; free the Weather Institute from Team Aqua.
 - [ ] M17 — Beat the Route 119 rival; obtain Fly.
@@ -85,7 +85,7 @@ Verify levels, moves, health and supplies before M31. Oddish, Whismur and Plusle
 
 ## Current progress
 
-- **Latest verified handoff — 12 October 2026, frame212214:** Verdanturf Center map6/4 (1540), (7,4), facing north, stable overworld. In-game save success at frame197109 and `save_confirmed`197130; playtime39:29, three badges. Swellow25 leads, holds Exp. Share,67/67HP; Marshtomp35 102/102HP; both no status, full PP. Only these two are in the live party; do not assume earlier members remain carried. No captures or supplies consumed during this 50-turn test. Next: continue required-roster acquisition/training, then Flannery (M14). Earlier Route111 handoff below is historical; this run did not verify the intervening human progress.
+- **Latest verified live state — 14 October 2026, frame95990:** original English Emerald decoder reports four badges (Stone, Knuckle, Dynamo, Heat) from save-block flags in Lavaridge Town, map0/12, at (9,7), stable overworld. This verifies M14/Heat Badge. The two party members are healthy (slots 0 and 1; decoder IDs 285 and 305; levels 36 and 26); slot 1 holds Exp. Share. One controller is connected. No save confirmation was observed in this decoder session. Next: M15 — defeat Norman at Petalburg Gym and receive the Balance Badge and Surf. Older handoffs below are historical.
 
 - **Latest handoff frame521822:** human continuation in Route111 double battle (19,119); Numel defeated, poisoned Shroomish18 remains. Marshtomp35 50/102HP, Oddish17 40/45HP, Swellow23 56/62HP with Exp. Share. MCP disconnected to avoid control conflict. Finish battle and heal before further training; M14 incomplete. No new in-game save verified.
 
@@ -158,3 +158,5 @@ Verify levels, moves, health and supplies before M31. Oddish, Whismur and Plusle
 
 
 12 October 2026: Reached Lavaridge after cable car/Jagged Pass. Healing confirmed frame471736. Marshtomp35 now leads102/102HP, Swellow26 69/69HP holding Exp. Share; both full PP/status0. In-game save success534004 and save_confirmed534026 at Center map4/5 (1029), (7,4), playtime41:57, three badges. Irene/Travis/Brice defeated, no supplies used. Next Flannery M14.
+
+| 2026-10-14 | M14 verified; next M15 selected | At frame95990, the verified `emerald_en_v1` decoder reports four save-block badge flags: Stone, Knuckle, Dynamo, and Heat. Heat Badge corroborates M14 complete, superseding the 12 October three-badge handoff. Stable overworld at Lavaridge Town map0/12 (9,7); two healthy party members, slot1 holding Exp. Share. No save confirmation retained this decoder session. Objective display set to defeat Norman at Petalburg Gym for the Balance Badge and Surf; no gameplay inputs sent. |

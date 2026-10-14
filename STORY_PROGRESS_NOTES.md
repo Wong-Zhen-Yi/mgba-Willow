@@ -177,3 +177,10 @@ This log records observed outcomes and problems. The checklist in `POKEMON_EMERA
 Route111 Camper Travis defeated (Sandshrew18), reward288 frame222809. Route112 Hiker Brice Numel17 and Machop17 defeated with Wing Attack; Swellow reached26 frame293481, still full HP. Marshtomp35 full HP, Mud Shot14PP/Water Gun24PP. No items used.
 
 12 October 2026: Reached Lavaridge after cable car/Jagged Pass. Healing confirmed frame471736. Marshtomp35 now leads102/102HP, Swellow26 69/69HP holding Exp. Share; both full PP/status0. In-game save success534004 and save_confirmed534026 at Center map4/5 (1029), (7,4), playtime41:57, three badges. Irene/Travis/Brice defeated, no supplies used. Next Flannery M14.
+
+
+## 14 October 2026 — read-only live-state handoff
+- Connected to the existing original English Pokémon Emerald session. `emerald_en_v1` reports a stable overworld at map0/12, (9,7), facing south; one controller remains connected.
+- At frame95990, the decoder reports four badges from save-block flags: Stone, Knuckle, Dynamo, and Heat. The Heat Badge verifies M14 (Flannery) complete and supersedes older notes that still listed Flannery as next.
+- Two party members are healthy: slot0 species ID285, level36, 127/127 HP; slot1 species ID305, level26, 69/69 HP, holding Exp. Share. No save confirmation was retained in this decoder session; this alone does not establish whether the game is saved.
+- Next main-story objective: M15 — defeat Norman at Petalburg Gym, earn the Balance Badge, and receive Surf. The shared objective display now shows this goal. No gameplay inputs were sent during this discovery session; MCP remains connected at the user's request.
