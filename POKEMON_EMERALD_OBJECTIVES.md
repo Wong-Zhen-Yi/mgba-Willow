@@ -156,3 +156,5 @@ Verify levels, moves, health and supplies before M31. Oddish, Whismur and Plusle
 
 
 
+
+12 October 2026: Reached Lavaridge after cable car/Jagged Pass. Healing confirmed frame471736. Marshtomp35 now leads102/102HP, Swellow26 69/69HP holding Exp. Share; both full PP/status0. In-game save success534004 and save_confirmed534026 at Center map4/5 (1029), (7,4), playtime41:57, three badges. Irene/Travis/Brice defeated, no supplies used. Next Flannery M14.
