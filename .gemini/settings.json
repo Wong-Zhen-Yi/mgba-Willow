@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mgba-willow": {
+      "command": "node",
+      "args": [
+        "tools/mcp/server.mjs"
+      ]
+    }
+  }
+}

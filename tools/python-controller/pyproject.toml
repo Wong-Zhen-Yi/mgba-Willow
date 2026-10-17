@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mgba-willow-controller"
+version = "1.0.0"
+description = "Native Python controller and stdio MCP server for mGBA Willow"
+requires-python = ">=3.11"
+license = "MPL-2.0"
+dependencies = ["mcp==1.30.0", "jsonschema>=4.23,<5"]
+
+[project.scripts]
+mgba-willow-mcp = "mgba_willow.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mgba_willow = ["contract.json"]

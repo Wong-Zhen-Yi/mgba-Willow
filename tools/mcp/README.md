@@ -2,6 +2,10 @@
 
 This local MCP controls a visible game in this checkout's Qt mGBA app. It provides screenshots, exact frame-counted button presses, read-only memory, and separate AI checkpoints. Games keep running while the model thinks. Node.js 20 or newer is required.
 
+A [native Python controller and MCP server](../python-controller/README.md) also
+provides this interface without Node.js. It can be imported by Python scripts or
+registered separately as `mgba-willow-python`.
+
 ## Structured Emerald state and navigation
 
 After connecting, use `set_objective({text:"Heal the party, then challenge the next Gym"})`

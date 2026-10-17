@@ -1,0 +1,660 @@
+{
+  "tools": [
+    {
+      "name": "list_sessions",
+      "description": "List visible mGBA windows, game titles, platforms, and AI control status. Open a ROM with Launch mGBA.cmd first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "connect",
+      "description": "Join shared AI control of one game window, preserve its pause state, and return its screenshot. Multiple agents can connect; actions run one at a time. Human controls remain active.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "set_objective",
+      "description": "Set the shared Objective box in the connected game window. Use a short current goal; an empty string clears it. The latest connected agent update wins. This only updates display text and does not advance gameplay or save notes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "observe",
+      "description": "Read a compact decision view with new events; full state stays local. Screenshots are selective for decoded games; request screenshot:true for puzzles or discrepancies. full_state:true returns all fields; compact:false uses legacy deltas. Only atomic:true certifies screenshot/state frame alignment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "get_game_state",
+      "description": "Read compact verified Emerald location, menu, party HP/status, live battlers, selected move/target and new events. full_state:true includes party moves, inventory and flags; compact:false uses legacy full/delta responses. Unsupported ROMs report supported:false.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "get_handoff",
+      "description": "Read one current handoff: location, party HP/status, badge progress, last five events and historical save evidence. full_state:true includes inventory and full party details. Does not save the game or write notes. Save evidence may be unavailable after restart or restore.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "get_local_map",
+      "description": "Read a radius of live Emerald collision tiles, elevations, behaviors, ladders, one-way ledges, active NPCs, warps and map connections. Coordinates exclude the game’s seven-tile border. Unknown tiles are never assumed passable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          },
+          "radius": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "move_to",
+      "description": "Avoid potential trainer sightlines by default; avoid_trainers:false permits intentional exposure. Follow a bounded on-foot path on the current verified Emerald map. Check every emulated frame and release input on encounters, dialogue, scripted movement, transitions, human input, blockage or timeout. Returns progress.reason; completed:false requires replanning. Verified cardinal ledges and destination-only north-facing animated doors are supported; other special traversal is excluded. No screenshot by default.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "max_frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "avoid_trainers": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "wait_until",
+      "description": "Advance with no AI buttons until a decoded Emerald condition holds for stable_frames (default 2), or max_frames (default 600) expires. Stops on human input or manual pause. map_transition_complete means the overworld is ready; it does not require a transition to begin.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "battle_menu_ready",
+              "battle_move_ready",
+              "battle_target_ready",
+              "overworld_ready",
+              "map_transition_complete",
+              "dialogue"
+            ]
+          },
+          "max_frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "stable_frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          }
+        },
+        "required": [
+          "condition"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "press",
+      "description": "Release for two frames, tap one button for two frames, then release for two frames. A single edge avoids missed polling frames; never automatically retries confirmations. Optional expected_menu checks fresh verified menu kind, cursor or party slot before input. Inspect after each tap. No screenshot by default.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          },
+          "button": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "Start",
+              "Select",
+              "Up",
+              "Down",
+              "Left",
+              "Right",
+              "L",
+              "R"
+            ]
+          },
+          "hold_frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "release_frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "expected_menu": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "cursor": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              "selected_party_slot": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "button"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "train_battle",
+      "description": "Run a bounded local routine in a verified single wild battle using an explicitly chosen move slot (0–3). Inspect every menu before one tap. Stop on any fainting, changed party/moves, move learning, evolution, dialogue, unknown state, human input, cancellation or budget. Never chooses replacements or retries a confirmation. No screenshot by default.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          },
+          "move_slot": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "max_actions": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "move_slot"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "act",
+      "description": "Verified Emerald requires single confirmation taps and stops raw travel at new decision evidence or 60 unchanged input frames. Hold AI buttons for up to 1–600 frames, then release only AI input. Unsupported ROM directional holds stop early on 64 frames of stable screenshots; inspect progress.requires_replan and progress.reason before moving again. Visual stalls indicate possible obstacles, not verified collision. Returns actual frame boundaries and a screenshot by default. Manual pause cancels pending actions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "buttons": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "A",
+                "B",
+                "Start",
+                "Select",
+                "Up",
+                "Down",
+                "Left",
+                "Right",
+                "L",
+                "R"
+              ]
+            }
+          },
+          "frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "buttons",
+          "frames"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "act_sequence",
+      "description": "Verified Emerald rejects confirmation batches and checks decoded state between input frames; prefer move_to for travel. Execute 1–200 predictable moves, at most 600 total frames. Unsupported ROM long directional holds use screenshot checks and stop the sequence on a visual stall; progress.requires_replan means inspect and choose another route. Return only fully completed step boundaries and one final screenshot by default. Pause or disconnect cancels remaining moves.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actions": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "buttons": {
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B",
+                      "Start",
+                      "Select",
+                      "Up",
+                      "Down",
+                      "Left",
+                      "Right",
+                      "L",
+                      "R"
+                    ]
+                  }
+                },
+                "frames": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 600
+                }
+              },
+              "required": [
+                "buttons",
+                "frames"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "screenshot": {
+            "type": "boolean"
+          },
+          "full_state": {
+            "type": "boolean"
+          },
+          "compact": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "actions"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "set_speed",
+      "description": "Set the persisted AI gameplay speed, shared with AI > AI Speed. Human fast-forward controls temporarily take priority. Ordinary speed settings are restored when AI control ends.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 1
+              },
+              {
+                "type": "number",
+                "const": 2
+              },
+              {
+                "type": "number",
+                "const": 4
+              },
+              {
+                "type": "number",
+                "const": 8
+              },
+              {
+                "type": "string",
+                "const": "maximum"
+              }
+            ]
+          }
+        },
+        "required": [
+          "multiplier"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "memory_map",
+      "description": "List emulator memory regions, supported raw read ranges, and bank limits. MMIO and virtual memory are unavailable.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "read_memory",
+      "description": "Read 1–4096 raw bytes from a supported memory region as hexadecimal. Address is a numeric byte address; segment selects a bank, or -1 uses the current mapping.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "length": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "segment": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 65535
+          }
+        },
+        "required": [
+          "address",
+          "length"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "save_checkpoint",
+      "description": "Save a named AI checkpoint for this ROM outside normal save-state slots. An existing checkpoint of the same name is replaced.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "load_checkpoint",
+      "description": "Restore a named checkpoint for this ROM and return its screenshot. Restores game progress and saved data from that checkpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    },
+    {
+      "name": "disconnect",
+      "description": "Disconnect this agent and cancel only its pending action. Other agents retain control; the last disconnect restores ordinary speed. Preserve human buttons and pause state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": false
+      }
+    }
+  ],
+  "info": {
+    "name": "mgba-willow",
+    "version": "1.1.0"
+  },
+  "instructions": "Control a visible mGBA game with shared human input. Multiple agents can connect to the same window; coordinate goals because they share game progress, speed, and checkpoints. Only one action runs at a time: if busy, observe and retry after completion. Observations and memory reads remain available during another agent's action. The bridge is enabled automatically while mGBA is open; the user can disable it in AI > MCP Enabled. Start with list_sessions and connect. Human directions override conflicting AI directions; other buttons combine. AI speed defaults to 4x and can be changed with set_speed or AI > AI Speed. The emulator runs while you think, so observations become stale quickly. Use short observe/action cycles near hazards. Use act_sequence for predictable movement to reduce model/tool round trips, with up to 200 steps and at most 600 total frames. Use screenshot:false only when a fresh image is unnecessary; obtain a new observation before uncertain decisions. Cancelled actions report cancelled:true and only completed sequence steps; do not assume planned moves completed. A manual pause must be resumed by the user. Disconnect cancels only your pending action; other connected agents retain control. The last agent disconnecting restores ordinary speed without pausing or clearing human buttons. Save a checkpoint before risky moves, using agent-specific names to avoid overwriting another agent's checkpoint. Use memory_map before reading memory: bytes are not labeled health or coordinates unless verified for this exact game. L/R exist only on GBA. Stop at the user's goal or when help is needed, then disconnect. Never reset or replace the user's game. This MCP does not select or invoke a model. For verified Emerald, use one press then inspect each new prompt, including switch and move-learning prompts. Confirmation batches are rejected. Raw travel checks state between input frames and stops at new decision evidence; prefer move_to for efficient collision-aware travel. Inspect live tiles, behavior, occupancy and reachable paths before selecting a destination; do not repeat no-path targets or assume Gym holes are active. move_to avoids potential trainer sightlines by default; avoid_trainers:false permits deliberate exposure. movement_available checks animation restrictions as well as overworld state; verify coordinate progress after geysers or forced movement. Compact output is the default: full state stays local, and each decision view contains location, menu, party HP/status, live battlers, selected move/target and new events. Compact views replace the previous view; they are not deltas. full_state:true returns all fields; compact:false enables legacy full/delta responses. Screenshots are omitted for decoded states and requested for unfamiliar prompts; screenshot:false explicitly suppresses them. Use move_to for verified route segments and wait_until for animations. train_battle uses a caller-selected move in single wild battles and stops at exceptions. Read one current handoff before consulting older history. For other deltas, replace changed top-level fields and delete removed_state_fields; verify base_frame and request full_state:true if it does not match. Inspect live battler HP, cursor, selected move and target; request a full screenshot observation when they seem inconsistent. Record milestones and evidence immediately in story notes and the objective tracker. During long sessions, make in-game saves at safe points and verify save_confirmed; checkpoints are separate. Obtain get_handoff before stopping. After connecting, use set_objective to display the current goal in the window and update it when the goal changes. Keep it short; this shared display does not replace story notes. Only atomic:true certifies screenshot/state frame alignment. Unsupported ROMs retain raw tools."
+}
