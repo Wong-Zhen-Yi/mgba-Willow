@@ -2,22 +2,11 @@
 
 ## Latest verified snapshot
 
-- 11 October 2026: Saved successfully in Lavaridge Town Pokémon Center after full healing. Explicit “MATT saved the game.” observed; 3 badges, Pokédex 6, playtime 30:25.
-- Position: Center 1F, map group 4 / number 5, (7,4), facing north at nurse counter. No active menu/battle. Checkpoint `root-lavaridge-healed-saved-20261011`.
-- M13 is complete: Maxie defeated on Mt. Chimney, Magma and Aqua departed, Meteorite recovered.
-- Party: Marshtomp 33, Oddish 15, Whismur 6, Plusle 13, Taillow 20. All full HP, no status, PP restored. Inventory: 2 Super Potions, 3 Super Repels, 3 Parlyz Heals; Meteorite in Key Items.
-- Next: M14, Flannery and Heat Badge. Gym not attempted. Center exits south; Gym door in town (12,15), approach (12,16). Replenish healing supplies as appropriate.
-- User requested a good save point and a handoff note; AI control disconnected and game left at ordinary speed. Do not continue until requested. Older entries below are historical snapshots.
-
-## 10 October 2026 — session start and detour
-
-- Connected to the existing Emerald window. Saved checkpoint `root-story-start-20261010` before movement.
-- Trainer card confirms MATT has three badges. Marshtomp is level 28; party also contains Oddish, Whismur, Plusle, and Taillow.
-- Difficulty: the ROM SHA1 is unsupported by decoded state and pathfinding tools. Navigation uses screenshots and short raw button holds. Camera scrolling, turn delays, and collisions can make movement ambiguous.
-- Difficulty: short one-frame menu taps were unreliable. Using eight-frame taps with released frames improves reliability. The `press` tool allows at most 60 release frames; longer waits use `act_sequence`.
-- Cleared a PokéNav call from Ricky. Crossed Fiery Path southward; defeated a Numel and Torkoal. Torkoal poisoned Marshtomp. Used one Super Potion; two remain. No Antidote or Repel was visible in the Items pocket.
-- Route correction: initially misidentified the northern Fiery Path entrance as Meteor Falls. The existing objectives tracker confirms Meteor Falls has not yet been visited. Going south was a detour; return through Fiery Path, then east to upper Route 111 and west along Route 113 to Fallarbor.
-- Position at this earlier point: southern Route 112, approaching the cable-car building. No new main-story milestone was verified.
+- 17 October 2026: Fortree City, map group 0 / number 4, live frame 1,216,829. Stable overworld at (30,15), facing south; no active menu or battle.
+- The game was saved here: “MATT saved the game” and save_confirmed at frame 1,205,470, map 4 at (30,15). The save screen confirmed Fortree City, five badges (Stone, Knuckle, Dynamo, Heat, Balance), Pokédex 9, and playtime 86:47.
+- M18 is partial. Steven's Devon Scope receipt on Route 120 was verified earlier; the invisible obstruction at Fortree Gym is still uncleared. Keep M18 unchecked until the obstruction is cleared. Next: approach the obstruction with the Scope, then defeat Winona for M19.
+- Party at handoff: Castform Lv25 53/73 HP, paralyzed; Swellow Lv32 46/85 HP, healthy and holding Exp. Share; Swampert Lv38 119/135 HP, healthy.
+- Controller was at 4× speed and connected while notes were prepared; it is now disconnected. No battle or menu was open. Older entries below are historical.
 
 This log records observed outcomes and problems. The checklist in `POKEMON_EMERALD_OBJECTIVES.md` remains the milestone tracker.
 
