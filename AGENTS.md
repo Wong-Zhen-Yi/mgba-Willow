@@ -14,6 +14,7 @@ Install a C/C++ toolchain, CMake, and frontend dependencies as described in `REA
 - `cmake -S . -B build -DBUILD_SUITE=ON`: enable the broader cmocka suite; build, then run `ctest --test-dir build --output-on-failure`.
 - In `tools/mcp/`, run `npm ci`, then `npm test`; `npm start` launches the stdio MCP server. Requires Node.js 20+.
 - Double-click `Launch mGBA.cmd` to build and open the Windows app.
+- always update the double click launcher 
 
 ## Coding Style & Naming Conventions
 

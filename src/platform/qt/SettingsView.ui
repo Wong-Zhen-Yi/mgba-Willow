@@ -766,7 +766,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_6">
          <property name="text">
-          <string>Library:</string>
+          <string>Classic library:</string>
          </property>
         </widget>
        </item>
@@ -785,11 +785,11 @@
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QCheckBox" name="showLibrary">
+        <widget class="QLabel" name="libraryStartInfo">
          <property name="text">
-          <string>Show when no game open</string>
+          <string>The game card library opens when no game is running. Change its ROM folder from the library screen.</string>
          </property>
-         <property name="checked">
+         <property name="wordWrap">
           <bool>true</bool>
          </property>
         </widget>
@@ -797,7 +797,7 @@
        <item row="4" column="1">
         <widget class="QCheckBox" name="showFilenameInLibrary">
          <property name="text">
-          <string>Show filename instead of ROM name in library view</string>
+          <string>Show filename instead of ROM name in classic library</string>
          </property>
         </widget>
        </item>

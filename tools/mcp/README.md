@@ -73,6 +73,34 @@ Layout facts are checked against [pret/pokeemerald](https://github.com/pret/poke
 
 The MCP itself never calls an inference API or changes your chat model. Gameplay uses your normal Codex model access and usage limits.
 
+For an experimental autonomous **local Kev-4B** controller without Codex, see
+[Local model setup](../local-model/README.md). **Launch mGBA.cmd** is the only
+double-click launcher. Open a game, then click **Enable local model** in mGBA's
+bottom status bar when you want Kev. Nothing checks/downloads/starts the model
+on app launch or game load alone. The button opens a goal picker with **Progress
+the story**, **Level up Pokémon**, **Explore nearby**, and **Finish the current
+battle**. **Start with selected goal** installs missing verified model/server/
+player runtimes and runs the chosen preset once Kev is ready. No typing is
+required. **Enable model only** starts Kev without gameplay input, while
+**Cancel** starts nothing. **Disable local model** stops its helper
+and owned server; changing/closing games resets it to off. Kev scores text
+choices, not screenshots; the initial adapter is limited to decoded English
+Emerald and stops at unknown prompts.
+The server now uses **Artemis Q4_K_M GGUF** through llama.cpp, defaulting to
+20 CUDA layers with CPU offload and an 8K context for 8 GB GPUs. The model is
+stored in `%LOCALAPPDATA%\mgba-willow\models\Kev-4B-Artemis-Q4_K_M.gguf`.
+Python/uv are not required. The helper chooses CPU mode when NVIDIA is
+unavailable; `Launch mGBA.cmd -Device cpu` forces it. If Node.js 20+ is missing,
+the button installs a private portable player runtime.
+Local runs default to 10,000 iterations / 12 hours, with choice-count-aware
+navigation scores, bounded route memory, deterministic animation waits and
+transient inference retries. The goal dialog also offers **Ask GPT-6 Luna when
+stuck** when `LUNA_API_KEY` and your provider's exact `LUNA_MODEL` ID are configured.
+This optional paid API feature shares decoded state, permits at most 20 requests
+per run, and cannot bypass unknown prompts or repeat unverified confirmations.
+See [Luna setup and limits](../local-model/README.md#optional-gpt-6-luna-help-when-stuck).
+Normal MCP behavior is unchanged.
+
 ## Availability, shared controls, and speed
 
 The app starts its local bridge automatically, even before you load a ROM. **AI → MCP Enabled** turns the bridge off or back on for that window. Disabling it cancels pending actions and closes clients; re-enable it and reconnect to resume AI control. Each new app launch enables MCP again. The status bar shows ready, connected, disabled, or an endpoint error. Codex starts the stdio MCP adapter when it loads the registered server; no Windows background service is needed.

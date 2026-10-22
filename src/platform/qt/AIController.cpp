@@ -1,25 +1,34 @@
 #include "AIController.h"
-#include "CoreController.h"
-#include "Window.h"
-#include "VFileDevice.h"
-#include "MultiplayerController.h"
 #include "ActionMapper.h"
 #include "ConfigController.h"
+#include "CoreController.h"
+#include "LocalModelGoalDialog.h"
+#include "MultiplayerController.h"
+#include "VFileDevice.h"
+#include "Window.h"
 
 #include <QAction>
 #include <QBuffer>
-#include <QCryptographicHash>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLocalSocket>
-#include <QMenuBar>
 #include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QProcess>
+#include <QProcessEnvironment>
+#include <QPushButton>
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#endif
 #include <QSaveFile>
 #include <QScopedValueRollback>
 #include <QStandardPaths>
@@ -68,6 +77,44 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 	window->config()->setOption("aiSpeed", initialSpeed);
 	m_status = new QLabel(tr("MCP: disabled"), window);
 	window->statusBar()->addPermanentWidget(m_status);
+	m_localModelButton = new QPushButton(tr("Enable local model"), window);
+	m_localModelButton->setObjectName("enableLocalModel");
+	m_localModelButton->setEnabled(false);
+	m_localModelButton->setToolTip(tr("Load a game, then click to set up and start Kev. Nothing starts automatically. "
+	                                  "First setup downloads the 2.54 GB model plus runtime files. "
+	                                  "Gameplay currently supports decoded English Emerald only."));
+	m_localModelButton->setStyleSheet(
+	    QStringLiteral("QPushButton { background: #26344b; color: #edf2fb; border: 1px solid #3b4b65;"
+		               " border-radius: 6px; padding: 6px 12px; }"
+		               "QPushButton:hover { background: #344764; }"
+		               "QPushButton:disabled { color: #718099; background: #1b2537; }"));
+	window->statusBar()->addPermanentWidget(m_localModelButton);
+	m_localModelProcess = new QProcess(this);
+	connect(m_localModelButton, &QPushButton::clicked, this, &AIController::toggleLocalModel);
+	connect(m_localModelProcess, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+	        [this](int code, QProcess::ExitStatus status) {
+		        m_localModelButton->setText(tr("Enable local model"));
+		        if (!m_stoppingLocalModel && code && status == QProcess::NormalExit) {
+			        QMessageBox::warning(m_window, tr("Local model setup"),
+					                     tr("Local model setup stopped or failed. Your game is still open. "
+					                        "Click Enable local model to retry; interrupted downloads will resume."));
+		        }
+	        });
+	connect(m_localModelProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+		if (error == QProcess::FailedToStart) {
+			m_localModelButton->setText(tr("Enable local model"));
+			QMessageBox::warning(m_window, tr("Local model setup"), m_localModelProcess->errorString());
+		}
+	});
+	connect(window, &Window::gameLoaded, this, [this]() {
+		m_gameId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+		m_localModelButton->setEnabled(true);
+	});
+	connect(window, &Window::gameUnloaded, this, [this]() {
+		m_gameId.clear();
+		m_localModelButton->setEnabled(false);
+		stopLocalModel();
+	});
 	connect(m_enabled.get(), &Action::activated, this, [this](bool enabled) { if (!m_changingEnabled) setEnabled(enabled); });
 	connect(m_toggle.get(), &Action::activated, this, [this](bool enabled) {
 		if (!enabled) { if (m_core) release(tr("ready")); return; }
@@ -101,11 +148,15 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 	});
 	m_timer.setSingleShot(true);
 	connect(&m_timer, &QTimer::timeout, this, [this]() { finishPending(true, tr("Action timed out")); });
-	connect(window, &Window::shutdown, this, [this]() { setEnabled(false); });
+	connect(window, &Window::shutdown, this, [this]() {
+		stopLocalModel();
+		setEnabled(false);
+	});
 	m_enabled->setActive(true);
 }
 
 AIController::~AIController() {
+	stopLocalModel();
 	setEnabled(false);
 	// Member sockets can emit disconnected while the local server is being
 	// destroyed, after our tracking set has already been destroyed.
@@ -117,9 +168,106 @@ AIController::~AIController() {
 	m_sockets.clear();
 }
 
+void AIController::toggleLocalModel() {
+	if (m_localModelProcess->state() != QProcess::NotRunning) {
+		stopLocalModel();
+		return;
+	}
+	auto core = m_window->controller();
+	if (!core || !core->hasStarted() || m_gameId.isEmpty()) {
+		return;
+	}
+#ifdef Q_OS_WIN
+	QString script = qEnvironmentVariable("MGBA_LOCAL_MODEL_SCRIPT");
+	if (script.isEmpty()) {
+		script = QCoreApplication::applicationDirPath() + "/../tools/local-model/launch.ps1";
+	}
+	if (!QFile::exists(script)) {
+		QMessageBox::warning(m_window, tr("Local model setup"),
+		                     tr("Local model setup files were not found. Open this checkout using Launch mGBA.cmd."));
+		return;
+	}
+	if (!m_server.isListening()) {
+		QMessageBox::information(m_window, tr("Local model setup"), tr("Enable AI > MCP Enabled first."));
+		return;
+	}
+	QString presetError;
+	auto goals = LocalModelGoalDialog::loadGoals(QFileInfo(script).dir().filePath("goals.json"), &presetError);
+	if (!presetError.isEmpty()) {
+		QMessageBox::warning(m_window, tr("Local gameplay goal"), presetError);
+		return;
+	}
+	const QString gameId = m_gameId;
+	LocalModelGoalDialog picker(goals, m_window->config()->getQtOption("localModelGoal").toString(), m_window);
+	int choice = picker.exec();
+	if (choice != QDialog::Accepted && choice != LocalModelGoalDialog::EnableOnly) {
+		return;
+	}
+	if (m_gameId != gameId || m_window->controller() != core || !core->hasStarted()) {
+		return;
+	}
+	QString goalId;
+	if (choice == QDialog::Accepted) {
+		goalId = picker.selectedGoalId();
+		m_window->config()->setQtOption("localModelGoal", goalId);
+		m_window->config()->write();
+		m_window->setAIObjective(picker.selectedGoalText());
+	}
+	QString device = qEnvironmentVariable("MGBA_LOCAL_MODEL_DEVICE", "auto");
+	if (device != "auto" && device != "cpu" && device != "cuda") {
+		device = "auto";
+	}
+	auto environment = QProcessEnvironment::systemEnvironment();
+	environment.insert("LUNA_HELP", picker.lunaHelpEnabled() ? "1" : "0");
+	m_localModelProcess->setProcessEnvironment(environment);
+	m_localModelProcess->setProcessChannelMode(QProcess::ForwardedChannels);
+	m_localModelProcess->setInputChannelMode(QProcess::ForwardedInputChannel);
+	m_localModelProcess->setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments* args) {
+		args->flags |= CREATE_NEW_CONSOLE;
+		args->startupInfo->dwFlags &= ~STARTF_USESTDHANDLES;
+	});
+	m_localModelButton->setText(tr("Disable local model"));
+	QStringList arguments {
+		"-NoLogo",    "-NoProfile", "-ExecutionPolicy", "Bypass",
+		"-File",      script,       "-EmulatorPid",     QString::number(QCoreApplication::applicationPid()),
+		"-SessionId", m_id,         "-GameId",          gameId,
+		"-Device",    device
+	};
+	if (!goalId.isEmpty()) {
+		arguments.append({ "-GoalId", goalId });
+	}
+	m_localModelProcess->start(qEnvironmentVariable("SystemRoot") + "/System32/WindowsPowerShell/v1.0/powershell.exe",
+	                           arguments);
+#else
+	QMessageBox::information(m_window, tr("Local model setup"),
+	                         tr("Automatic local model setup is currently available on Windows. "
+	                            "See tools/local-model/README.md for manual serving."));
+#endif
+}
+
+void AIController::stopLocalModel() {
+	QScopedValueRollback<bool> stopping(m_stoppingLocalModel, true);
+	if (m_localModelProcess->state() == QProcess::NotRunning) {
+		return;
+	}
+#ifdef Q_OS_WIN
+	// Stop only this helper's tree (installer/player/owned server), not a reused external server.
+	QProcess killer;
+	killer.start(qEnvironmentVariable("SystemRoot") + "/System32/taskkill.exe",
+	             { "/PID", QString::number(m_localModelProcess->processId()), "/T", "/F" });
+	killer.waitForFinished(5000);
+#endif
+	if (m_localModelProcess->state() != QProcess::NotRunning) {
+		m_localModelProcess->kill();
+	}
+	m_localModelProcess->waitForFinished(3000);
+	m_localModelButton->setText(tr("Enable local model"));
+}
+
 void AIController::setEnabled(bool enabled) {
 	QScopedValueRollback<bool> changing(m_changingEnabled, true);
 	if (!enabled) {
+		stopLocalModel();
 		release(tr("disabled"));
 		m_server.close();
 		QFile::remove(m_descriptor);
@@ -187,6 +335,7 @@ QJsonObject AIController::session() const {
 	auto core = m_window->controller();
 	return { { "session_id", m_id },
 	         { "title", core ? core->title() : QString() },
+	         { "game_id", core ? m_gameId : QString() },
 	         { "platform", core ? (core->platform() == mPLATFORM_GBA ? "GBA" : "GB/GBC") : "none" },
 	         { "started", core && core->hasStarted() },
 	         { "ai_control", core && core->aiControl() },

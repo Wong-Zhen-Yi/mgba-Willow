@@ -35,13 +35,13 @@
 #include "DebuggerConsoleController.h"
 #include "Display.h"
 #include "DolphinConnector.h"
-#include "CoreController.h"
 #include "ForwarderView.h"
 #include "FrameView.h"
 #include "GBAApp.h"
 #include "GDBController.h"
 #include "GDBWindow.h"
 #include "GIFView.h"
+#include "GameLibrary.h"
 #ifdef BUILD_SDL
 #include "input/SDLInputDriver.h"
 #endif
@@ -96,18 +96,28 @@
 using namespace QGBA;
 
 Window::Window(CoreManager* manager, ConfigController* config, int playerId, QWidget* parent)
-	: QMainWindow(parent)
-	, m_manager(manager)
-	, m_logView(new LogView(&m_log, this))
-	, m_screenWidget(new WindowBackground())
-	, m_config(config)
-	, m_inputController(this)
-	, m_shortcutController(new ShortcutController(this))
-	, m_playerId(playerId)
-{
+    : QMainWindow(parent)
+    , m_manager(manager)
+    , m_logView(new LogView(&m_log, this))
+    , m_screenWidget(new WindowBackground())
+    , m_gameLibrary(new GameLibrary(this))
+    , m_config(config)
+    , m_inputController(this)
+    , m_shortcutController(new ShortcutController(this))
+    , m_playerId(playerId) {
 	setFocusPolicy(Qt::StrongFocus);
 	setAcceptDrops(true);
 	setAttribute(Qt::WA_DeleteOnClose);
+	setStyleSheet(QStringLiteral(
+	    "QMainWindow { background: #111827; }"
+	    "QMenuBar { background: #151f30; color: #edf2fb; border-bottom: 1px solid #2b364a; padding: 4px; }"
+	    "QMenuBar::item { padding: 5px 10px; background: transparent; border-radius: 4px; }"
+	    "QMenuBar::item:selected { background: #344764; }"
+	    "QMenu { background: #1b2537; color: #edf2fb; border: 1px solid #3b4b65; padding: 5px; }"
+	    "QMenu::item { padding: 6px 24px; border-radius: 4px; }"
+	    "QMenu::item:selected { background: #344764; }"
+	    "QMenu::item:disabled { color: #718099; }"
+	    "QMenu::separator { height: 1px; background: #3b4b65; margin: 5px; }"));
 	updateTitle();
 
 	m_logo.setDevicePixelRatio(m_screenWidget->devicePixelRatio());
@@ -123,19 +133,22 @@ Window::Window(CoreManager* manager, ConfigController* config, int playerId, QWi
 		m_savedScale = multiplier.toInt();
 		i = m_savedScale;
 	}
+	attachWidget(m_gameLibrary);
+	m_gameLibrary->setFolder(m_config->getQtOption(GameLibrary::folderSettingKey()).toString());
+	connect(m_gameLibrary, &GameLibrary::folderChanged, this, [this](const QString& folder) {
+		m_config->setQtOption(GameLibrary::folderSettingKey(), folder);
+		// Persist immediately, not only when the emulator shuts down cleanly.
+		m_config->write();
+	});
+	connect(m_gameLibrary, &GameLibrary::gameSelected, this, [this](const QString& path) {
+		if (!m_controller) {
+			setController(m_manager->loadGame(path));
+		}
+	});
+	connect(m_gameLibrary, &GameLibrary::openRequested, this, &Window::selectROM);
+	connect(m_gameLibrary, &GameLibrary::settingsRequested, this, [this]() { openSettingsWindow(); });
 #ifdef USE_SQLITE3
 	m_libraryView = new LibraryController(nullptr, ConfigController::configDir() + "/library.sqlite3", m_config);
-	ConfigOption* showLibrary = m_config->addOption("showLibrary");
-	showLibrary->connect([this](const QVariant& value) {
-		if (!m_controller) {
-			if (value.toBool()) {
-				attachWidget(m_libraryView);
-			} else {
-				attachWidget(m_screenWidget);
-			}
-		}
-	}, this);
-	m_config->updateOption("showLibrary");
 
 	ConfigOption* showFilenameInLibrary = m_config->addOption("showFilenameInLibrary");
 	showFilenameInLibrary->connect([this](const QVariant& value) {
@@ -206,6 +219,7 @@ Window::Window(CoreManager* manager, ConfigController* config, int playerId, QWi
 
 Window::~Window() {
 	delete m_logView;
+	delete m_gameLibrary;
 
 #ifdef USE_SQLITE3
 	delete m_libraryView;
@@ -281,8 +295,10 @@ QSize Window::contentSize(bool fallback) const {
 
 void Window::resizeFrame(const QSize& size) {
 	QSize newSize(size);
-	if (!m_config->getOption("lockFrameSize").toInt()) {
-		m_savedSize = size;
+	if (centralWidget() == m_gameLibrary || !m_config->getOption("lockFrameSize").toInt()) {
+		if (centralWidget() != m_gameLibrary) {
+			m_savedSize = size;
+		}
 		if (windowHandle()) {
 			QRect geom = windowHandle()->screen()->availableGeometry();
 			if (newSize.width() > geom.width()) {
@@ -298,7 +314,9 @@ void Window::resizeFrame(const QSize& size) {
 			resize(newSize);
 		}
 	}
-	recalculateFrameSize(size);
+	if (centralWidget() != m_gameLibrary) {
+		recalculateFrameSize(size);
+	}
 }
 
 void Window::updateMultiplayerStatus(bool canOpenAnother) {
@@ -409,11 +427,10 @@ void Window::selectROMInArchive() {
 }
 
 void Window::addDirToLibrary() {
-	QString filename = GBAApp::app()->getOpenDirectoryName(this, tr("Select folder"));
-	if (filename.isEmpty()) {
-		return;
+	QString folder = GBAApp::app()->getOpenDirectoryName(this, tr("Select folder"));
+	if (!folder.isEmpty()) {
+		m_libraryView->addDirectory(folder);
 	}
-	m_libraryView->addDirectory(filename);
 }
 #endif
 
@@ -736,6 +753,9 @@ void Window::recalculateFrameSize(const QSize& size) {
 
 void Window::resizeEvent(QResizeEvent*) {
 	m_config->setOption("fullscreen", isFullScreen());
+	if (centralWidget() == m_gameLibrary) {
+		return;
+	}
 	if (m_config->getOption("lockFrameSize").toInt()) {
 		return;
 	}
@@ -766,10 +786,15 @@ void Window::showEvent(QShowEvent* event) {
 	m_wasOpened = true;
 #ifdef Q_OS_WIN
 	HWND hwnd = reinterpret_cast<HWND>(winId());
-	DWM_WINDOW_CORNER_PREFERENCE cornerPref = DWMWCP_DONOTROUND;
+	DWM_WINDOW_CORNER_PREFERENCE cornerPref = DWMWCP_ROUND;
 	DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &cornerPref, sizeof(cornerPref));
+	BOOL darkMode = TRUE;
+	DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
 #endif
-	if (m_initialSize.isValid()) {
+	if (centralWidget() == m_gameLibrary) {
+		QSize librarySize = m_config->getQtOption("gameLibrarySize").toSize();
+		resizeFrame(librarySize.isValid() ? librarySize : m_gameLibrary->sizeHint());
+	} else if (m_initialSize.isValid()) {
 		resizeFrame(m_initialSize);
 	}
 	QVariant windowPos = m_config->getQtOption("windowPos", m_playerId > 0 ? QString("player%0").arg(m_playerId) : QString());
@@ -815,6 +840,9 @@ void Window::closeEvent(QCloseEvent* event) {
 	emit shutdown();
 	m_config->setQtOption("windowPos", pos(), m_playerId > 0 ? QString("player%0").arg(m_playerId) : QString());
 	m_config->setQtOption("maximized", isMaximized());
+	if (centralWidget() == m_gameLibrary && !isFullScreen() && !isMaximized()) {
+		m_config->setQtOption("gameLibrarySize", m_gameLibrary->size());
+	}
 
 	if (m_savedScale > 0) {
 		m_config->setOption("height", GBA_VIDEO_VERTICAL_PIXELS * m_savedScale);
@@ -993,9 +1021,11 @@ void Window::gameStarted() {
 #ifdef USE_DISCORD_RPC
 	DiscordCoordinator::gameStarted(m_controller);
 #endif
+	emit gameLoaded();
 }
 
 void Window::gameStopped() {
+	emit gameUnloaded();
 	for (auto& action : m_platformActions) {
 		action->setEnabled(true);
 	}
@@ -1356,10 +1386,33 @@ void Window::setupMenu(QMenuBar* menubar) {
 	m_actions.addMenu(tr("&File"), "file");
 
 	m_actions.addAction(tr("Load &ROM..."), "loadROM", this, &Window::selectROM, "file", QKeySequence::Open);
+	m_actions.addAction(tr("Choose ROM folder..."), "chooseROMFolder", m_gameLibrary, &GameLibrary::chooseFolder,
+	                    "file");
+#ifdef USE_SQLITE3
+	m_actions.addAction(
+	    tr("Classic library"), "classicLibrary",
+	    [this]() {
+		    if (!m_controller) {
+			    attachWidget(m_libraryView);
+		    }
+	    },
+	    "file");
+#endif
+	m_actions.addAction(
+	    tr("Return to game library"), "gameLibrary",
+	    [this]() {
+		    if (m_controller) {
+			    m_controller->stop();
+		    } else {
+			    detachWidget();
+		    }
+	    },
+	    "file");
 
 #ifdef USE_SQLITE3
 	m_actions.addAction(tr("Load ROM in archive..."), "loadROMInArchive", this, &Window::selectROMInArchive, "file");
-	m_actions.addAction(tr("Add folder to library..."), "addDirToLibrary", this, &Window::addDirToLibrary, "file");
+	m_actions.addAction(tr("Add folder to classic library..."), "addDirToLibrary", this, &Window::addDirToLibrary,
+	                    "file");
 #endif
 
 	m_actions.addMenu(tr("Save games"), "saves", "file");
@@ -2068,15 +2121,25 @@ void Window::attachWidget(QWidget* widget) {
 	if (m_display && widget != m_display.get()) {
 		m_display->hide();
 	}
-	takeCentralWidget();
+	if (centralWidget() == m_gameLibrary && m_wasOpened && !isFullScreen() && !isMaximized()) {
+		m_config->setQtOption("gameLibrarySize", m_gameLibrary->size());
+	}
+	QWidget* previous = takeCentralWidget();
+	if (previous && previous != widget) {
+		previous->hide();
+	}
 	setCentralWidget(widget);
+	widget->show();
 	if (m_display && widget == m_display.get()) {
 		m_display->show();
 	}
 }
 
 void Window::detachWidget() {
-	m_config->updateOption("showLibrary");
+	attachWidget(m_gameLibrary);
+	QSize librarySize = m_config->getQtOption("gameLibrarySize").toSize();
+	resizeFrame(librarySize.isValid() ? librarySize : m_gameLibrary->sizeHint());
+	m_gameLibrary->refresh();
 }
 
 void Window::appendMRU(const QString& fname) {

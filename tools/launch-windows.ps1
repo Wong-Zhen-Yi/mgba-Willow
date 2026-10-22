@@ -1,5 +1,8 @@
 # Windows PowerShell 5.1 compatible; invoked by Launch mGBA.cmd.
-param([Parameter(ValueFromRemainingArguments = $true)][string[]]$AppArguments)
+param(
+    [ValidateSet('auto', 'cpu', 'cuda')][string]$Device = 'auto',
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$AppArguments
+)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -182,12 +185,17 @@ try {
         Set-MsysEnvironment
     }
     Write-Host '[4/4] Opening mGBA with MCP objective updates...'
+    Write-Host 'Load a game, then click Enable local model in mGBA when you want Kev.'
+    Write-Host 'No model setup or inference starts automatically.'
     Write-Host 'Connected agents can use set_objective to update the Objective box.'
     Write-Host 'Restart the MCP server after updating this checkout to discover new tools.'
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $appPath
     $startInfo.WorkingDirectory = Split-Path -Parent $appPath
     $startInfo.UseShellExecute = $false
+    # This only tells the UI where its opt-in helper lives. Never start/check/download Kev here.
+    $startInfo.EnvironmentVariables['MGBA_LOCAL_MODEL_SCRIPT'] = Join-Path $repoRoot 'tools\local-model\launch.ps1'
+    $startInfo.EnvironmentVariables['MGBA_LOCAL_MODEL_DEVICE'] = $Device
     # Escape using Windows command-line rules, including trailing backslashes.
     $quotedArguments = foreach ($argument in $AppArguments) {
         '"' + ([regex]::Replace(([regex]::Replace($argument, '(\\*)"', '$1$1\"')), '(\\+)$', '$1$1')) + '"'

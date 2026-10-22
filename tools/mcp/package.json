@@ -6,6 +6,7 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "start": "node server.mjs",
+    "play:local": "node ../local-model/cli.mjs",
     "test": "node --test test/*.test.mjs",
     "smoke": "node test/smoke.mjs",
     "smoke:multi-agent": "node test/multi-agent-smoke.mjs"

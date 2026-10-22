@@ -527,7 +527,6 @@ void SettingsView::updateConfig() {
 	saveSetting("patchPath", m_ui.patchPath);
 	saveSetting("cheatsPath", m_ui.cheatsPath);
 	saveSetting("libraryStyle", m_ui.libraryStyle->currentIndex());
-	saveSetting("showLibrary", m_ui.showLibrary);
 	saveSetting("preload", m_ui.preload);
 	saveSetting("showFps", m_ui.showFps);
 	saveSetting("cheatAutoload", m_ui.cheatAutoload);
@@ -751,7 +750,6 @@ void SettingsView::reloadConfig() {
 	loadSetting("screenshotPath", m_ui.screenshotPath);
 	loadSetting("patchPath", m_ui.patchPath);
 	loadSetting("cheatsPath", m_ui.cheatsPath);
-	loadSetting("showLibrary", m_ui.showLibrary);
 	loadSetting("preload", m_ui.preload, true);
 	loadSetting("showFps", m_ui.showFps, true);
 	loadSetting("cheatAutoload", m_ui.cheatAutoload, true);

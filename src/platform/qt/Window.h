@@ -39,6 +39,7 @@ class DolphinConnector;
 class FrameView;
 class GDBController;
 class GIFView;
+class GameLibrary;
 class LibraryController;
 class LogView;
 class OverrideView;
@@ -76,6 +77,8 @@ public:
 
 signals:
 	void startDrawing();
+	void gameLoaded();
+	void gameUnloaded();
 	void shutdown();
 	void paused(bool);
 	void shaderSelectorAdded(ShaderSelector*);
@@ -228,6 +231,7 @@ private:
 #endif
 	LoadSaveState* m_stateWindow = nullptr;
 	WindowBackground* m_screenWidget;
+	GameLibrary* m_gameLibrary;
 	QPixmap m_logo{":/res/mgba-1024.png"};
 	ConfigController* m_config;
 	InputController m_inputController;

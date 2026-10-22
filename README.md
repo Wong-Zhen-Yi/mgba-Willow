@@ -9,6 +9,34 @@ This Willow checkout includes a local MCP for playing a visible game from a
 Codex chat using Luna models. See [Play mGBA with Luna](tools/mcp/README.md) for
 setup, frame-counted controls, memory reads, checkpoints, and manual takeover.
 
+The Qt frontend opens to Willow's dark, card-based **Game library**. Click
+**Choose folder** once to select your ROM directory; the location is saved
+immediately and restored on future launches. Games in subfolders are included.
+Search by filename, select a card and click **Play game**, or double-click a
+card / press Enter to start. **Refresh** picks up added or removed ROMs, and
+**Choose folder** changes the saved location. ROMs are not moved or copied.
+The cards support `.gba`, `.agb`, `.gb`, `.gbc`, `.sgb` and compressed `.zip` /
+`.7z` games when those archive backends are enabled. Choose a collection folder
+such as `E:\Pokemon Rom Collection`; its subfolders are scanned automatically.
+Archive cards play directly without extracting files to disk. An archive with
+multiple games opens its first compatible ROM; **File → Load ROM in archive**
+lets you choose a specific game in SQLite-enabled builds. Unreadable archives,
+archives without recognized ROM filenames, macOS metadata and Nintendo DS
+files are skipped. Other supported formats can still use **Open ROM**. Save your current game before using
+**File → Return to game library**, which stops emulation. The original SQLite
+catalog remains available under **File → Classic library** in enabled builds.
+Launching with a ROM argument still opens that game directly.
+
+**Launch mGBA.cmd** is the only double-click launcher. Local Kev is off by
+default, including after a game loads. Click **Enable local model** in the
+bottom status bar to choose a preset: **Progress the story**, **Level up Pokémon**,
+**Explore nearby**, or **Finish the current battle**. Click **Start with selected
+goal** to install missing runtime/model files and begin that goal when Kev is
+ready—no typing required. **Enable model only** starts Kev without gameplay
+inputs; **Cancel** starts nothing. Click **Disable local model** to stop it.
+See [Local model setup](tools/local-model/README.md) for first-run downloads and
+the current English Emerald gameplay limitation.
+
 During capped AI fast-forward, supported English Emerald ROMs play background
 music at its original speed in both the SDL and Qt audio backends. A private,
 memory-only emulator runs the ROM's music driver, follows song changes, and
