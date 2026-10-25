@@ -27,15 +27,8 @@ files are skipped. Other supported formats can still use **Open ROM**. Save your
 catalog remains available under **File → Classic library** in enabled builds.
 Launching with a ROM argument still opens that game directly.
 
-**Launch mGBA.cmd** is the only double-click launcher. Local Kev is off by
-default, including after a game loads. Click **Enable local model** in the
-bottom status bar to choose a preset: **Progress the story**, **Level up Pokémon**,
-**Explore nearby**, or **Finish the current battle**. Click **Start with selected
-goal** to install missing runtime/model files and begin that goal when Kev is
-ready—no typing required. **Enable model only** starts Kev without gameplay
-inputs; **Cancel** starts nothing. Click **Disable local model** to stop it.
-See [Local model setup](tools/local-model/README.md) for first-run downloads and
-the current English Emerald gameplay limitation.
+**Launch mGBA.cmd** builds and opens this checkout's MCP-enabled emulator.
+Open a game, then connect from Codex to play through the MCP tools.
 
 During capped AI fast-forward, supported English Emerald ROMs play background
 music at its original speed in both the SDL and Qt audio backends. A private,

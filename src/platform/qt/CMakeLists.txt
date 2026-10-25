@@ -146,7 +146,6 @@ set(SOURCE_FILES
 	InputProfile.cpp
 	KeyEditor.cpp
 	LoadSaveState.cpp
-	LocalModelGoalDialog.cpp
 	Log.cpp
 	LogController.cpp
 	LogConfigModel.cpp
@@ -612,10 +611,6 @@ if(BUILD_SUITE OR BUILD_AI_TESTS)
 		set_target_properties(test-qt-emeraldmusic PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
 		add_test(platform-qt-emeraldmusic test-qt-emeraldmusic)
 	endif()
-	add_executable(test-qt-localmodelgoals test/localmodelgoals.cpp LocalModelGoalDialog.cpp)
-	target_link_libraries(test-qt-localmodelgoals ${QT}::Widgets)
-	add_test(platform-qt-localmodelgoals test-qt-localmodelgoals "${PROJECT_SOURCE_DIR}/tools/local-model/goals.json")
-	set_tests_properties(platform-qt-localmodelgoals PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 	add_executable(test-qt-gamelibrary test/gamelibrary.cpp GameLibrary.cpp)
 	target_link_libraries(test-qt-gamelibrary ${BINARY_NAME} ${QT}::Widgets)
 	set_target_properties(test-qt-gamelibrary PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")

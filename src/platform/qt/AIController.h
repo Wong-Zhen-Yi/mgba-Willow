@@ -12,8 +12,6 @@
 
 class QLabel;
 class QLocalSocket;
-class QProcess;
-class QPushButton;
 
 namespace QGBA {
 class Window;
@@ -34,8 +32,6 @@ private:
 	void release(const QString& reason);
 	void disconnectClient(QLocalSocket* socket);
 	void setEnabled(bool enabled);
-	void toggleLocalModel();
-	void stopLocalModel();
 	void finishPending(bool cancelled = false, const QString& reason = { });
 	QJsonArray completedSteps() const;
 	QJsonObject observation(bool screenshot = true);
@@ -52,8 +48,6 @@ private:
 	QTimer m_timer;
 	QString m_id;
 	QString m_gameId;
-	QPushButton* m_localModelButton;
-	QProcess* m_localModelProcess;
 	QString m_descriptor;
 	QString m_gamePath;
 	QJsonValue m_pending;
@@ -67,7 +61,6 @@ private:
 	QHash<QLocalSocket*, QString> m_lastStall;
 	QHash<QLocalSocket*, int> m_stallCount;
 	bool m_changingEnabled = false;
-	bool m_stoppingLocalModel = false;
 	QList<QMetaObject::Connection> m_coreConnections;
 };
 }
