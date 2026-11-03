@@ -5,17 +5,28 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #include "GameLibrary.h"
 
+#include <QCryptographicHash>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
+#include <QHash>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPushButton>
+#include <QRegularExpression>
+#include <QSaveFile>
 #include <QStackedWidget>
+#include <QStandardPaths>
 #include <QStyledItemDelegate>
 #include <QVBoxLayout>
 
@@ -27,7 +38,99 @@ using namespace QGBA;
 
 namespace {
 
-enum GameRole { PathRole = Qt::UserRole, GamePlatformRole, LocationRole };
+enum GameRole { PathRole = Qt::UserRole, GamePlatformRole, LocationRole, ArtworkRole };
+
+QString artworkKey(QString title) {
+	// Ignore release metadata, but retain unknown qualifiers (including ROM hack names).
+	static const QRegularExpression metadata(
+	    QStringLiteral("\\((?:(?:USA|Europe|Japan|World|Australia|Canada|France|Germany|Italy|Spain|Korea|China|"
+		               "Brazil|Netherlands|Sweden|U|E|J|[A-Z][a-z])(?:, ?(?:[A-Za-z]+))*|"
+		               "Rev [0-9.]+|V[0-9.]+|SGB Enhanced|CGB\\+SGB Enhanced|GB Compatible)\\)"),
+	    QRegularExpression::CaseInsensitiveOption);
+	title.remove(metadata);
+	title.remove(QStringLiteral("[!]"));
+	title.remove(QRegularExpression(QStringLiteral("\\bVersion\\b"), QRegularExpression::CaseInsensitiveOption));
+	title.remove(QRegularExpression(QStringLiteral("\\band\\b"), QRegularExpression::CaseInsensitiveOption));
+	title = title.normalized(QString::NormalizationForm_D).toLower();
+	title.remove(QRegularExpression(QStringLiteral("[^a-z0-9]")));
+	if (title == QStringLiteral("pokemonyellow")) {
+		title = QStringLiteral("pokemonyellowspecialpikachuedition");
+	}
+	return title;
+}
+
+QString artworkUrl(const QString& title, const QString& platform) {
+	static const QHash<QString, QStringList> catalog = []() {
+		QFile file(QStringLiteral(":/library-titles.json"));
+		if (!file.open(QIODevice::ReadOnly)) {
+			return QHash<QString, QStringList>();
+		}
+		QJsonObject systems = QJsonDocument::fromJson(file.readAll()).object();
+		QHash<QString, QStringList> names;
+		for (auto system = systems.constBegin(); system != systems.constEnd(); ++system) {
+			for (const QJsonValue& entry : system.value().toArray()) {
+				QString name = entry.toString();
+				names[system.key() + ":" + artworkKey(name)].append(name);
+			}
+		}
+		return names;
+	}();
+	QString matchedPlatform = platform;
+	QString key = matchedPlatform + ":" + artworkKey(title);
+	// Some dual-mode Game Boy Color releases are distributed with a .gb extension.
+	if (!catalog.contains(key) && (platform == "GB" || platform == "GBC")) {
+		matchedPlatform = platform == "GB" ? "GBC" : "GB";
+		key = matchedPlatform + ":" + artworkKey(title);
+	}
+	QString best;
+	int bestScore = -1;
+	QStringList regions;
+	const QRegularExpression regionTag(QStringLiteral("\\b(USA|Europe|Japan|World|Australia|Canada|France|Germany|"
+	                                                  "Italy|Spain|Korea|China|Brazil|Netherlands|Sweden)\\b"));
+	auto tags = QRegularExpression(QStringLiteral("\\([^)]*\\)")).globalMatch(title);
+	while (tags.hasNext()) {
+		auto matches = regionTag.globalMatch(tags.next().captured());
+		while (matches.hasNext()) {
+			regions.append(matches.next().captured());
+		}
+	}
+	for (const QString& name : catalog.value(key)) {
+		if (!regions.isEmpty()) {
+			bool sameRegion = false;
+			for (const QString& region : regions) {
+				sameRegion |= name.contains(region);
+			}
+			if (!sameRegion) {
+				continue;
+			}
+		}
+		int score = name.contains("(USA") ? 3 : name.contains("(World") ? 2 : name.contains("(Europe") ? 1 : 0;
+		if (!name.contains("(Rev ")) {
+			++score;
+		}
+		// Preserve a supplied region/revision instead of borrowing a different release's splash.
+		if (name.compare(title, Qt::CaseInsensitive) == 0) {
+			score += 100;
+		}
+		if (score > bestScore) {
+			best = name;
+			bestScore = score;
+		}
+	}
+	if (best.isEmpty()) {
+		return { };
+	}
+	QString system = matchedPlatform == "GBA" ? "Nintendo_-_Game_Boy_Advance" :
+	    matchedPlatform == "GBC"              ? "Nintendo_-_Game_Boy_Color" :
+	                                            "Nintendo_-_Game_Boy";
+	return QStringLiteral("https://raw.githubusercontent.com/libretro-thumbnails/%1/master/Named_Titles/%2.png")
+	    .arg(system, QString::fromLatin1(QUrl::toPercentEncoding(best)));
+}
+
+QString artworkCachePath(const QString& url) {
+	return QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + QStringLiteral("/library-artwork/") +
+	    QString::fromLatin1(QCryptographicHash::hash(url.toUtf8(), QCryptographicHash::Sha256).toHex()) + ".png";
+}
 
 QString romPlatform(const QString& suffix) {
 	if (suffix == QStringLiteral("gba") || suffix == QStringLiteral("agb")) {
@@ -51,7 +154,7 @@ bool isMetadata(const QString& path) {
 	return false;
 }
 
-QString archivePlatform(const QFileInfo& file) {
+QString archivePlatform(const QFileInfo& file, QString* romName, QString* platform) {
 	QString format;
 	QString suffix = file.suffix().toLower();
 #if defined(USE_LIBZIP) || defined(USE_MINIZIP)
@@ -82,6 +185,8 @@ QString archivePlatform(const QFileInfo& file) {
 		if (!romPlatform(extension).isEmpty() || extension == QStringLiteral("rom") ||
 		    extension == QStringLiteral("bin") || extension == QStringLiteral("mb")) {
 			hasRom = true;
+			*romName = QFileInfo(name).completeBaseName();
+			*platform = romPlatform(extension);
 			break;
 		}
 	}
@@ -119,12 +224,25 @@ public:
 		painter->setBrush(gradient);
 		painter->drawRoundedRect(art, 8, 8);
 
-		// A stylized cartridge provides intentional artwork without downloading covers.
-		QRect cartridge(art.center().x() - 30, art.center().y() - 33, 60, 66);
+		QPixmap splash = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
+		QRect cartridge = art.adjusted(18, 17, -18, -9);
 		painter->setPen(QPen(accent.lighter(120), 2));
 		painter->setBrush(QColor(20, 28, 46, 130));
 		painter->drawRoundedRect(cartridge, 7, 7);
-		painter->drawRoundedRect(cartridge.adjusted(10, 12, -10, -20), 3, 3);
+		QRect label = cartridge.adjusted(8, 10, -8, -17);
+		painter->drawRoundedRect(label, 3, 3);
+		if (!splash.isNull()) {
+			painter->save();
+			QPainterPath clip;
+			clip.addRoundedRect(label, 3, 3);
+			painter->setClipPath(clip);
+			painter->fillRect(label, Qt::black);
+			QSize size = splash.size().scaled(label.size(), Qt::KeepAspectRatio);
+			QRect target(QPoint(), size);
+			target.moveCenter(label.center());
+			painter->drawPixmap(target, splash);
+			painter->restore();
+		}
 		painter->drawLine(cartridge.left() + 17, cartridge.bottom() - 9, cartridge.right() - 17,
 		                  cartridge.bottom() - 9);
 
@@ -298,6 +416,7 @@ GameLibrary::GameLibrary(QWidget* parent)
 	connect(m_games, &QListWidget::itemActivated, this, &GameLibrary::launchSelected);
 	connect(m_play, &QPushButton::clicked, this, &GameLibrary::launchSelected);
 	connect(&m_scanTimer, &QTimer::timeout, this, &GameLibrary::scanBatch);
+	m_artworkNetwork = new QNetworkAccessManager(this);
 	m_scanTimer.setInterval(1);
 	updateStatus();
 }
@@ -325,6 +444,8 @@ void GameLibrary::refresh() {
 	m_scanTimer.stop();
 	m_iterator.reset();
 	m_games->clear();
+	m_artworkQueue.clear();
+	m_requestedArtwork.clear();
 	QFileInfo directory(m_folder);
 	if (!m_folder.isEmpty() && directory.isDir() && directory.isReadable()) {
 		// Do not follow directory symlinks: avoid loops and scanning outside the chosen tree.
@@ -350,9 +471,11 @@ void GameLibrary::scanBatch() {
 			continue;
 		}
 		QString platform = romPlatform(file.suffix().toLower());
+		QString artworkPlatform = platform;
+		QString romName = file.completeBaseName();
 		bool compressed = platform.isEmpty();
 		if (compressed) {
-			platform = archivePlatform(file);
+			platform = archivePlatform(file, &romName, &artworkPlatform);
 		}
 		if (platform.isEmpty()) {
 			continue;
@@ -361,6 +484,17 @@ void GameLibrary::scanBatch() {
 		item->setData(PathRole, file.absoluteFilePath());
 		item->setData(GamePlatformRole, platform);
 		item->setData(LocationRole, relativePath);
+		QString url = artworkUrl(romName, artworkPlatform);
+		item->setData(ArtworkRole, url);
+		if (!url.isEmpty()) {
+			QPixmap cached(artworkCachePath(url));
+			if (!cached.isNull()) {
+				item->setData(Qt::DecorationRole, cached);
+			} else if (!m_requestedArtwork.contains(url)) {
+				m_requestedArtwork.insert(url);
+				m_artworkQueue.enqueue(url);
+			}
+		}
 		item->setToolTip(compressed ? tr("%1\nCompressed ROM: plays directly without extracting files.\n"
 		                                 "For multi-game archives, Play opens the first compatible ROM.")
 		                                  .arg(file.absoluteFilePath()) :
@@ -371,6 +505,7 @@ void GameLibrary::scanBatch() {
 			break;
 		}
 	}
+	loadArtwork();
 	if (!m_iterator->hasNext()) {
 		m_scanTimer.stop();
 		m_iterator.reset();
@@ -379,6 +514,39 @@ void GameLibrary::scanBatch() {
 		emit scanFinished();
 	} else {
 		updateStatus();
+	}
+}
+
+void GameLibrary::loadArtwork() {
+	while (m_activeArtwork < 4 && !m_artworkQueue.isEmpty()) {
+		QString url = m_artworkQueue.dequeue();
+		QNetworkRequest request { QUrl(url) };
+		QNetworkReply* reply = m_artworkNetwork->get(request);
+		QTimer::singleShot(15000, reply, &QNetworkReply::abort);
+		++m_activeArtwork;
+		connect(reply, &QNetworkReply::finished, this, [this, reply, url]() {
+			QByteArray bytes = reply->readAll();
+			QPixmap image;
+			if (reply->error() == QNetworkReply::NoError && image.loadFromData(bytes, "PNG")) {
+				QString path = artworkCachePath(url);
+				QDir().mkpath(QFileInfo(path).absolutePath());
+				QSaveFile cache(path);
+				if (cache.open(QIODevice::WriteOnly)) {
+					cache.write(bytes);
+					cache.commit();
+				}
+				// Match current model data: refresh/folder changes may have deleted the original cards.
+				for (int i = 0; i < m_games->count(); ++i) {
+					auto* item = m_games->item(i);
+					if (item->data(ArtworkRole).toString() == url) {
+						item->setData(Qt::DecorationRole, image);
+					}
+				}
+			}
+			reply->deleteLater();
+			--m_activeArtwork;
+			loadArtwork();
+		});
 	}
 }
 

@@ -173,3 +173,7 @@ Route111 Camper Travis defeated (Sandshrew18), reward288 frame222809. Route112 H
 - At frame95990, the decoder reports four badges from save-block flags: Stone, Knuckle, Dynamo, and Heat. The Heat Badge verifies M14 (Flannery) complete and supersedes older notes that still listed Flannery as next.
 - Two party members are healthy: slot0 species ID285, level36, 127/127 HP; slot1 species ID305, level26, 69/69 HP, holding Exp. Share. No save confirmation was retained in this decoder session; this alone does not establish whether the game is saved.
 - Next main-story objective: M15 — defeat Norman at Petalburg Gym, earn the Balance Badge, and receive Surf. The shared objective display now shows this goal. No gameplay inputs were sent during this discovery session; MCP remains connected at the user's request.
+## 31 October 2026 — Fortree recovery
+- Live session began at Mt. Pyre exterior map 24/22 (23,31), six badges including Feather. Earlier Fortree Gym handoff is superseded; Mt. Pyre summit and Magma Emblem remain unverified.
+- Flew to Fortree with fainted Swellow and healed at the Pokémon Center. Nurse confirmed full recovery; Swampert 40 142/142, Swellow 36 95/95, Castform 29 84/84.
+- In-game save confirmed at frame 67407, Fortree Center map 12/2 (7,4), six badges, playtime 119:59. Next return to Mt. Pyre and investigate summit.

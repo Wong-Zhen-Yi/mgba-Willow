@@ -16,6 +16,7 @@ if not exist "%~dp0tools\launch-windows.ps1" (
 echo Opening the latest mGBA Willow build with the new game-card library.
 echo Choose your ROM folder once; Willow remembers it for future launches.
 echo The library scans subfolders and loads ZIP/7z games without manual extraction.
+echo Recognized games show their own title splash on the cartridge; artwork is cached after download.
 echo Select a game card and click Play, or double-click a card to start.
 echo Use File / Return to game library after saving your current game.
 echo Multi-agent MCP support remains available during gameplay.

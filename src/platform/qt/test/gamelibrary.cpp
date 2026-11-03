@@ -6,6 +6,7 @@
 #include "GameLibrary.h"
 
 #include <QApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -14,8 +15,10 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QThread>
+#include <QUrl>
 
 #include <mgba-util/vfs.h>
 
@@ -65,6 +68,35 @@ static void waitForScan(bool& complete) {
 
 int main(int argc, char** argv) {
 	QApplication app(argc, argv);
+	if (app.arguments().size() == 4 && app.arguments().at(1) == "--artwork-folder") {
+		GameLibrary collection;
+		collection.resize(1060, 700);
+		collection.show();
+		bool complete = false;
+		QObject::connect(&collection, &GameLibrary::scanFinished, &collection, [&]() { complete = true; });
+		collection.setFolder(app.arguments().at(2));
+		waitForScan(complete);
+		auto* cards = collection.findChild<QListWidget*>("gameCards");
+		QElapsedTimer timer;
+		timer.start();
+		int loaded = 0;
+		do {
+			QApplication::processEvents();
+			loaded = 0;
+			for (int i = 0; i < cards->count(); ++i) {
+				loaded += !qvariant_cast<QPixmap>(cards->item(i)->data(Qt::DecorationRole)).isNull();
+			}
+			QThread::msleep(10);
+		} while (loaded < cards->count() && timer.elapsed() < 30000);
+		for (int i = 0; i < cards->count(); ++i) {
+			std::printf("%s: %s\n", cards->item(i)->text().toUtf8().constData(),
+			            cards->item(i)->data(Qt::UserRole + 3).toString().toUtf8().constData());
+		}
+		std::printf("Loaded artwork for %d of %d cards\n", loaded, cards->count());
+		CHECK(collection.grab().save(app.arguments().at(3)));
+		CHECK(loaded == cards->count());
+		return 0;
+	}
 	if (app.arguments().size() == 3 && app.arguments().at(1) == "--scan-folder") {
 		// Read-only manual QA: discover cards without connecting any launch signal or loading a ROM.
 		GameLibrary collection;
@@ -275,6 +307,72 @@ int main(int argc, char** argv) {
 	library.setFolder(QString());
 	CHECK(cards->count() == 0);
 	CHECK(emptyTitle->text() == "Your next adventure starts here");
+	// Artwork matching and persistent offline loading, using synthetic cached images.
+	// Give this test its own cache namespace; never read or overwrite the user's artwork.
+	QStandardPaths::setTestModeEnabled(true);
+	app.setApplicationName("willow-artwork-" + QFileInfo(temporary.path()).fileName());
+	QString artworkFolder = temporary.path() + "/artwork";
+	CHECK(QDir().mkpath(artworkFolder));
+	struct ArtworkFixture {
+		const char* rom;
+		const char* system;
+		const char* title;
+	};
+	const ArtworkFixture artworkFixtures[] = {
+		{ "Pokemon - Fire Red.gba", "Nintendo_-_Game_Boy_Advance", "Pokemon - FireRed Version (USA)" },
+		{ "Pokemon - Leaf Green.gba", "Nintendo_-_Game_Boy_Advance", "Pokemon - LeafGreen Version (USA)" },
+		{ "Pokemon Blue.gb", "Nintendo_-_Game_Boy", "Pokemon - Blue Version (USA, Europe) (SGB Enhanced)" },
+		{ "Pokemon Yellow.gb", "Nintendo_-_Game_Boy",
+		  "Pokemon - Yellow Version - Special Pikachu Edition (USA, Europe) (CGB+SGB Enhanced)" },
+		{ "Pokemon Pinball - Ruby and Sapphire.gba", "Nintendo_-_Game_Boy_Advance",
+		  "Pokemon Pinball - Ruby _ Sapphire (USA)" },
+		{ "Pokemon Trading Card Game.gb", "Nintendo_-_Game_Boy_Color",
+		  "Pokemon Trading Card Game (USA, Australia) (SGB Enhanced) (GB Compatible)" },
+		{ "Pokémon - Crystal Version (Australia).gbc", "Nintendo_-_Game_Boy_Color",
+		  "Pokemon - Crystal Version (Australia)" }
+	};
+	QHash<QString, QString> expectedUrls;
+	QString cacheFolder = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/library-artwork";
+	CHECK(QDir().mkpath(cacheFolder));
+	for (const auto& fixture : artworkFixtures) {
+		makeFile(artworkFolder + "/" + QString::fromUtf8(fixture.rom));
+		QString url =
+		    QStringLiteral("https://raw.githubusercontent.com/libretro-thumbnails/%1/master/Named_Titles/%2.png")
+		        .arg(fixture.system, QString::fromLatin1(QUrl::toPercentEncoding(QString::fromUtf8(fixture.title))));
+		expectedUrls.insert(QString::fromUtf8(fixture.rom), url);
+		QString hash = QString::fromLatin1(QCryptographicHash::hash(url.toUtf8(), QCryptographicHash::Sha256).toHex());
+		QPixmap image(240, 160);
+		image.fill(Qt::green);
+		CHECK(image.save(cacheFolder + "/" + hash + ".png"));
+	}
+	makeFile(artworkFolder + "/Unknown.gba");
+	makeFile(artworkFolder + "/Pokemon - Fire Red [Unrelated Hack].gba");
+	makeFile(artworkFolder + "/Pokemon - Crystal Version (Japan).gbc");
+#if defined(USE_LIBZIP) || defined(USE_MINIZIP)
+	makeZip(artworkFolder + "/Misleading name.zip", { "__MACOSX/._Fake.gb", "Pokemon - Fire Red.gba" });
+	expectedUrls.insert("Misleading name.zip", expectedUrls.value("Pokemon - Fire Red.gba"));
+#endif
+	complete = false;
+	library.setFolder(artworkFolder);
+	waitForScan(complete);
+	CHECK(cards->count() == expectedUrls.size() + 3);
+	for (int i = 0; i < cards->count(); ++i) {
+		auto* item = cards->item(i);
+		QString filename = QFileInfo(item->data(Qt::UserRole).toString()).fileName();
+		QString expected = expectedUrls.value(filename);
+		if (item->data(Qt::UserRole + 3).toString() != expected) {
+			std::fprintf(stderr, "%s: expected %s, got %s\n", filename.toUtf8().constData(),
+			             expected.toUtf8().constData(), item->data(Qt::UserRole + 3).toString().toUtf8().constData());
+		}
+		CHECK(item->data(Qt::UserRole + 3).toString() == expected);
+		CHECK(qvariant_cast<QPixmap>(item->data(Qt::DecorationRole)).isNull() == expected.isEmpty());
+	}
+	complete = false;
+	library.refresh();
+	waitForScan(complete);
+	CHECK(cards->count() == expectedUrls.size() + 3);
+	CHECK(QDir::fromNativeSeparators(cacheFolder).contains("/" + app.applicationName() + "/"));
+	CHECK(QDir(cacheFolder).removeRecursively());
 	std::puts("Game library tests passed");
 	return 0;
 }

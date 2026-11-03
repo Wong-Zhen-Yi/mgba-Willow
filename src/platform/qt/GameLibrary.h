@@ -5,6 +5,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #pragma once
 
+#include <QQueue>
+#include <QSet>
 #include <QTimer>
 #include <QWidget>
 
@@ -13,6 +15,7 @@
 class QDirIterator;
 class QLabel;
 class QLineEdit;
+class QNetworkAccessManager;
 class QListWidget;
 class QPushButton;
 class QStackedWidget;
@@ -48,6 +51,7 @@ private:
 	void filterGames();
 	void updateStatus();
 	void launchSelected();
+	void loadArtwork();
 
 	QString m_folder;
 	QTimer m_scanTimer;
@@ -61,6 +65,10 @@ private:
 	QStackedWidget* m_pages;
 	QPushButton* m_play;
 	QPushButton* m_emptyChoose;
+	QNetworkAccessManager* m_artworkNetwork;
+	QQueue<QString> m_artworkQueue;
+	QSet<QString> m_requestedArtwork;
+	int m_activeArtwork = 0;
 };
 
 }
