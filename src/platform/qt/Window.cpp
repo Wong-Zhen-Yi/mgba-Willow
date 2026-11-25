@@ -1226,7 +1226,10 @@ void Window::changeRenderer() {
 	}
 
 	CoreController::Interrupter interrupter(m_controller);
-	if (m_config->getOption("hwaccelVideo").toInt() && m_display->supportsShaders() && m_controller->supportsFeature(CoreController::Feature::OPENGL)) {
+	// The GPU renderer serves human play. AI control needs the software renderer,
+	// whose finished frame lines up with the captured game state (atomic:true).
+	if (m_config->getOption("hwaccelVideo").toInt() && !m_controller->aiControl() && m_display->supportsShaders() &&
+	    m_controller->supportsFeature(CoreController::Feature::OPENGL)) {
 		m_display->videoProxy()->attach(m_controller.get());
 
 		int fb = m_display->framebufferHandle();
@@ -2330,6 +2333,7 @@ void Window::setController(CoreController* controller) {
 	connect(m_controller.get(), &CoreController::started, this, &Window::gameStarted);
 	connect(m_controller.get(), &CoreController::started, GBAApp::app(), &GBAApp::suspendScreensaver);
 	connect(m_controller.get(), &CoreController::stopping, this, &Window::gameStopped);
+	connect(m_controller.get(), &CoreController::aiControlChanged, this, &Window::changeRenderer);
 	connect(m_controller.get(), &CoreController::stopping, GBAApp::app(), &GBAApp::resumeScreensaver);
 	connect(m_controller.get(), &CoreController::paused, this, &Window::updateFrame);
 

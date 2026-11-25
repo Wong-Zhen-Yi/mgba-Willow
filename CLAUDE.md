@@ -58,6 +58,16 @@ User docs: `doc/willow-mobile.md`. Moving parts:
 - `mobile-server.mjs` is the loopback HTTP and WebSocket server. It checks the
   Host and Origin headers, requires the token in the link's `#pair=` fragment,
   allows one controller, and evicts unpaired sockets beyond 8.
+- Video: the phone sends `{type:'video', codec:'h264'}` when WebCodecs works,
+  and the server then loops `mobile_frame {codec:'h264', wait:true}`. Qt holds
+  that request until `frameAvailable` and encodes with `MobileVideoEncoder`
+  (`MobileVideo.cpp`: NVENC → AMF → QSV → Media Foundation → x264, all through
+  the linked FFmpeg). Binary WebSocket frames start with a type byte: 0 PNG,
+  1 H.264 delta, 2 keyframe. `WILLOW_MOBILE_ENCODER=libx264` forces an encoder.
+  `test-qt-mobilevideo` decodes every encoder found and checks the colours.
+- The GBA OpenGL renderer (`hwaccelVideo`, default on) is swapped for software
+  while `CoreController::aiControl()` is true (`aiControlChanged` →
+  `Window::changeRenderer`), because only software frames are `atomic:true`.
 - `mobile/` holds the phone UI. The game picker (the PC's ROM library) is the
   first page and the GBA screen with the gamepad is the second. The server
   reads these files once at startup, so restart pairing to see UI edits; that

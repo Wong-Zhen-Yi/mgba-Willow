@@ -158,6 +158,7 @@ set(SOURCE_FILES
 	MemorySearch.cpp
 	MemoryView.cpp
 	MessagePainter.cpp
+	MobileVideo.cpp
 	MobilePairing.cpp
 	MultiplayerController.cpp
 	ObjView.cpp
@@ -618,6 +619,10 @@ if(BUILD_SUITE OR BUILD_AI_TESTS)
 	set_target_properties(test-qt-gamelibrary PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
 	add_test(platform-qt-gamelibrary test-qt-gamelibrary)
 	set_tests_properties(platform-qt-gamelibrary PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+	add_executable(test-qt-mobilevideo test/mobilevideo.cpp MobileVideo.cpp)
+	target_link_libraries(test-qt-mobilevideo ${BINARY_NAME} ${QT}::Gui)
+	set_target_properties(test-qt-mobilevideo PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
+	add_test(platform-qt-mobilevideo test-qt-mobilevideo)
 	add_executable(test-qt-aigameplay test/aigameplay.cpp)
 	add_test(platform-qt-aigameplay test-qt-aigameplay)
 	add_executable(test-qt-controllerpainter test/controllerpainter.cpp ControllerPainter.cpp)

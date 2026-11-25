@@ -23,7 +23,10 @@ echo Multi-agent MCP support remains available during gameplay.
 echo Changed emulator sources will be rebuilt automatically.
 echo To play from your iPhone, click Pair iPhone in the Willow window, then pick a game on the phone.
 echo Tap Auto Play or Stop Auto Play on the phone game screen to control Codex.
+echo Use Game speed on the phone to change playback speed while connected.
 echo The iPhone link uses Tailscale Funnel HTTPS; Tailscale handles the certificate.
+echo The iPhone stream is H.264 video encoded on the GPU (NVENC/AMF/Quick Sync), with CPU and PNG fallbacks.
+echo GBA games render on the GPU with OpenGL; Willow uses the software renderer while an AI agent has control.
 echo After opening a ROM, multiple agents can connect; button actions run one at a time.
 echo Connected agents can update the Objective box with the set_objective MCP tool.
 echo After an update, restart the MCP server so agents discover the latest tools.

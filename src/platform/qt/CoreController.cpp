@@ -264,6 +264,8 @@ QImage CoreController::getPixels() {
 		Interrupter interrupter(this);
 		const void* pixels;
 		m_threadContext.core->getPixels(m_threadContext.core, &pixels, &stride);
+		// The OpenGL renderer reads back at its upscaled size.
+		size *= videoScale();
 		stride *= BYTES_PER_PIXEL;
 		buffer = QByteArray::fromRawData(static_cast<const char*>(pixels), stride * size.height());
 	}
@@ -566,7 +568,8 @@ void CoreController::setAIControl(bool enabled) {
 	m_threadContext.core->setKeys(m_threadContext.core, m_humanKeys);
 	updateKeys();
 	updateFastForward();
-	emit fastForwardChanged(m_fastForward || m_fastForwardForced || (enabled && m_aiSpeed != 1));
+	emit fastForwardChanged(m_fastForward || m_fastForwardForced || controlledSpeed() != 1);
+	emit aiControlChanged(enabled);
 }
 
 void CoreController::setMobileKeys(unsigned keys) {
@@ -579,6 +582,18 @@ void CoreController::releaseMobileKeys() {
 	QMutexLocker locker(&m_actionMutex);
 	m_mobileKeys = 0;
 	m_mobileTapKeys = 0;
+}
+
+void CoreController::setMobileSpeed(int multiplier) {
+	if (m_mobileSpeed == multiplier) {
+		return;
+	}
+	Interrupter interrupter(this);
+	m_mobileSpeed = multiplier;
+	if (hasStarted() && !mCoreThreadHasExited(&m_threadContext)) {
+		updateFastForward();
+	}
+	emit fastForwardChanged(m_fastForward || m_fastForwardForced || controlledSpeed() != 1);
 }
 
 void CoreController::cancelAIAction() {
@@ -594,7 +609,7 @@ void CoreController::setAISpeed(float multiplier) {
 	Interrupter interrupter(this);
 	m_aiSpeed = multiplier;
 	if (hasStarted() && !mCoreThreadHasExited(&m_threadContext)) updateFastForward();
-	emit fastForwardChanged(m_fastForward || m_fastForwardForced || (m_aiControl && m_aiSpeed != 1));
+	emit fastForwardChanged(m_fastForward || m_fastForwardForced || controlledSpeed() != 1);
 }
 
 bool CoreController::advanceAI(unsigned keys, int frames) {
@@ -1393,7 +1408,9 @@ void CoreController::finishFrame() {
 #ifdef M_CORE_GBA
 	if (m_threadContext.core->platform(m_threadContext.core) == mPLATFORM_GBA) {
 		double speed = 1.0 / mCoreCalculateFramerateRatio(m_threadContext.core, m_threadContext.impl->sync.fpsTarget);
-		bool capped = (m_fastForward || m_fastForwardForced) ? (m_fastForward ? m_fastForwardHeldRatio : m_fastForwardRatio) > 0 : m_aiSpeed > 0;
+		bool capped = (m_fastForward || m_fastForwardForced) ?
+		    (m_fastForward ? m_fastForwardHeldRatio : m_fastForwardRatio) > 0 :
+		    controlledSpeed() > 0;
 		m_emeraldMusic.update(m_threadContext.core, speed, m_normalSpeedMusic && m_aiControl && capped && m_aiGameState.supported());
 	}
 #endif
@@ -1464,7 +1481,15 @@ void CoreController::updatePlayerSave() {
 	}
 }
 
+float CoreController::controlledSpeed() const {
+	if (m_mobileSpeed) {
+		return m_mobileSpeed;
+	}
+	return m_aiControl ? m_aiSpeed : 1.f;
+}
+
 void CoreController::updateFastForward() {
+	const float speed = controlledSpeed();
 	// If we have "Fast forward" checked in the menu (m_fastForwardForced)
 	// or are holding the fast forward button (m_fastForward):
 	if (m_fastForward || m_fastForwardForced) {
@@ -1489,12 +1514,13 @@ void CoreController::updateFastForward() {
 				m_threadContext.impl->sync.audioWait = true;
 			}
 		}
-	} else if (m_aiControl && m_aiSpeed != 1) {
-		m_threadContext.core->opts.volume = m_fastForwardVolume >= 0 ? m_fastForwardVolume : m_threadContext.core->opts.volume;
+	} else if (speed != 1) {
+		m_threadContext.core->opts.volume =
+		    m_fastForwardVolume >= 0 ? m_fastForwardVolume : m_threadContext.core->opts.volume;
 		m_threadContext.core->opts.mute = m_fastForwardMute || m_mute;
 		setSync(false);
-		if (m_aiSpeed > 0) {
-			m_threadContext.impl->sync.fpsTarget = m_fpsTarget * m_aiSpeed;
+		if (speed > 0) {
+			m_threadContext.impl->sync.fpsTarget = m_fpsTarget * speed;
 			m_threadContext.impl->sync.audioWait = true;
 		}
 	} else {

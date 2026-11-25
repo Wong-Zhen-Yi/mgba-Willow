@@ -147,6 +147,7 @@ public:
 	void setAIControl(bool enabled);
 	void setMobileKeys(unsigned keys);
 	void releaseMobileKeys();
+	void setMobileSpeed(int multiplier);
 	bool aiControl() const { return m_aiControl; }
 	bool advanceAI(unsigned keys, int frames);
 	bool advanceAI(const std::vector<AIGameplay::Step>& steps);
@@ -254,6 +255,7 @@ signals:
 	void failed();
 	void frameAvailable();
 	void effectiveKeysChanged(unsigned keys);
+	void aiControlChanged(bool enabled);
 	void aiActionFinished();
 	void didReset();
 	void stateLoaded();
@@ -276,6 +278,7 @@ private:
 	void updatePlayerSave();
 
 	void updateFastForward();
+	float controlledSpeed() const;
 
 	void updateROMInfo();
 
@@ -317,6 +320,7 @@ private:
 	std::atomic<unsigned> m_humanKeys{0};
 	unsigned m_mobileKeys = 0;
 	unsigned m_mobileTapKeys = 0;
+	int m_mobileSpeed = 0;
 	unsigned m_effectiveKeys = 0; // Protected by m_actionMutex
 	float m_aiSpeed = 4.f;
 	QList<std::function<void()>> m_resetActions;

@@ -156,6 +156,8 @@ ConfigController::ConfigController(QObject* parent)
 	mCoreConfigSetDefaultIntValue(&m_config, "gb.colors", GB_COLORS_CGB);
 #endif
 	mCoreConfigSetDefaultIntValue(&m_config, "preload", true);
+	// Render GBA games on the GPU when the display supports it.
+	mCoreConfigSetDefaultIntValue(&m_config, "hwaccelVideo", 1);
 	mCoreConfigMap(&m_config, &m_opts);
 
 	mSubParserGraphicsInit(&m_subparsers[0], &m_graphicsOpts);

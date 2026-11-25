@@ -871,7 +871,7 @@ void SettingsView::reloadConfig() {
 	}
 #endif
 
-	int hwaccelVideo = m_controller->getOption("hwaccelVideo", 0).toInt();
+	int hwaccelVideo = m_controller->getOption("hwaccelVideo", 1).toInt();
 	m_ui.hwaccelVideo->setCurrentIndex(hwaccelVideo);
 
 	connect(m_ui.videoScale, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this](int value) {

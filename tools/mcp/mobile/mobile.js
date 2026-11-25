@@ -7,8 +7,10 @@ const refresh = byId('refresh');
 const status = byId('status');
 const hint = byId('hint');
 const screen = byId('frame');
+const painter = screen.getContext('2d', { alpha: false });
 const back = byId('back');
 const autoPlay = byId('autoplay');
+const speedSelect = byId('speed');
 const gamepad = document.querySelector('.gamepad');
 const directions = gamepad.querySelector('.directions');
 const buttons = [...gamepad.querySelectorAll('button')];
@@ -33,8 +35,17 @@ let attaching = false;
 let paused = false;
 let autoPlayState;
 let autoPlayPending = false;
+let gameSpeed;
 let gba = false;
-let frameURL;
+// The PC encodes H.264 on its GPU when it can; WebCodecs decodes it in hardware here.
+// PNG stills remain the fallback (plain-HTTP pages have no WebCodecs).
+let decoder;
+let needKey = true;
+let chunks = 0;
+let videoFailures = 0;
+let video = null;
+let pngBusy = false;
+let pngNext;
 let retry = 500;
 let busySince = 0;
 let lastKeys = 0;
@@ -248,12 +259,103 @@ function clearGame() {
   autoPlayState = undefined;
   autoPlayPending = false;
   renderAutoPlay();
+  setSpeed(undefined);
   gamepad.inert = true;
   byId('waiting').hidden = false;
   screen.hidden = true;
-  screen.removeAttribute('src');
-  if (frameURL) URL.revokeObjectURL(frameURL);
-  frameURL = undefined;
+  closeDecoder();
+  video = null;
+  pngNext = undefined;
+}
+
+function closeDecoder() {
+  if (decoder && decoder.state !== 'closed') decoder.close();
+  decoder = undefined;
+  needKey = true;
+}
+
+async function chooseVideo() {
+  if (!window.isSecureContext || !('VideoDecoder' in window)) return;
+  try {
+    const { supported } = await VideoDecoder.isConfigSupported({ codec: 'avc1.64001e', optimizeForLatency: true });
+    if (supported) send({ type: 'video', codec: 'h264' });
+  } catch {}
+}
+
+function configureVideo(message) {
+  closeDecoder();
+  video = message;
+  try {
+    decoder = new VideoDecoder({ output: drawFrame, error: videoFailed });
+    decoder.configure({ codec: message.format, codedWidth: message.width, codedHeight: message.height,
+                        optimizeForLatency: true });
+  } catch {
+    videoFailed();
+  }
+  renderPlayerStatus();
+}
+
+function videoFailed() {
+  closeDecoder();
+  video = null;
+  // Retry once with a fresh decoder and keyframe, then settle for PNG.
+  send({ type: 'video', codec: ++videoFailures > 2 ? 'png' : 'h264' });
+  renderPlayerStatus();
+}
+
+function decodeChunk(bytes, key) {
+  if (!decoder || decoder.state !== 'configured' || (needKey && !key)) return;
+  // A phone that falls behind skips ahead to the next keyframe rather than lagging.
+  if (decoder.decodeQueueSize > 4) {
+    needKey = true;
+    send({ type: 'keyframe' });
+    return;
+  }
+  needKey = false;
+  try {
+    decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: chunks++ * 16667, data: bytes }));
+  } catch {
+    videoFailed();
+  }
+}
+
+function drawFrame(frame) {
+  if (attached) paint(frame, frame.displayWidth, frame.displayHeight);
+  frame.close();
+}
+
+function paint(image, width, height) {
+  if (screen.width !== width || screen.height !== height) {
+    screen.width = width;
+    screen.height = height;
+  }
+  painter.drawImage(image, 0, 0, width, height);
+  if (screen.hidden) {
+    screen.hidden = false;
+    byId('waiting').hidden = true;
+  }
+}
+
+async function showPng(bytes) {
+  if (pngBusy) {
+    pngNext = bytes;
+    return;
+  }
+  pngBusy = true;
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+    if (attached) paint(image, image.naturalWidth, image.naturalHeight);
+  } catch {}
+  URL.revokeObjectURL(url);
+  pngBusy = false;
+  if (pngNext) {
+    const next = pngNext;
+    pngNext = undefined;
+    showPng(next);
+  }
 }
 
 function renderAutoPlay() {
@@ -263,8 +365,15 @@ function renderAutoPlay() {
   autoPlay.textContent = autoPlayState?.stopping ? 'Stopping…' : running ? 'Stop Auto Play' : 'Auto Play';
 }
 
+function setSpeed(speed) {
+  gameSpeed = speed;
+  speedSelect.value = speed ?? 0;
+  speedSelect.disabled = speed === undefined;
+}
+
 function renderPlayerStatus() {
-  const connection = paused ? 'Paused on PC. Resume in mGBA to play.' : 'Connected';
+  const stream = video ? ` · ${video.hardware ? 'GPU' : 'CPU'} video` : '';
+  const connection = paused ? 'Paused on PC. Resume in mGBA to play.' : `Connected${stream}`;
   const message = autoPlayState?.message;
   const text = message ? (paused ? `${connection} ${message}` : message) : connection;
   if (status.textContent !== text) status.textContent = text;
@@ -293,6 +402,10 @@ autoPlay.onclick = () => {
   renderAutoPlay();
   send({ type: 'autoplay', enabled: !autoPlayState.running });
 };
+speedSelect.onchange = () => {
+  speedSelect.disabled = true;
+  send({ type: 'speed', multiplier: Number(speedSelect.value) });
+};
 
 function handle(message) {
   switch (message.type) {
@@ -300,6 +413,7 @@ function handle(message) {
       retry = 500;
       busySince = 0;
       paired = true;
+      chooseVideo();
       if (document.body.dataset.page === 'play' && wanted) send({ type: 'sessions' });
       else {
         setPickerStatus('Loading your games…');
@@ -336,6 +450,7 @@ function handle(message) {
       attaching = false;
       autoPlayState = message.autoplay;
       renderAutoPlay();
+      setSpeed(message.speed);
       gba = message.platform === 'GBA';
       for (const button of buttons) {
         if (Number(button.dataset.key) > 255) button.disabled = !gba;
@@ -361,6 +476,26 @@ function handle(message) {
       renderAutoPlay();
       status.textContent = message.message;
       break;
+    case 'speed':
+      if (attached) {
+        setSpeed(message.speed);
+        renderPlayerStatus();
+      }
+      break;
+    case 'speed-error':
+      if (attached) {
+        setSpeed(gameSpeed);
+        status.textContent = message.message;
+      }
+      break;
+    case 'video':
+      if (message.codec === 'h264') configureVideo(message);
+      else {
+        closeDecoder();
+        video = null;
+        renderPlayerStatus();
+      }
+      break;
     case 'detached':
       if (document.body.dataset.page === 'play') {
         returnToPicker(message.message ? 'The game closed on the PC. Choose a game to continue.' : undefined);
@@ -377,17 +512,15 @@ function handle(message) {
 
 function connect() {
   socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/control`);
-  socket.binaryType = 'blob';
+  socket.binaryType = 'arraybuffer';
   socket.onopen = () => send({ type: 'pair', token });
   socket.onmessage = ({ data }) => {
     if (typeof data === 'string') return handle(JSON.parse(data));
     if (!attached) return;
-    const previous = frameURL;
-    frameURL = URL.createObjectURL(new Blob([data], { type: 'image/png' }));
-    screen.src = frameURL;
-    if (previous) URL.revokeObjectURL(previous);
-    screen.hidden = false;
-    byId('waiting').hidden = true;
+    // The first byte says what follows: 0 PNG, 1 H.264 delta, 2 H.264 keyframe.
+    const bytes = new Uint8Array(data);
+    if (bytes[0] === 0) showPng(bytes.subarray(1));
+    else decodeChunk(bytes.subarray(1), bytes[0] === 2);
   };
   socket.onclose = ({ code }) => {
     paired = false;
@@ -459,7 +592,7 @@ for (const button of buttons) {
 gamepad.oncontextmenu = event => event.preventDefault();
 window.addEventListener('keydown', event => {
   const bit = keyMap.get(event.code);
-  if (!attached || paused || !bit || (bit > 255 && !gba) || event.target.closest('button, input')) return;
+  if (!attached || paused || !bit || (bit > 255 && !gba) || event.target.closest('button, input, select')) return;
   event.preventDefault();
   keyboard.set(event.code, bit);
   updateKeys();

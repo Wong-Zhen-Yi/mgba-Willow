@@ -34,14 +34,24 @@
         <button id="back" type="button">Games</button>
       </header>
       <div class="screen" id="screen">
-        <img id="frame" alt="Live game screen" hidden>
+        <canvas id="frame" role="img" aria-label="Live game screen" width="240" height="160" hidden></canvas>
         <div class="waiting" id="waiting">
           <p id="hint">Starting…</p>
         </div>
       </div>
       <div class="player-controls">
         <p id="status" role="status"></p>
-        <button id="autoplay" type="button" disabled>Auto Play</button>
+        <div class="player-actions">
+          <select id="speed" aria-label="Game speed" disabled>
+            <option value="0">PC speed</option>
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+            <option value="-1">Maximum</option>
+          </select>
+          <button id="autoplay" type="button" disabled>Auto Play</button>
+        </div>
       </div>
     </section>
     <section class="gamepad" aria-label="Gamepad" inert>

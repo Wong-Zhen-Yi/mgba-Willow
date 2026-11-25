@@ -27,12 +27,41 @@ in Willow under **AI → Auto Play Model**. Tap **Stop Auto Play** on the phone 
 PC to stop it. Auto Play waits while the game is paused and keeps running on the
 PC if you return to **Games** or close the mobile page.
 
+Use **Game speed** to choose **1×**, **2×**, **4×**, **8×**, or **Maximum** for
+manual play and Auto Play. **PC speed** follows Willow’s desktop settings.
+Desktop fast-forward controls take priority when active. Willow returns to
+**PC speed** when the phone disconnects or returns to **Games**.
+
 You can close the pairing dialog after scanning. To turn off mobile access,
 click **Stop** in **Pair iPhone** or close Willow. **Games** on the phone
 releases control and returns to the game list. The game keeps running on the
 PC. Starting mobile access again creates a
 new pairing code. Anyone with the current link can pair, so keep the QR code
 private.
+
+## Video stream
+
+Willow streams the game to the phone as H.264 video at the game's frame rate.
+The PC encodes it on the GPU when it can, trying NVIDIA NVENC first, then AMD
+AMF, Intel Quick Sync and Windows Media Foundation. If none of these work, it
+uses x264 on the CPU. The phone decodes the video in hardware with WebCodecs.
+The status line on the phone shows **GPU video** or **CPU video**. Frames are
+doubled with sharp pixel edges before encoding, so a GBA game streams at
+480×320 and uses about 1–2 Mbit/s.
+
+The phone falls back to still PNG frames, at up to 20 per second, when it has
+no WebCodecs (for example on a plain `http://` link) or when the PC cannot
+encode H.264. To force an encoder for testing, set `WILLOW_MOBILE_ENCODER`
+before launching Willow, for example `WILLOW_MOBILE_ENCODER=libx264`.
+
+## GPU rendering on the PC
+
+Willow renders GBA games with mGBA's OpenGL renderer by default (**Settings →
+Enhancements → Video renderer: OpenGL**). While an AI agent controls a game,
+Willow switches to the software renderer and switches back when the agent
+disconnects. Only the software renderer's frames line up exactly with the game
+state an agent reads (`atomic:true`). Game Boy games always use the software
+renderer. The bridge's `session` reply shows the active `renderer`.
 
 ## Connection modes
 

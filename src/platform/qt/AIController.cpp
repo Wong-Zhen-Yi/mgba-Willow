@@ -4,6 +4,7 @@
 #include "ConfigController.h"
 #include "CoreController.h"
 #include "GameLibrary.h"
+#include "MobileVideo.h"
 #include "MultiplayerController.h"
 #include "VFileDevice.h"
 #include "Window.h"
@@ -115,6 +116,8 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 	connect(&m_timer, &QTimer::timeout, this, [this]() { finishPending(true, tr("Action timed out")); });
 	m_mobileLease.setSingleShot(true);
 	connect(&m_mobileLease, &QTimer::timeout, this, [this]() { m_mobileCore->releaseMobileKeys(); });
+	m_mobileFrameWait.setSingleShot(true);
+	connect(&m_mobileFrameWait, &QTimer::timeout, this, &AIController::answerMobileFrame);
 	connect(window, &Window::shutdown, this, [this]() { setEnabled(false); });
 	m_autoPlay = new AutoPlay(window, actions, m_id);
 	m_enabled->setActive(true);
@@ -191,11 +194,20 @@ void AIController::reply(QLocalSocket* socket, const QJsonValue& id, const QJson
 
 void AIController::detachMobile() {
 	m_mobileLease.stop();
+	m_mobileFrameWait.stop();
+	if (!m_mobileFrameId.isUndefined()) {
+		reply(m_mobileSocket, m_mobileFrameId, { }, tr("Game disconnected. Select a game again"), false);
+		m_mobileFrameId = QJsonValue(QJsonValue::Undefined);
+		m_mobileFrameArgs = { };
+	}
+	m_mobileVideo.reset();
 	for (auto connection : m_mobileConnections)
 		QObject::disconnect(connection);
 	m_mobileConnections.clear();
-	if (m_mobileCore)
+	if (m_mobileCore) {
 		m_mobileCore->releaseMobileKeys();
+		m_mobileCore->setMobileSpeed(0);
+	}
 	m_mobileCore.reset();
 	m_mobileSocket.clear();
 }
@@ -281,7 +293,9 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 			        [this]() {
 			            m_mobileLease.stop();
 			            m_mobileCore->releaseMobileKeys();
+			            answerMobileFrame();
 			        }),
+			connect(core.get(), &CoreController::frameAvailable, this, &AIController::answerMobileFrame),
 			connect(core.get(), &CoreController::stopping, this, &AIController::detachMobile),
 			connect(core.get(), &CoreController::didReset, this, &AIController::detachMobile),
 			connect(core.get(), &CoreController::stateLoaded, this, &AIController::detachMobile),
@@ -289,11 +303,22 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 		};
 		auto result = session();
 		result.insert("autoplay", m_autoPlay->status());
+		result.insert("speed", 0);
 		reply(socket, id, result, {}, false);
 		return;
 	}
 	if (!m_mobileCore || m_mobileSocket != socket) {
 		fail(tr("Game disconnected. Select a game again"));
+		return;
+	}
+	if (method == "mobile_speed") {
+		const int speed = args.value("multiplier").toInt(-2);
+		if (speed != -1 && speed != 0 && speed != 1 && speed != 2 && speed != 4 && speed != 8) {
+			fail(tr("Invalid mobile speed"));
+			return;
+		}
+		m_mobileCore->setMobileSpeed(speed);
+		reply(socket, id, { { "speed", speed } }, {}, false);
 		return;
 	}
 	if (method == "mobile_autoplay") {
@@ -322,26 +347,73 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 		return;
 	}
 	if (method == "mobile_frame") {
-		CoreController::Interrupter guard(m_mobileCore);
-		const auto frame = double(m_mobileCore->frameCounter());
-		QJsonObject result { { "paused", m_mobileCore->isPaused() },
-			                 { "frame", frame },
-			                 { "autoplay", m_autoPlay->status() } };
-		if (args.value("after") == QJsonValue(frame)) {
-			reply(socket, id, result, { }, false);
+		if (!m_mobileFrameId.isUndefined()) {
+			fail(tr("A frame request is already waiting"));
 			return;
 		}
-		const auto image = m_mobileCore->getPixels().copy();
+		mobileFrame(id, args, false);
+		return;
+	}
+	fail(tr("Unknown mobile command"));
+}
+
+// Sends the newest frame as PNG, or as H.264 packets when args.codec is "h264".
+// With args.wait, an H.264 request for a frame the phone already has is held
+// until the core finishes the next one, so the stream follows the game's own
+// frame rate rather than a polling timer.
+void AIController::mobileFrame(const QJsonValue& id, const QJsonObject& args, bool waited) {
+	CoreController::Interrupter guard(m_mobileCore);
+	const auto frame = double(m_mobileCore->frameCounter());
+	const bool paused = m_mobileCore->isPaused();
+	const bool video = args.value("codec") == QLatin1String("h264");
+	QJsonObject result { { "paused", paused }, { "frame", frame }, { "autoplay", m_autoPlay->status() } };
+	if (args.value("after") == QJsonValue(frame)) {
 		guard.resume();
+		if (video && args.value("wait").toBool() && !waited && !paused) {
+			m_mobileFrameId = id;
+			m_mobileFrameArgs = args;
+			m_mobileFrameWait.start(250);
+			return;
+		}
+		reply(m_mobileSocket, id, result, { }, false);
+		return;
+	}
+	const auto image = m_mobileCore->getPixels().copy();
+	guard.resume();
+	if (video) {
+		if (!m_mobileVideo) m_mobileVideo = std::make_unique<MobileVideoEncoder>();
+		QList<MobileVideoEncoder::Packet> packets;
+		if (m_mobileVideo->encode(image, args.value("keyframe").toBool(), &packets)) {
+			QJsonArray encoded;
+			for (const auto& packet : packets)
+				encoded.append(QJsonObject { { "key", packet.key }, { "data", QString::fromLatin1(packet.data.toBase64()) } });
+			result.insert("video", QJsonObject { { "encoder", m_mobileVideo->encoder() },
+			                                     { "hardware", m_mobileVideo->hardware() },
+			                                     { "codec", m_mobileVideo->codec() },
+			                                     { "width", m_mobileVideo->size().width() },
+			                                     { "height", m_mobileVideo->size().height() },
+			                                     { "packets", encoded } });
+		} else {
+			result.insert("video_error", m_mobileVideo->error());
+		}
+	} else {
 		QByteArray png;
 		QBuffer output(&png);
 		output.open(QIODevice::WriteOnly);
 		if (image.save(&output, "PNG"))
 			result.insert("png", QString::fromLatin1(png.toBase64()));
-		reply(socket, id, result, { }, false);
-		return;
 	}
-	fail(tr("Unknown mobile command"));
+	reply(m_mobileSocket, id, result, { }, false);
+}
+
+void AIController::answerMobileFrame() {
+	if (m_mobileFrameId.isUndefined()) return;
+	m_mobileFrameWait.stop();
+	const auto id = m_mobileFrameId;
+	const auto args = m_mobileFrameArgs;
+	m_mobileFrameId = QJsonValue(QJsonValue::Undefined);
+	m_mobileFrameArgs = { };
+	if (m_mobileCore) mobileFrame(id, args, true);
 }
 
 void AIController::receive(QLocalSocket* socket) {
@@ -368,6 +440,7 @@ QJsonObject AIController::session() const {
 	         { "ai_control", core && core->aiControl() },
 	         { "frame", core ? double(core->frameCounter()) : 0 },
 	         { "paused", core && core->isPaused() },
+	         { "renderer", core && core->hardwareAccelerated() ? "opengl" : "software" },
 	         { "connected", !m_clients.isEmpty() },
 	         { "connected_clients", int(m_clients.size()) },
 	         { "mcp_enabled", m_server.isListening() },
