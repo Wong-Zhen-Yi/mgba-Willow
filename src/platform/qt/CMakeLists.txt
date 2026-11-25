@@ -98,6 +98,7 @@ endif()
 
 set(SOURCE_FILES
 	AIController.cpp
+	AutoPlay.cpp
 	EmeraldGameState.cpp
 	EmeraldMusic.cpp
 	AboutScreen.cpp
@@ -157,6 +158,7 @@ set(SOURCE_FILES
 	MemorySearch.cpp
 	MemoryView.cpp
 	MessagePainter.cpp
+	MobilePairing.cpp
 	MultiplayerController.cpp
 	ObjView.cpp
 	OpenGLBug.cpp

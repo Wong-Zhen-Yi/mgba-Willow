@@ -1,7 +1,9 @@
 #include "AIController.h"
 #include "ActionMapper.h"
+#include "AutoPlay.h"
 #include "ConfigController.h"
 #include "CoreController.h"
+#include "GameLibrary.h"
 #include "MultiplayerController.h"
 #include "VFileDevice.h"
 #include "Window.h"
@@ -69,9 +71,11 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 	m_status = new QLabel(tr("MCP: disabled"), window);
 	window->statusBar()->addPermanentWidget(m_status);
 	connect(window, &Window::gameLoaded, this, [this]() {
+		detachMobile();
 		m_gameId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 	});
 	connect(window, &Window::gameUnloaded, this, [this]() {
+		detachMobile();
 		m_gameId.clear();
 	});
 	connect(m_enabled.get(), &Action::activated, this, [this](bool enabled) { if (!m_changingEnabled) setEnabled(enabled); });
@@ -99,6 +103,8 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 			m_sockets.insert(socket);
 			connect(socket, &QLocalSocket::readyRead, this, [this, socket]() { receive(socket); });
 			connect(socket, &QLocalSocket::disconnected, this, [this, socket]() {
+				if (m_mobileSocket == socket)
+					detachMobile();
 				disconnectClient(socket);
 				m_sockets.remove(socket);
 				socket->deleteLater();
@@ -107,9 +113,10 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 	});
 	m_timer.setSingleShot(true);
 	connect(&m_timer, &QTimer::timeout, this, [this]() { finishPending(true, tr("Action timed out")); });
-	connect(window, &Window::shutdown, this, [this]() {
-		setEnabled(false);
-	});
+	m_mobileLease.setSingleShot(true);
+	connect(&m_mobileLease, &QTimer::timeout, this, [this]() { m_mobileCore->releaseMobileKeys(); });
+	connect(window, &Window::shutdown, this, [this]() { setEnabled(false); });
+	m_autoPlay = new AutoPlay(window, actions, m_id);
 	m_enabled->setActive(true);
 }
 
@@ -128,6 +135,7 @@ AIController::~AIController() {
 void AIController::setEnabled(bool enabled) {
 	QScopedValueRollback<bool> changing(m_changingEnabled, true);
 	if (!enabled) {
+		detachMobile();
 		release(tr("disabled"));
 		m_server.close();
 		QFile::remove(m_descriptor);
@@ -166,15 +174,174 @@ void AIController::setEnabled(bool enabled) {
 	m_enabled->setActive(enabled);
 }
 
-void AIController::reply(QLocalSocket* socket, const QJsonValue& id, const QJsonObject& result, const QString& error) {
+void AIController::reply(QLocalSocket* socket, const QJsonValue& id, const QJsonObject& result, const QString& error,
+                         bool showInteraction) {
 	if (!socket || socket->state() != QLocalSocket::ConnectedState) return;
-	const QString outcome = !error.isEmpty() ? tr("error: %1").arg(error) :
-		result.value("cancelled").toBool() ? tr("cancelled: %1").arg(result.value("reason").toString()) : tr("completed");
-	m_window->showAIInteraction(tr("MCP #%1  %2").arg(id.toVariant().toString(), outcome));
+	if (showInteraction) {
+		const QString outcome = !error.isEmpty() ? tr("error: %1").arg(error) :
+		    result.value("cancelled").toBool()   ? tr("cancelled: %1").arg(result.value("reason").toString()) :
+		                                           tr("completed");
+		m_window->showAIInteraction(tr("MCP #%1  %2").arg(id.toVariant().toString(), outcome));
+	}
 	QJsonObject response{{"id", id}};
 	if (error.isEmpty()) response.insert("result", result);
 	else response.insert("error", error);
 	socket->write(QJsonDocument(response).toJson(QJsonDocument::Compact) + '\n');
+}
+
+void AIController::detachMobile() {
+	m_mobileLease.stop();
+	for (auto connection : m_mobileConnections)
+		QObject::disconnect(connection);
+	m_mobileConnections.clear();
+	if (m_mobileCore)
+		m_mobileCore->releaseMobileKeys();
+	m_mobileCore.reset();
+	m_mobileSocket.clear();
+}
+
+void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, const QString& method,
+                                 const QJsonObject& args) {
+	auto fail = [&](const QString& message) { reply(socket, id, { }, message, false); };
+	if (method == "mobile_session") {
+		reply(socket, id, session(), { }, false);
+		return;
+	}
+	// The phone's first page lists the PC's ROM library and can start a game from it.
+	if (method == "mobile_library") {
+		auto* library = m_window->gameLibrary();
+		QJsonArray games;
+		for (const auto& entry : library->entries()) {
+			games.append(QJsonObject { { "id", entry.id },
+			                           { "title", entry.title },
+			                           { "platform", entry.platform },
+			                           { "art", entry.artwork } });
+		}
+		auto core = m_window->controller();
+		reply(socket, id,
+		      { { "games", games },
+		        { "scanning", library->scanning() },
+		        { "folder", !library->folder().isEmpty() },
+		        { "current_id", core ? GameLibrary::gameId(core->path()) : QString() } },
+		      { }, false);
+		return;
+	}
+	if (method == "mobile_artwork") {
+		const auto ids = args.value("ids").toArray();
+		if (ids.size() > 24) {
+			fail(tr("Too many artwork requests"));
+			return;
+		}
+		QJsonObject art;
+		for (const auto& value : ids) {
+			const auto image = m_window->gameLibrary()->artwork(value.toString(), 192);
+			QByteArray jpeg;
+			QBuffer output(&jpeg);
+			output.open(QIODevice::WriteOnly);
+			if (!image.isNull() && image.convertToFormat(QImage::Format_RGB32).save(&output, "JPEG", 82))
+				art.insert(value.toString(), QString::fromLatin1(jpeg.toBase64()));
+		}
+		reply(socket, id, { { "art", art } }, { }, false);
+		return;
+	}
+	if (method == "mobile_launch") {
+		const auto game = args.value("id").toString();
+		if (auto core = m_window->controller()) {
+			if (GameLibrary::gameId(core->path()) == game) {
+				reply(socket, id, session(), { }, false);
+				return;
+			}
+			// Never close a running game from the phone; it may have unsaved progress.
+			fail(tr("%1 is open on the PC. Save it and return to the game library first.").arg(core->title()));
+			return;
+		}
+		if (!m_window->gameLibrary()->launch(game)) {
+			fail(tr("That game is no longer in the library."));
+			return;
+		}
+		reply(socket, id, { { "launching", true } }, { }, false);
+		return;
+	}
+	if (method == "mobile_connect") {
+		auto core = m_window->controller();
+		if (!core || !core->hasStarted() || m_gameId.isEmpty() || args.value("game_id") != m_gameId ||
+		    (core->multiplayerController() && core->multiplayerController()->attached() > 1)) {
+			fail(tr("Select a running single-player game"));
+			return;
+		}
+		if (m_mobileSocket && m_mobileSocket != socket) {
+			fail(tr("A mobile controller is already connected"));
+			return;
+		}
+		detachMobile();
+		m_mobileSocket = socket;
+		m_mobileCore = core;
+		m_mobileConnections = {
+			connect(core.get(), &CoreController::paused, this,
+			        [this]() {
+			            m_mobileLease.stop();
+			            m_mobileCore->releaseMobileKeys();
+			        }),
+			connect(core.get(), &CoreController::stopping, this, &AIController::detachMobile),
+			connect(core.get(), &CoreController::didReset, this, &AIController::detachMobile),
+			connect(core.get(), &CoreController::stateLoaded, this, &AIController::detachMobile),
+			connect(core.get(), &CoreController::crashed, this, &AIController::detachMobile),
+		};
+		auto result = session();
+		result.insert("autoplay", m_autoPlay->status());
+		reply(socket, id, result, {}, false);
+		return;
+	}
+	if (!m_mobileCore || m_mobileSocket != socket) {
+		fail(tr("Game disconnected. Select a game again"));
+		return;
+	}
+	if (method == "mobile_autoplay") {
+		const auto enabled = args.value("enabled");
+		if (!enabled.isBool()) {
+			fail(tr("Invalid Auto Play setting"));
+			return;
+		}
+		if (enabled.toBool())
+			m_autoPlay->start();
+		else
+			m_autoPlay->stop();
+		reply(socket, id, m_autoPlay->status(), {}, false);
+		return;
+	}
+	if (method == "mobile_keys") {
+		if (!integer(args.value("keys"), 0, m_mobileCore->platform() == mPLATFORM_GBA ? 0x3FF : 0xFF)) {
+			fail(tr("Invalid mobile buttons"));
+			return;
+		}
+		if (!m_mobileCore->isPaused()) {
+			m_mobileCore->setMobileKeys(args.value("keys").toInt());
+			m_mobileLease.start(500);
+		}
+		reply(socket, id, { }, { }, false);
+		return;
+	}
+	if (method == "mobile_frame") {
+		CoreController::Interrupter guard(m_mobileCore);
+		const auto frame = double(m_mobileCore->frameCounter());
+		QJsonObject result { { "paused", m_mobileCore->isPaused() },
+			                 { "frame", frame },
+			                 { "autoplay", m_autoPlay->status() } };
+		if (args.value("after") == QJsonValue(frame)) {
+			reply(socket, id, result, { }, false);
+			return;
+		}
+		const auto image = m_mobileCore->getPixels().copy();
+		guard.resume();
+		QByteArray png;
+		QBuffer output(&png);
+		output.open(QIODevice::WriteOnly);
+		if (image.save(&output, "PNG"))
+			result.insert("png", QString::fromLatin1(png.toBase64()));
+		reply(socket, id, result, { }, false);
+		return;
+	}
+	fail(tr("Unknown mobile command"));
 }
 
 void AIController::receive(QLocalSocket* socket) {
@@ -318,6 +485,13 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 	auto args = req.value("args").toObject();
 	auto fail = [&](const QString& message) { reply(socket, id, {}, message); };
 	if (!integer(id, 1, 9007199254740991.0)) { fail(tr("Invalid request id")); return; }
+	if (method.startsWith("mobile_")) {
+		if (m_server.isListening())
+			mobileRequest(socket, id, method, args);
+		else
+			reply(socket, id, { }, tr("MCP is disabled"), false);
+		return;
+	}
 	m_window->showAIInteraction(tr("MCP #%1  %2 %3").arg(id.toVariant().toString(), method.left(128),
 		QString::fromUtf8(QJsonDocument(args).toJson(QJsonDocument::Compact))));
 	if (!m_server.isListening()) { fail(tr("MCP is disabled")); return; }

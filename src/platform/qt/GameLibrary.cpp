@@ -332,6 +332,11 @@ GameLibrary::GameLibrary(QWidget* parent)
 	nav->addWidget(library);
 	auto* open = makeButton(tr("Open ROM…"), "openROM", sidebar);
 	nav->addWidget(open);
+#ifdef Q_OS_WIN
+	auto* pairMobile = makeButton(tr("Pair iPhone…"), "pairMobile", sidebar);
+	nav->addWidget(pairMobile);
+	connect(pairMobile, &QPushButton::clicked, this, &GameLibrary::mobilePairingRequested);
+#endif
 	nav->addStretch();
 	auto* settings = makeButton(tr("Settings"), "settings", sidebar);
 	nav->addWidget(settings);
@@ -611,4 +616,47 @@ void GameLibrary::launchSelected() {
 		return;
 	}
 	emit gameSelected(path);
+}
+
+QString GameLibrary::gameId(const QString& path) {
+	const auto canonical = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+	return QString::fromLatin1(QCryptographicHash::hash(canonical.toUtf8(), QCryptographicHash::Sha1).toHex().left(20));
+}
+
+QList<GameLibrary::Entry> GameLibrary::entries() const {
+	QList<Entry> games;
+	games.reserve(m_games->count());
+	for (int i = 0; i < m_games->count(); ++i) {
+		const auto* item = m_games->item(i);
+		games.append({ gameId(item->data(PathRole).toString()), item->text(), item->data(GamePlatformRole).toString(),
+		               !item->data(Qt::DecorationRole).isNull() });
+	}
+	return games;
+}
+
+QImage GameLibrary::artwork(const QString& id, int width) const {
+	for (int i = 0; i < m_games->count(); ++i) {
+		const auto* item = m_games->item(i);
+		if (gameId(item->data(PathRole).toString()) != id)
+			continue;
+		const auto image = item->data(Qt::DecorationRole).value<QPixmap>().toImage();
+		return image.isNull() || image.width() <= width ? image :
+		                                                  image.scaledToWidth(width, Qt::SmoothTransformation);
+	}
+	return { };
+}
+
+bool GameLibrary::launch(const QString& id) {
+	for (int i = 0; i < m_games->count(); ++i) {
+		const auto path = m_games->item(i)->data(PathRole).toString();
+		if (gameId(path) != id)
+			continue;
+		if (!QFileInfo(path).isFile()) {
+			refresh();
+			return false;
+		}
+		emit gameSelected(path);
+		return true;
+	}
+	return false;
 }

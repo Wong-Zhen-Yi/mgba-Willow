@@ -1,0 +1,290 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { once } from 'node:events';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import http from 'node:http';
+import net from 'node:net';
+import os from 'node:os';
+import path from 'node:path';
+import WebSocket from 'ws';
+import { createMobileServer, isTailscaleIPv4 } from '../mobile-server.mjs';
+
+const ip = '100.94.12.10';
+const origin = `http://${ip}:9444`;
+const token = 'test-pairing-token';
+const fixtureFrame = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+test('the mobile link accepts only Tailscale IPv4 addresses', () => {
+  for (const valid of [ip, '100.64.0.1', '100.127.255.254']) assert.equal(isTailscaleIPv4(valid), true);
+  for (const invalid of ['127.0.0.1', '100.128.0.1', '100.63.0.1', 'willow.ts.net', 'fd7a:115c:a1e0::1']) {
+    assert.equal(isTailscaleIPv4(invalid), false);
+  }
+});
+
+test('a paired mobile controller streams frames, forwards input and controls Luna Auto Play', { timeout: 20000 }, async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'willow-mobile-'));
+  const id = randomUUID();
+  const gameId = randomUUID();
+  const name = `mgba-willow-ai-${id}`;
+  const pipe = process.platform === 'win32' ? `\\\\.\\pipe\\${name}` : path.join(os.tmpdir(), name);
+  const sockets = new Set();
+  const game = { session_id: id, game_id: gameId, platform: 'GBA', started: true, paused: false, title: 'Test ROM' };
+  const autoplayCalls = [];
+  let autoplay = { running: false, stopping: false, message: '' };
+  let observeKeys;
+  let release;
+  let mobile;
+  const fake = net.createServer(socket => {
+    sockets.add(socket);
+    let input = '';
+    let attached = false;
+    socket.setEncoding('utf8').on('data', chunk => {
+      const lines = (input + chunk).split('\n');
+      input = lines.pop();
+      for (const line of lines) {
+        const request = JSON.parse(line);
+        let result = {};
+        let error;
+        switch (request.method) {
+          case 'mobile_session': result = game; break;
+          case 'mobile_connect':
+            attached = request.args.game_id === gameId;
+            if (attached) result = { ...game, autoplay };
+            else error = 'Game changed';
+            break;
+          case 'mobile_frame':
+            result = { frame: 1, paused: game.paused, autoplay };
+            if (request.args.after !== 1) result.png = fixtureFrame.toString('base64');
+            break;
+          case 'mobile_autoplay':
+            assert.ok(attached);
+            autoplayCalls.push(request.args);
+            autoplay = request.args.enabled ?
+              { running: true, stopping: false, message: 'Auto Play is running with GPT-6 Luna · extra high.' } :
+              { running: true, stopping: true, message: 'Auto Play is stopping…' };
+            result = autoplay;
+            break;
+          case 'mobile_keys': observeKeys?.(request.args.keys); break;
+          default: assert.fail(`Unexpected method ${request.method}`);
+        }
+        socket.write(JSON.stringify({ id: request.id, result, error }) + '\n');
+      }
+    });
+    socket.on('close', () => {
+      sockets.delete(socket);
+      if (attached) release?.();
+    });
+  });
+  t.after(async () => {
+    mobile?.close();
+    for (const socket of sockets) socket.destroy();
+    await new Promise(resolve => fake.close(resolve));
+    await rm(root, { recursive: true, force: true });
+  });
+  fake.listen(pipe);
+  await once(fake, 'listening');
+  await writeFile(path.join(root, id + '.json'), JSON.stringify({ session_id: id, pipe: name, protocol: 1, pid: 1234 }));
+  mobile = await createMobileServer({ origin, token, pid: 1234, directory: root });
+  mobile.server.listen(0, '127.0.0.1');
+  await once(mobile.server, 'listening');
+  const endpoint = `127.0.0.1:${mobile.server.address().port}`;
+  const options = { headers: { Host: new URL(origin).host } };
+  const get = async (route, requestHeaders = options.headers) => {
+    const reply = await new Promise((resolve, reject) => {
+      http.get(`http://${endpoint}${route}`, { headers: requestHeaders }, resolve).once('error', reject);
+    });
+    let body = '';
+    for await (const chunk of reply.setEncoding('utf8')) body += chunk;
+    return { status: reply.statusCode, csp: reply.headers['content-security-policy'], body };
+  };
+  const page = await get('/');
+  assert.equal(page.status, 200);
+  assert.match(page.csp, /connect-src ws:\/\/100\.94\.12\.10:9444/);
+  assert.match(page.body, /<button id="autoplay" type="button" disabled>Auto Play<\/button>/);
+  assert.equal((await get('/', { Host: 'example.com' })).status, 404);
+  assert.equal((await get('/Willow-Mobile.mobileconfig')).status, 404);
+
+  const unauthorized = new WebSocket(`ws://${endpoint}/control`, { ...options, origin });
+  await once(unauthorized, 'open');
+  unauthorized.send(JSON.stringify({ type: 'pair', token: 'wrong' }));
+  assert.equal((await once(unauthorized, 'close'))[0], 4001);
+
+  const crossOrigin = new WebSocket(`ws://${endpoint}/control`, { ...options, origin: 'https://example.com' });
+  await assert.rejects(once(crossOrigin, 'open'));
+  const ws = new WebSocket(`ws://${endpoint}/control`, { ...options, origin });
+  await once(ws, 'open');
+  const send = message => ws.send(JSON.stringify(message));
+  const read = type => new Promise(resolve => {
+    ws.on('message', function onMessage(data, binary) {
+      if (binary) return;
+      const packet = JSON.parse(data);
+      if (type && packet.type !== type) return;
+      ws.off('message', onMessage);
+      resolve(packet);
+    });
+  });
+  send({ type: 'pair', token });
+  assert.equal((await read()).type, 'paired');
+  send({ type: 'autoplay', enabled: true });
+  send({ type: 'sessions' });
+  assert.equal((await read()).games[0].title, game.title);
+  send({ type: 'connect', session: id, game: randomUUID() });
+  assert.equal((await read()).type, 'error');
+  send({ type: 'connect', session: id, game: gameId });
+  const packets = [];
+  ws.on('message', (body, binary) => packets.push(binary ? body : JSON.parse(body)));
+  const attached = await read();
+  assert.equal(attached.type, 'attached');
+  assert.deepEqual(attached.autoplay, autoplay);
+  if (!packets[1]) await once(ws, 'message');
+  assert.deepEqual(packets[1], fixtureFrame);
+  const keys = new Promise(resolve => { observeKeys = resolve; });
+  send({ type: 'keys', keys: 65 });
+  assert.equal(await keys, 65);
+
+  send({ type: 'autoplay', enabled: 'true' });
+  send({ type: 'autoplay', enabled: true });
+  assert.deepEqual(await read(), { type: 'autoplay', acknowledged: true, autoplay });
+  assert.deepEqual(autoplayCalls, [{ enabled: true }]);
+
+  // A pause and progress from the PC are sent even though the frame is unchanged.
+  game.paused = true;
+  autoplay = { ...autoplay, message: 'Auto Play is waiting. Resume the game to continue.' };
+  const pause = read('pause');
+  const progress = read('autoplay');
+  assert.deepEqual(await pause, { type: 'pause', paused: true });
+  assert.deepEqual(await progress, { type: 'autoplay', acknowledged: false, autoplay });
+
+  send({ type: 'autoplay', enabled: false });
+  assert.deepEqual(await read(), { type: 'autoplay', acknowledged: true, autoplay });
+  assert.equal(autoplay.stopping, true);
+  assert.deepEqual(autoplayCalls, [{ enabled: true }, { enabled: false }]);
+  autoplay = { running: false, stopping: false, message: 'Auto Play is off.' };
+  assert.deepEqual(await read(), { type: 'autoplay', acknowledged: false, autoplay });
+
+  const released = new Promise(resolve => { release = resolve; });
+  ws.close();
+  await released;
+});
+
+test('Tailscale Serve HTTPS origins allow only the matching secure WebSocket', async t => {
+  const secure = 'https://willow.tail1234.ts.net:9444';
+  const mobile = await createMobileServer({ origin: secure, token, pid: 1234, directory: os.tmpdir() });
+  t.after(() => mobile.close());
+  mobile.server.listen(0, '127.0.0.1');
+  await once(mobile.server, 'listening');
+  const reply = await new Promise((resolve, reject) => {
+    http.get(`http://127.0.0.1:${mobile.server.address().port}/`, { headers: { Host: new URL(secure).host } }, resolve)
+      .once('error', reject);
+  });
+  reply.resume();
+  assert.equal(reply.statusCode, 200);
+  assert.match(reply.headers['content-security-policy'], /connect-src wss:\/\/willow\.tail1234\.ts\.net:9444;/);
+});
+
+test('idle unpaired sockets cannot block a phone from pairing', { timeout: 10000 }, async t => {
+  const mobile = await createMobileServer({ origin, token, pid: 1234, directory: os.tmpdir() });
+  const idle = [];
+  t.after(() => {
+    for (const ws of idle) ws.terminate();
+    mobile.close();
+  });
+  mobile.server.listen(0, '127.0.0.1');
+  await once(mobile.server, 'listening');
+  const url = `ws://127.0.0.1:${mobile.server.address().port}/control`;
+  const open = async () => {
+    const ws = new WebSocket(url, { headers: { Host: new URL(origin).host }, origin });
+    await once(ws, 'open');
+    return ws;
+  };
+  for (let i = 0; i < 12; i++) idle.push(await open());
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.equal(idle.filter(ws => ws.readyState === WebSocket.OPEN).length, 8);
+  assert.equal(idle[0].readyState, WebSocket.CLOSED);
+  const phone = await open();
+  idle.push(phone);
+  phone.send(JSON.stringify({ type: 'pair', token }));
+  assert.equal(JSON.parse((await once(phone, 'message'))[0]).type, 'paired');
+});
+
+test('the phone lists the PC library, loads artwork and launches a game', { timeout: 20000 }, async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'willow-library-'));
+  const id = randomUUID();
+  const name = `mgba-willow-ai-${id}`;
+  const pipe = process.platform === 'win32' ? `\\\\.\\pipe\\${name}` : path.join(os.tmpdir(), name);
+  const emerald = 'a'.repeat(20);
+  const calls = [];
+  let started = false;
+  const fake = net.createServer(socket => {
+    let input = '';
+    socket.setEncoding('utf8').on('data', chunk => {
+      const lines = (input + chunk).split('\n');
+      input = lines.pop();
+      for (const line of lines) {
+        const request = JSON.parse(line);
+        calls.push([request.method, request.args]);
+        let result = {};
+        let error;
+        if (request.method === 'mobile_library') {
+          result = { folder: true, scanning: false, current_id: started ? emerald : '',
+            games: [{ id: emerald, title: 'Emerald', platform: 'GBA', art: true },
+              { id: 'b'.repeat(20), title: 'Red', platform: 'GB', art: false }] };
+        } else if (request.method === 'mobile_session') {
+          result = { session_id: id, game_id: started ? 'game-1' : '', title: started ? 'Emerald' : '',
+            platform: 'GBA', started };
+        } else if (request.method === 'mobile_artwork') {
+          result = { art: { [emerald]: Buffer.from('jpeg').toString('base64') } };
+        } else if (request.method === 'mobile_launch') {
+          if (request.args.id === emerald) { started = true; result = { launching: true }; }
+          else error = 'That game is no longer in the library.';
+        }
+        socket.write(JSON.stringify({ id: request.id, result, error }) + '\n');
+      }
+    });
+  });
+  let mobile;
+  let ws;
+  t.after(async () => {
+    ws?.terminate();
+    mobile?.close();
+    await new Promise(resolve => fake.close(resolve));
+    await rm(root, { recursive: true, force: true });
+  });
+  fake.listen(pipe);
+  await once(fake, 'listening');
+  await writeFile(path.join(root, id + '.json'), JSON.stringify({ session_id: id, pipe: name, protocol: 1, pid: 1234 }));
+  mobile = await createMobileServer({ origin, token, pid: 1234, directory: root });
+  mobile.server.listen(0, '127.0.0.1');
+  await once(mobile.server, 'listening');
+  ws = new WebSocket(`ws://127.0.0.1:${mobile.server.address().port}/control`,
+    { headers: { Host: new URL(origin).host }, origin });
+  await once(ws, 'open');
+  const send = message => ws.send(JSON.stringify(message));
+  const read = async () => JSON.parse((await once(ws, 'message'))[0]);
+  send({ type: 'pair', token });
+  assert.equal((await read()).type, 'paired');
+
+  send({ type: 'library' });
+  const listing = await read();
+  assert.equal(listing.type, 'library');
+  assert.equal(listing.session_id, id);
+  assert.deepEqual(listing.games.map(game => game.title), ['Emerald', 'Red']);
+  assert.equal(listing.running, null);
+
+  send({ type: 'artwork', session: id, ids: [emerald, '../../etc'] });
+  send({ type: 'artwork', session: id, ids: [emerald] });
+  const artwork = await read();
+  assert.equal(artwork.type, 'artwork');
+  assert.equal(Buffer.from(artwork.art[emerald], 'base64').toString(), 'jpeg');
+  assert.equal(calls.filter(([method]) => method === 'mobile_artwork').length, 1);
+
+  send({ type: 'launch', session: id, id: 'b'.repeat(20) });
+  assert.deepEqual(await read(), { type: 'error', message: 'That game is no longer in the library.' });
+  send({ type: 'launch', session: id, id: emerald });
+  assert.deepEqual(await read(), { type: 'launching', id: emerald });
+  send({ type: 'library' });
+  const after = await read();
+  assert.equal(after.current_id, emerald);
+  assert.deepEqual(after.running, { game_id: 'game-1', title: 'Emerald', platform: 'GBA' });
+});

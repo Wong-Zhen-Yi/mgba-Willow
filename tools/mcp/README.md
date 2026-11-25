@@ -73,6 +73,19 @@ Layout facts are checked against [pret/pokeemerald](https://github.com/pret/poke
 
 The MCP itself never calls an inference API or changes your chat model. Gameplay uses your normal Codex model access and usage limits.
 
+## Auto Play
+
+To let Codex play without opening a chat, open a game and click **▶ Auto Play** in the status bar, or choose **AI → Auto Play**. Click **■ Stop Auto Play** or choose the menu item again to stop. Closing the game or Willow also stops it.
+
+**AI → Auto Play Model** chooses the model. The setting persists and applies the next time Auto Play starts:
+
+- **GPT-6.1 Terra (medium)**, the default.
+- **GPT-6 Luna (extra high)**, for harder decisions. It is slower and uses more of your Codex limits.
+
+Auto Play runs `codex exec` from this repository with the `mgba-willow` MCP server you registered in Setup, so it uses your Codex sign-in and usage limits. Codex connects only to the window you started it from. It follows `AGENTS.md` and [Willow control and verification](../../doc/willow-control.md), including in-game saves and progress notes. Codex runs with the workspace-write sandbox and is told to edit only `CURRENT_HANDOFF.md`, `POKEMON_EMERALD_OBJECTIVES.md` and `STORY_PROGRESS_NOTES.md`.
+
+When a Codex turn ends, Auto Play resumes the same conversation. Activity appears in the status bar. Auto Play waits while the game is paused and continues when you resume. It stops and shows the reason if Codex says it needs you, ends two turns without playing, fails three times in a row, or reaches a usage limit. Your keyboard and controller keep working alongside it.
+
 ## Availability, shared controls, and speed
 
 The app starts its local bridge automatically, even before you load a ROM. **AI → MCP Enabled** turns the bridge off or back on for that window. Disabling it cancels pending actions and closes clients; re-enable it and reconnect to resume AI control. Each new app launch enables MCP again. The status bar shows ready, connected, disabled, or an endpoint error. Codex starts the stdio MCP adapter when it loads the registered server; no Windows background service is needed.

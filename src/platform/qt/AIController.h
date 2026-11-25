@@ -18,6 +18,7 @@ class Window;
 class CoreController;
 class Action;
 class ActionMapper;
+class AutoPlay;
 
 // GUI-thread IPC endpoint; emulation access is synchronized by CoreController.
 class AIController : public QObject {
@@ -28,7 +29,10 @@ public:
 private:
 	void receive(QLocalSocket* socket);
 	void request(QLocalSocket* socket, const QJsonObject& request);
-	void reply(QLocalSocket* socket, const QJsonValue& id, const QJsonObject& result, const QString& error = { });
+	void reply(QLocalSocket* socket, const QJsonValue& id, const QJsonObject& result, const QString& error = { },
+	           bool showInteraction = true);
+	void mobileRequest(QLocalSocket* socket, const QJsonValue& id, const QString& method, const QJsonObject& args);
+	void detachMobile();
 	void release(const QString& reason);
 	void disconnectClient(QLocalSocket* socket);
 	void setEnabled(bool enabled);
@@ -37,6 +41,7 @@ private:
 	QJsonObject observation(bool screenshot = true);
 	QJsonObject session() const;
 	Window* m_window;
+	AutoPlay* m_autoPlay;
 	QLocalServer m_server;
 	QSet<QLocalSocket*> m_clients;
 	QPointer<QLocalSocket> m_actionOwner;
@@ -46,6 +51,10 @@ private:
 	QSet<QLocalSocket*> m_sockets;
 	QLabel* m_status;
 	QTimer m_timer;
+	QTimer m_mobileLease;
+	QPointer<QLocalSocket> m_mobileSocket;
+	std::shared_ptr<CoreController> m_mobileCore;
+	QList<QMetaObject::Connection> m_mobileConnections;
 	QString m_id;
 	QString m_gameId;
 	QString m_descriptor;

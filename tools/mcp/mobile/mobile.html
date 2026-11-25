@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#161b18">
+  <title>Willow Mobile</title>
+  <link rel="stylesheet" href="/mobile.css">
+  <script src="/mobile.js" defer></script>
+</head>
+<body data-page="picker">
+  <main>
+    <section class="picker" aria-labelledby="picker-title">
+      <header>
+        <h1 id="picker-title">Willow <span>Mobile</span></h1>
+      </header>
+      <p id="picker-status" role="status">Connecting to Willow…</p>
+      <button id="continue" class="continue" type="button" hidden>
+        <span class="continue-label">Playing on PC</span>
+        <span id="continue-title" class="continue-title"></span>
+        <span class="continue-action">Continue</span>
+      </button>
+      <input id="search" type="search" placeholder="Search games" aria-label="Search games" autocomplete="off" hidden>
+      <ul id="library" class="library" aria-label="Games"></ul>
+      <button id="refresh" type="button" hidden>Check again</button>
+    </section>
+
+    <section class="display" aria-label="Game">
+      <header>
+        <div>
+          <h1>Willow <span>Mobile</span></h1>
+          <p id="game-title" hidden></p>
+        </div>
+        <button id="back" type="button">Games</button>
+      </header>
+      <div class="screen" id="screen">
+        <img id="frame" alt="Live game screen" hidden>
+        <div class="waiting" id="waiting">
+          <p id="hint">Starting…</p>
+        </div>
+      </div>
+      <div class="player-controls">
+        <p id="status" role="status"></p>
+        <button id="autoplay" type="button" disabled>Auto Play</button>
+      </div>
+    </section>
+    <section class="gamepad" aria-label="Gamepad" inert>
+      <div class="shoulders">
+        <button type="button" data-key="512">L</button>
+        <button type="button" data-key="256">R</button>
+      </div>
+      <div class="primary">
+        <div class="directions" role="group" aria-label="Direction pad">
+          <button type="button" data-key="64" aria-label="Up">▲</button>
+          <button type="button" data-key="32" aria-label="Left">◀</button>
+          <div class="dpad-center"></div>
+          <button type="button" data-key="16" aria-label="Right">▶</button>
+          <button type="button" data-key="128" aria-label="Down">▼</button>
+        </div>
+        <div class="actions" role="group" aria-label="Action buttons">
+          <button type="button" data-key="2">B</button>
+          <button type="button" data-key="1">A</button>
+        </div>
+      </div>
+      <div class="system">
+        <button type="button" data-key="4">Select</button>
+        <button type="button" data-key="8">Start</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

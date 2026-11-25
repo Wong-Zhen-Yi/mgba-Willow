@@ -145,6 +145,8 @@ public:
 	void addFrameAction(std::function<void ()> callback);
 	uint64_t frameCounter() const { return m_frameCounter; }
 	void setAIControl(bool enabled);
+	void setMobileKeys(unsigned keys);
+	void releaseMobileKeys();
 	bool aiControl() const { return m_aiControl; }
 	bool advanceAI(unsigned keys, int frames);
 	bool advanceAI(const std::vector<AIGameplay::Step>& steps);
@@ -313,6 +315,8 @@ private:
 	bool m_normalSpeedMusic = true;
 	AIStateAction m_aiStateAction;
 	std::atomic<unsigned> m_humanKeys{0};
+	unsigned m_mobileKeys = 0;
+	unsigned m_mobileTapKeys = 0;
 	unsigned m_effectiveKeys = 0; // Protected by m_actionMutex
 	float m_aiSpeed = 4.f;
 	QList<std::function<void()>> m_resetActions;

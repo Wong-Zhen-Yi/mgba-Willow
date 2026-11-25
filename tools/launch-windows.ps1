@@ -195,6 +195,8 @@ try {
         '"' + ([regex]::Replace(([regex]::Replace($argument, '(\\*)"', '$1$1\"')), '(\\+)$', '$1$1')) + '"'
     }
     $startInfo.Arguments = $quotedArguments -join ' '
+    $startInfo.EnvironmentVariables['WILLOW_MOBILE_SCRIPT'] = Join-Path $PSScriptRoot 'mcp\mobile-launch.mjs'
+    $startInfo.EnvironmentVariables['WILLOW_AUTOPLAY_SCRIPT'] = Join-Path $PSScriptRoot 'mcp\autoplay.mjs'
     $appProcess = [Diagnostics.Process]::Start($startInfo)
     if ($appProcess.WaitForExit(2000)) {
         if ($appProcess.ExitCode -ne 0 -or $AppArguments.Count -eq 0) {

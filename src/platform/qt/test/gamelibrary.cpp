@@ -127,6 +127,14 @@ int main(int argc, char** argv) {
 	makeFile(folder + "/archive.zip");
 
 	GameLibrary library;
+#ifdef Q_OS_WIN
+	bool pairingRequested = false;
+	QObject::connect(&library, &GameLibrary::mobilePairingRequested, [&]() { pairingRequested = true; });
+	auto* pairMobile = library.findChild<QPushButton*>("pairMobile");
+	CHECK(pairMobile);
+	pairMobile->click();
+	CHECK(pairingRequested);
+#endif
 	library.resize(1060, 700);
 	library.show();
 	auto* cards = library.findChild<QListWidget*>("gameCards");
@@ -191,12 +199,30 @@ int main(int argc, char** argv) {
 	cards->itemActivated(emerald);
 	CHECK(launches == 2);
 
+	// Willow Mobile lists games by opaque id and launches them without seeing paths.
+	const auto entries = library.entries();
+	CHECK(entries.size() == 6);
+	CHECK(entries.at(0).title == "Advance");
+	CHECK(entries.at(1).id != entries.at(2).id);
+	const auto emeraldId = GameLibrary::gameId(folder + "/Emerald.GBA");
+	CHECK(emeraldId.size() == 20);
+	CHECK(!emeraldId.contains('/'));
+	bool listed = false;
+	for (const auto& entry : entries)
+		listed |= entry.id == emeraldId && entry.title == "Emerald" && entry.platform == "GBA";
+	CHECK(listed);
+	CHECK(library.launch(emeraldId));
+	CHECK(launches == 3);
+	CHECK(launched == folder + "/Emerald.GBA");
+	CHECK(!library.launch(QString(20, 'f')));
+	CHECK(launches == 3);
+
 	// Deleted ROMs cannot launch; refreshing drops stale cards.
 	CHECK(QFile::remove(folder + "/Emerald.GBA"));
 	complete = false;
 	play->click();
 	waitForScan(complete);
-	CHECK(launches == 2);
+	CHECK(launches == 3);
 	CHECK(cards->count() == 5);
 	complete = false;
 	library.setFolder(folder);

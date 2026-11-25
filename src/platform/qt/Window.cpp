@@ -52,14 +52,15 @@
 #include "MemoryAccessLogView.h"
 #include "MemorySearch.h"
 #include "MemoryView.h"
+#include "MobilePairing.h"
 #include "MultiplayerController.h"
-#include "OverrideView.h"
 #include "ObjView.h"
+#include "OverrideView.h"
 #include "PaletteView.h"
 #include "PlacementControl.h"
 #include "PrinterView.h"
-#include "ReportView.h"
 #include "ROMInfo.h"
+#include "ReportView.h"
 #include "SaveConverter.h"
 #ifdef ENABLE_SCRIPTING
 #include "scripting/ScriptingView.h"
@@ -146,6 +147,7 @@ Window::Window(CoreManager* manager, ConfigController* config, int playerId, QWi
 		}
 	});
 	connect(m_gameLibrary, &GameLibrary::openRequested, this, &Window::selectROM);
+	connect(m_gameLibrary, &GameLibrary::mobilePairingRequested, this, &Window::showMobilePairing);
 	connect(m_gameLibrary, &GameLibrary::settingsRequested, this, [this]() { openSettingsWindow(); });
 #ifdef USE_SQLITE3
 	m_libraryView = new LibraryController(nullptr, ConfigController::configDir() + "/library.sqlite3", m_config);
@@ -1379,6 +1381,17 @@ void Window::openStateWindow(LoadSave ls) {
 	attachWidget(m_stateWindow);
 }
 
+void Window::showMobilePairing() {
+	if (!m_mobilePairing) {
+		m_mobilePairing = new MobilePairing(this);
+		connect(this, &Window::shutdown, m_mobilePairing, &MobilePairing::stop);
+	}
+	m_mobilePairing->start();
+	m_mobilePairing->show();
+	m_mobilePairing->raise();
+	m_mobilePairing->activateWindow();
+}
+
 void Window::setupMenu(QMenuBar* menubar) {
 	installEventFilter(m_shortcutController);
 
@@ -1821,6 +1834,9 @@ void Window::setupMenu(QMenuBar* menubar) {
 #endif
 
 	m_actions.addMenu(tr("&Tools"), "tools");
+#ifdef Q_OS_WIN
+	m_actions.addAction(tr("Pair iPhone…"), "pairMobile", this, &Window::showMobilePairing, "tools");
+#endif
 	m_actions.addAction(tr("View &logs..."), "viewLogs", static_cast<QWidget*>(m_logView), &QWidget::show, "tools");
 
 	m_actions.addAction(tr("Game &overrides..."), "overrideWindow", [this]() {

@@ -569,6 +569,18 @@ void CoreController::setAIControl(bool enabled) {
 	emit fastForwardChanged(m_fastForward || m_fastForwardForced || (enabled && m_aiSpeed != 1));
 }
 
+void CoreController::setMobileKeys(unsigned keys) {
+	QMutexLocker locker(&m_actionMutex);
+	m_mobileTapKeys |= keys & ~m_mobileKeys;
+	m_mobileKeys = keys;
+}
+
+void CoreController::releaseMobileKeys() {
+	QMutexLocker locker(&m_actionMutex);
+	m_mobileKeys = 0;
+	m_mobileTapKeys = 0;
+}
+
 void CoreController::cancelAIAction() {
 	Interrupter interrupter(this);
 	QMutexLocker locker(&m_actionMutex);
@@ -1341,6 +1353,10 @@ void CoreController::updateKeys() {
 	// Preserve the ordinary scripting input path outside AI control. During
 	// shared control, previous effective keys must not feed back as human keys.
 	if (!m_aiControl) human |= m_threadContext.core->getKeys(m_threadContext.core) & ~m_removedKeys;
+	const unsigned mobile = m_mobileKeys | m_mobileTapKeys;
+	m_mobileTapKeys = 0;
+	if (mobile)
+		human = AIGameplay::mergeKeys(human, mobile);
 	m_humanKeys = human;
 	if (human && m_aiStateAction.pending()) {
 		m_aiStateAction.cancel("human_input", m_frameCounter);
@@ -1348,7 +1364,7 @@ void CoreController::updateKeys() {
 		m_aiActionEnd = m_frameCounter.load();
 		QMetaObject::invokeMethod(this, "aiActionFinished", Qt::QueuedConnection);
 	}
-	m_removedKeys = polledKeys;
+	m_removedKeys = polledKeys | mobile;
 	const unsigned effective = AIGameplay::mergeKeys(human, m_aiKeys);
 	m_threadContext.core->setKeys(m_threadContext.core, effective);
 	if (effective != m_effectiveKeys) {

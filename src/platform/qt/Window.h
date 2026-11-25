@@ -42,6 +42,7 @@ class GIFView;
 class GameLibrary;
 class LibraryController;
 class LogView;
+class MobilePairing;
 class OverrideView;
 class SensorView;
 class ShaderSelector;
@@ -57,6 +58,7 @@ public:
 	virtual ~Window();
 
 	std::shared_ptr<CoreController> controller() { return m_controller; }
+	GameLibrary* gameLibrary() const { return m_gameLibrary; }
 
 	void setConfig(ConfigController*);
 	ConfigController* config() { return m_config; }
@@ -179,6 +181,7 @@ private:
 	static const int MUST_RESTART_TIMEOUT = 10000;
 
 	void setupMenu(QMenuBar*);
+	void showMobilePairing();
 	void setupOptions();
 	void openStateWindow(LoadSave);
 
@@ -232,6 +235,7 @@ private:
 	LoadSaveState* m_stateWindow = nullptr;
 	WindowBackground* m_screenWidget;
 	GameLibrary* m_gameLibrary;
+	MobilePairing* m_mobilePairing = nullptr;
 	QPixmap m_logo{":/res/mgba-1024.png"};
 	ConfigController* m_config;
 	InputController m_inputController;

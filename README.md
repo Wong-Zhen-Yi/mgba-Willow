@@ -28,7 +28,16 @@ catalog remains available under **File → Classic library** in enabled builds.
 Launching with a ROM argument still opens that game directly.
 
 **Launch mGBA.cmd** builds and opens this checkout's MCP-enabled emulator.
-Open a game, then connect from Codex to play through the MCP tools.
+Open a game, then connect from Codex to play through the MCP tools. To let Codex
+play by itself, click **Auto Play** in the status bar (GPT-6.1 Terra on medium by
+default, or GPT-6 Luna on extra high from **AI → Auto Play Model**). See
+[Auto Play](tools/mcp/README.md#auto-play).
+
+Select **Pair iPhone** in Willow's game library or **Tools → Pair iPhone**
+during gameplay to show a pairing QR code. The iPhone opens an HTTPS link that
+Tailscale Funnel publishes while pairing is on. Tailscale issues the
+certificate, so there is nothing to install. See
+[Willow Mobile](doc/willow-mobile.md).
 
 During capped AI fast-forward, supported English Emerald ROMs play background
 music at its original speed in both the SDL and Qt audio backends. A private,
