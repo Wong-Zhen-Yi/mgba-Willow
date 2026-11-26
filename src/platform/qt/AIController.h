@@ -19,7 +19,14 @@ class CoreController;
 class Action;
 class ActionMapper;
 class AutoPlay;
+}
+
+namespace Willow {
 class MobileVideoEncoder;
+}
+
+namespace QGBA {
+using Willow::MobileVideoEncoder;
 
 // GUI-thread IPC endpoint; emulation access is synchronized by CoreController.
 class AIController : public QObject {

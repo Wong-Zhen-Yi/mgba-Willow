@@ -4,7 +4,7 @@
 #include "ConfigController.h"
 #include "CoreController.h"
 #include "GameLibrary.h"
-#include "MobileVideo.h"
+#include "willow/MobileVideo.h"
 #include "MultiplayerController.h"
 #include "VFileDevice.h"
 #include "Window.h"
@@ -396,19 +396,23 @@ void AIController::mobileFrame(const QJsonValue& id, const QJsonObject& args, bo
 	if (video) {
 		if (!m_mobileVideo)
 			m_mobileVideo = std::make_unique<MobileVideoEncoder>(MobileVideoEncoder::defaultEncoders(codec == "hevc"));
-		QList<MobileVideoEncoder::Packet> packets;
-		if (m_mobileVideo->encode(image, args.value("keyframe").toBool(), &packets)) {
+		const QImage rgbx = image.format() == QImage::Format_RGBX8888 ? image : image.convertToFormat(QImage::Format_RGBX8888);
+		const Willow::VideoFrame frame { rgbx.constBits(), rgbx.width(), rgbx.height(), int(rgbx.bytesPerLine()) };
+		std::vector<MobileVideoEncoder::Packet> packets;
+		if (m_mobileVideo->encode(frame, args.value("keyframe").toBool(), &packets)) {
 			QJsonArray encoded;
-			for (const auto& packet : packets)
-				encoded.append(QJsonObject { { "key", packet.key }, { "data", QString::fromLatin1(packet.data.toBase64()) } });
-			result.insert("video", QJsonObject { { "encoder", m_mobileVideo->encoder() },
+			for (const auto& packet : packets) {
+				const auto data = QByteArray::fromRawData(reinterpret_cast<const char*>(packet.data.data()), int(packet.data.size()));
+				encoded.append(QJsonObject { { "key", packet.key }, { "data", QString::fromLatin1(data.toBase64()) } });
+			}
+			result.insert("video", QJsonObject { { "encoder", QString::fromStdString(m_mobileVideo->encoder()) },
 			                                     { "hardware", m_mobileVideo->hardware() },
-			                                     { "codec", m_mobileVideo->codec() },
-			                                     { "width", m_mobileVideo->size().width() },
-			                                     { "height", m_mobileVideo->size().height() },
+			                                     { "codec", QString::fromStdString(m_mobileVideo->codec()) },
+			                                     { "width", m_mobileVideo->size().width },
+			                                     { "height", m_mobileVideo->size().height },
 			                                     { "packets", encoded } });
 		} else {
-			result.insert("video_error", m_mobileVideo->error());
+			result.insert("video_error", QString::fromStdString(m_mobileVideo->error()));
 		}
 	} else {
 		QByteArray png;

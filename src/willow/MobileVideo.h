@@ -5,19 +5,31 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #pragma once
 
-#include <QByteArray>
-#include <QImage>
-#include <QList>
-#include <QSize>
-#include <QString>
-#include <QStringList>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 struct AVCodecContext;
 struct AVFrame;
 struct AVPacket;
 struct SwsContext;
 
-namespace QGBA {
+namespace Willow {
+
+// One frame of 8-bit RGBX pixels: bytes R, G, B, then one unused byte.
+struct VideoFrame {
+	const uint8_t* pixels = nullptr;
+	int width = 0;
+	int height = 0;
+	int stride = 0; // Bytes per row; at least width * 4.
+};
+
+struct VideoSize {
+	int width = 0;
+	int height = 0;
+	bool operator==(const VideoSize& other) const { return width == other.width && height == other.height; }
+	bool operator!=(const VideoSize& other) const { return !(*this == other); }
+};
 
 // Low-latency HEVC via NVIDIA NVENC, or H.264 with hardware encoders
 // preferred over x264. Native-size frames are
@@ -28,42 +40,42 @@ namespace QGBA {
 class MobileVideoEncoder {
 public:
 	struct Packet {
-		QByteArray data;
+		std::vector<uint8_t> data;
 		bool key = false;
 	};
 
 	static bool available();
-	static QStringList defaultEncoders(bool hevc = false);
+	static std::vector<std::string> defaultEncoders(bool hevc = false);
 
-	explicit MobileVideoEncoder(QStringList encoders = defaultEncoders(), int scale = 2);
+	explicit MobileVideoEncoder(std::vector<std::string> encoders = defaultEncoders(), int scale = 2);
 	~MobileVideoEncoder();
 	MobileVideoEncoder(const MobileVideoEncoder&) = delete;
 	MobileVideoEncoder& operator=(const MobileVideoEncoder&) = delete;
 
-	// Encodes one RGBX frame and appends any finished access units. Returns false
+	// Encodes one frame and appends any finished access units. Returns false
 	// once every candidate encoder has failed; error() then explains why.
-	bool encode(const QImage& frame, bool keyframe, QList<Packet>* packets);
+	bool encode(const VideoFrame& frame, bool keyframe, std::vector<Packet>* packets);
 
-	QString encoder() const { return m_name; }
+	std::string encoder() const { return m_name; }
 	bool hardware() const;
 	// RFC 6381 codec string, such as "avc1.4d401e", known after the first keyframe.
-	QString codec() const { return m_codec; }
-	QSize size() const { return m_size; }
-	QString error() const { return m_error; }
+	std::string codec() const { return m_codec; }
+	VideoSize size() const { return m_size; }
+	std::string error() const { return m_error; }
 
 private:
-	bool open(const QSize& source);
+	bool open(const VideoSize& source);
 	void close();
-	bool drain(QList<Packet>* packets);
+	bool drain(std::vector<Packet>* packets);
 
-	QStringList m_candidates;
+	std::vector<std::string> m_candidates;
 	int m_scale;
-	QString m_name;
-	QString m_codec;
-	QString m_error;
-	QSize m_source;
-	QSize m_size;
-	qint64 m_pts = 0;
+	std::string m_name;
+	std::string m_codec;
+	std::string m_error;
+	VideoSize m_source;
+	VideoSize m_size;
+	int64_t m_pts = 0;
 	bool m_needKey = true;
 	AVCodecContext* m_context = nullptr;
 	AVFrame* m_frame = nullptr;

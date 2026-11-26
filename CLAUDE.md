@@ -61,10 +61,10 @@ User docs: `doc/willow-mobile.md`. Moving parts:
 - Video: the phone sends `{type:'video', codec:'h264'}` when WebCodecs works,
   and the server then loops `mobile_frame {codec:'h264', wait:true}`. Qt holds
   that request until `frameAvailable` and encodes with `MobileVideoEncoder`
-  (`MobileVideo.cpp`: NVENC → AMF → QSV → Media Foundation → x264, all through
+  (`src/willow/MobileVideo.cpp`: NVENC → AMF → QSV → Media Foundation → x264, all through
   the linked FFmpeg). Binary WebSocket frames start with a type byte: 0 PNG,
   1 H.264 delta, 2 keyframe. `WILLOW_MOBILE_ENCODER=libx264` forces an encoder.
-  `test-qt-mobilevideo` decodes every encoder found and checks the colours.
+  `test-willow-mobilevideo` decodes every encoder found and checks the colours.
 - The GBA OpenGL renderer (`hwaccelVideo`, default on) is swapped for software
   while `CoreController::aiControl()` is true (`aiControlChanged` →
   `Window::changeRenderer`), because only software frames are `atomic:true`.

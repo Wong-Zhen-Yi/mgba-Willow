@@ -2,7 +2,8 @@
 # adapters). It must not depend on Qt so that any frontend can link it.
 set(WILLOW_SOURCES
 	EmeraldGameState.cpp
-	EmeraldMusic.cpp)
+	EmeraldMusic.cpp
+	MobileVideo.cpp)
 
 add_library(willow STATIC ${WILLOW_SOURCES})
 target_compile_features(willow PUBLIC cxx_std_17)
@@ -16,7 +17,7 @@ target_compile_definitions(willow PUBLIC ${FEATURE_DEFINES} ${FUNCTION_DEFINES} 
 
 if(BUILD_SUITE OR BUILD_AI_TESTS)
 	enable_testing()
-	foreach(TEST_NAME aigameplay emeraldgamestate emeraldmusic)
+	foreach(TEST_NAME aigameplay emeraldgamestate emeraldmusic mobilevideo)
 		add_executable(test-willow-${TEST_NAME} test/${TEST_NAME}.cpp)
 		target_link_libraries(test-willow-${TEST_NAME} willow)
 		add_test(willow-${TEST_NAME} test-willow-${TEST_NAME})

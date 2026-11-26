@@ -7,6 +7,11 @@
 
 #include <mgba/flags.h>
 
+#include <algorithm>
+#include <cstdio>
+#include <cstdarg>
+#include <cstdlib>
+
 #ifdef USE_FFMPEG
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -15,14 +20,35 @@ extern "C" {
 }
 #endif
 
-using namespace QGBA;
+using namespace Willow;
 
 namespace {
 
 #ifdef USE_FFMPEG
-int findNal(const QByteArray& data, int type, bool hevc) {
-	const auto* bytes = reinterpret_cast<const uchar*>(data.constData());
-	for (int i = 0; i + 3 < data.size(); ++i) {
+std::string format(const char* pattern, ...) {
+	char buffer[256];
+	va_list args;
+	va_start(args, pattern);
+	std::vsnprintf(buffer, sizeof(buffer), pattern, args);
+	va_end(args);
+	return buffer;
+}
+
+bool endsWith(const std::string& text, const char* suffix) {
+	const size_t length = std::char_traits<char>::length(suffix);
+	return text.size() >= length && text.compare(text.size() - length, length, suffix) == 0;
+}
+
+std::string trimmed(const std::string& text) {
+	const char* space = " \t\n\v\f\r";
+	const size_t start = text.find_first_not_of(space);
+	if (start == std::string::npos) return {};
+	return text.substr(start, text.find_last_not_of(space) - start + 1);
+}
+
+int findNal(const std::vector<uint8_t>& data, int type, bool hevc) {
+	const uint8_t* bytes = data.data();
+	for (int i = 0; i + 3 < int(data.size()); ++i) {
 		if (bytes[i] || bytes[i + 1] || bytes[i + 2] != 1) continue;
 		const int nalType = hevc ? (bytes[i + 3] >> 1) & 0x3F : bytes[i + 3] & 0x1F;
 		if (nalType == type)
@@ -32,44 +58,39 @@ int findNal(const QByteArray& data, int type, bool hevc) {
 	return -1;
 }
 
-QString hevcCodec(const QByteArray& data, int sps) {
+std::string hevcCodec(const std::vector<uint8_t>& data, int sps) {
 	// The SPS starts with the NAL header and one byte before profile_tier_level.
 	// Strip emulation-prevention bytes from its 12-byte general profile.
-	QByteArray profile;
+	std::vector<uint8_t> profile;
 	int zeros = 0;
-	for (int i = sps + 3; i < data.size() && profile.size() < 12; ++i) {
-		const char byte = data[i];
+	for (int i = sps + 3; i < int(data.size()) && profile.size() < 12; ++i) {
+		const uint8_t byte = data[i];
 		if (zeros >= 2 && byte == 3) {
 			zeros = 0;
 			continue;
 		}
-		profile.append(byte);
+		profile.push_back(byte);
 		zeros = byte == 0 ? zeros + 1 : 0;
 	}
 	if (profile.size() != 12)
 		return {};
 
-	const auto* bytes = reinterpret_cast<const uchar*>(profile.constData());
+	const uint8_t* bytes = profile.data();
 	const int space = bytes[0] >> 6;
-	const QString prefix = space ? QString(QChar('A' + space - 1)) : QString();
-	const QChar tier = bytes[0] & 0x20 ? 'H' : 'L';
+	const std::string prefix = space ? std::string(1, char('A' + space - 1)) : std::string();
+	const char tier = bytes[0] & 0x20 ? 'H' : 'L';
 	// RFC 6381 writes the 32 profile compatibility flags with the first flag in the low bit.
-	quint32 compatible = 0;
+	uint32_t compatible = 0;
 	for (int bit = 0; bit < 32; ++bit) {
 		if (bytes[1 + bit / 8] & (0x80 >> (bit % 8)))
-			compatible |= quint32(1) << bit;
+			compatible |= uint32_t(1) << bit;
 	}
-	QString codec = QStringLiteral("hvc1.%1%2.%3.%4%5")
-	                    .arg(prefix)
-	                    .arg(bytes[0] & 0x1F)
-	                    .arg(QString::number(compatible, 16).toUpper())
-	                    .arg(tier)
-	                    .arg(bytes[11]);
+	std::string codec = format("hvc1.%s%d.%X.%c%d", prefix.c_str(), bytes[0] & 0x1F, unsigned(compatible), tier, bytes[11]);
 	int lastConstraint = 10;
 	while (lastConstraint >= 5 && !bytes[lastConstraint])
 		--lastConstraint;
 	for (int i = 5; i <= lastConstraint; ++i)
-		codec += QStringLiteral(".%1").arg(bytes[i], 2, 16, QLatin1Char('0')).toUpper();
+		codec += format(".%02X", bytes[i]);
 	return codec;
 }
 
@@ -78,8 +99,8 @@ void setOption(AVCodecContext* context, const char* key, const char* value) {
 	av_opt_set(context->priv_data, key, value, 0);
 }
 
-void tune(AVCodecContext* context, const QString& name) {
-	if (name.endsWith("_nvenc")) {
+void tune(AVCodecContext* context, const std::string& name) {
+	if (endsWith(name, "_nvenc")) {
 		setOption(context, "preset", "p2");
 		setOption(context, "tune", "ull");
 		setOption(context, "rc", "vbr");
@@ -108,7 +129,7 @@ void tune(AVCodecContext* context, const QString& name) {
 	}
 }
 
-AVPixelFormat pixelFormat(const AVCodec* codec, const QString& name) {
+AVPixelFormat pixelFormat(const AVCodec* codec, const std::string& name) {
 	const AVPixelFormat* formats = nullptr;
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
 	if (avcodec_get_supported_config(nullptr, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0,
@@ -120,8 +141,8 @@ AVPixelFormat pixelFormat(const AVCodec* codec, const QString& name) {
 #endif
 	// NVENC converts RGB to BT.601 YUV on the GPU. Other encoders get YUV from
 	// swscale so the colour matrix always matches what the stream signals.
-	QList<AVPixelFormat> preferred{AV_PIX_FMT_NV12, AV_PIX_FMT_YUV420P};
-	if (name == "h264_nvenc") preferred.prepend(AV_PIX_FMT_RGB0);
+	std::vector<AVPixelFormat> preferred{AV_PIX_FMT_NV12, AV_PIX_FMT_YUV420P};
+	if (name == "h264_nvenc") preferred.insert(preferred.begin(), AV_PIX_FMT_RGB0);
 	if (!formats) return AV_PIX_FMT_YUV420P;
 	for (AVPixelFormat format : preferred) {
 		for (const AVPixelFormat* supported = formats; *supported != AV_PIX_FMT_NONE; ++supported) {
@@ -131,10 +152,10 @@ AVPixelFormat pixelFormat(const AVCodec* codec, const QString& name) {
 	return AV_PIX_FMT_NONE;
 }
 
-QString describe(int error) {
+std::string describe(int error) {
 	char buffer[AV_ERROR_MAX_STRING_SIZE] = {};
 	av_strerror(error, buffer, sizeof(buffer));
-	return QString::fromLocal8Bit(buffer);
+	return buffer;
 }
 #endif
 
@@ -148,16 +169,21 @@ bool MobileVideoEncoder::available() {
 #endif
 }
 
-QStringList MobileVideoEncoder::defaultEncoders(bool hevc) {
+std::vector<std::string> MobileVideoEncoder::defaultEncoders(bool hevc) {
 	// WILLOW_MOBILE_ENCODER=libx264 (or a comma-separated list) overrides the order.
-	const QString forced = qEnvironmentVariable("WILLOW_MOBILE_ENCODER").trimmed();
-	if (!forced.isEmpty()) {
-		QStringList encoders;
-		for (const auto& entry : forced.split(',', Qt::SkipEmptyParts)) {
-			const auto name = entry.trimmed();
-			const bool isHevc = name.startsWith("hevc_");
-			if (!name.isEmpty() && isHevc == hevc)
-				encoders.append(name);
+	const char* variable = std::getenv("WILLOW_MOBILE_ENCODER");
+	const std::string forced = trimmed(variable ? variable : "");
+	if (!forced.empty()) {
+		std::vector<std::string> encoders;
+		size_t start = 0;
+		while (start <= forced.size()) {
+			size_t end = forced.find(',', start);
+			if (end == std::string::npos) end = forced.size();
+			const std::string name = trimmed(forced.substr(start, end - start));
+			const bool isHevc = name.compare(0, 5, "hevc_") == 0;
+			if (!name.empty() && isHevc == hevc)
+				encoders.push_back(name);
+			start = end + 1;
 		}
 		return encoders;
 	}
@@ -166,10 +192,10 @@ QStringList MobileVideoEncoder::defaultEncoders(bool hevc) {
 	return {"h264_nvenc", "h264_amf", "h264_qsv", "h264_mf", "libx264"};
 }
 
-MobileVideoEncoder::MobileVideoEncoder(QStringList encoders, int scale)
-	: m_candidates(encoders)
-	, m_scale(qBound(1, scale, 4)) {
-	for (QString& name : m_candidates) name = name.trimmed();
+MobileVideoEncoder::MobileVideoEncoder(std::vector<std::string> encoders, int scale)
+	: m_candidates(std::move(encoders))
+	, m_scale(std::clamp(scale, 1, 4)) {
+	for (std::string& name : m_candidates) name = trimmed(name);
 }
 
 MobileVideoEncoder::~MobileVideoEncoder() {
@@ -177,7 +203,7 @@ MobileVideoEncoder::~MobileVideoEncoder() {
 }
 
 bool MobileVideoEncoder::hardware() const {
-	return !m_name.isEmpty() && m_name != "libx264";
+	return !m_name.empty() && m_name != "libx264";
 }
 
 void MobileVideoEncoder::close() {
@@ -192,22 +218,22 @@ void MobileVideoEncoder::close() {
 	m_codec.clear();
 }
 
-bool MobileVideoEncoder::open(const QSize& source) {
+bool MobileVideoEncoder::open(const VideoSize& source) {
 	close();
 	m_source = source;
 	// The OpenGL renderer may already deliver an upscaled frame.
-	m_size = source.width() >= 480 ? source : source * m_scale;
+	m_size = source.width >= 480 ? source : VideoSize{ source.width * m_scale, source.height * m_scale };
 #ifdef USE_FFMPEG
-	QStringList errors;
-	while (!m_candidates.isEmpty()) {
-		const QString name = m_candidates.first();
-		const AVCodec* codec = avcodec_find_encoder_by_name(name.toLatin1().constData());
+	std::string errors;
+	while (!m_candidates.empty()) {
+		const std::string name = m_candidates.front();
+		const AVCodec* codec = avcodec_find_encoder_by_name(name.c_str());
 		AVPixelFormat format = codec ? pixelFormat(codec, name) : AV_PIX_FMT_NONE;
 		int status = -1;
 		if (codec && format != AV_PIX_FMT_NONE) {
 			m_context = avcodec_alloc_context3(codec);
-			m_context->width = m_size.width();
-			m_context->height = m_size.height();
+			m_context->width = m_size.width;
+			m_context->height = m_size.height;
 			m_context->pix_fmt = format;
 			m_context->time_base = {1, 60};
 			m_context->framerate = {60, 1};
@@ -229,9 +255,9 @@ bool MobileVideoEncoder::open(const QSize& source) {
 			m_frame = av_frame_alloc();
 			m_packet = av_packet_alloc();
 			m_frame->format = format;
-			m_frame->width = m_size.width();
-			m_frame->height = m_size.height();
-			m_scaler = sws_getContext(source.width(), source.height(), AV_PIX_FMT_RGB0, m_size.width(), m_size.height(),
+			m_frame->width = m_size.width;
+			m_frame->height = m_size.height;
+			m_scaler = sws_getContext(source.width, source.height, AV_PIX_FMT_RGB0, m_size.width, m_size.height,
 			                          format, SWS_POINT, nullptr, nullptr, nullptr);
 			if (m_scaler && format != AV_PIX_FMT_RGB0) {
 				const int* matrix = sws_getCoefficients(SWS_CS_ITU601);
@@ -244,30 +270,31 @@ bool MobileVideoEncoder::open(const QSize& source) {
 				return true;
 			}
 		}
-		errors.append(QStringLiteral("%1: %2").arg(name, !codec ? QStringLiteral("not built in") :
-		                                                 format == AV_PIX_FMT_NONE ? QStringLiteral("no usable pixel format") :
-		                                                 status < 0 ? describe(status) : QStringLiteral("setup failed")));
+		if (!errors.empty()) errors += "; ";
+		errors += name + ": " + (!codec ? std::string("not built in") :
+		                         format == AV_PIX_FMT_NONE ? std::string("no usable pixel format") :
+		                         status < 0 ? describe(status) : std::string("setup failed"));
 		close();
-		m_candidates.removeFirst();
+		m_candidates.erase(m_candidates.begin());
 	}
-	m_error = errors.isEmpty() ? QStringLiteral("No encoder configured for this codec") : errors.join("; ");
+	m_error = errors.empty() ? std::string("No encoder configured for this codec") : errors;
 #else
-	m_error = QStringLiteral("This build has no FFmpeg");
+	m_error = "This build has no FFmpeg";
 #endif
 	return false;
 }
 
-bool MobileVideoEncoder::drain(QList<Packet>* packets) {
+bool MobileVideoEncoder::drain(std::vector<Packet>* packets) {
 #ifdef USE_FFMPEG
 	while (true) {
 		const int status = avcodec_receive_packet(m_context, m_packet);
 		if (status == AVERROR(EAGAIN) || status == AVERROR_EOF) return true;
 		if (status < 0) {
-			m_error = QStringLiteral("%1: %2").arg(m_name, describe(status));
+			m_error = m_name + ": " + describe(status);
 			return false;
 		}
 		Packet packet;
-		packet.data = QByteArray(reinterpret_cast<const char*>(m_packet->data), m_packet->size);
+		packet.data.assign(m_packet->data, m_packet->data + m_packet->size);
 		packet.key = m_packet->flags & AV_PKT_FLAG_KEY;
 		av_packet_unref(m_packet);
 		if (packet.key) {
@@ -279,41 +306,40 @@ bool MobileVideoEncoder::drain(QList<Packet>* packets) {
 			};
 			// A decoder joining at a keyframe needs all parameter sets in band.
 			if (!hasParameters() && m_context->extradata_size > 0)
-				packet.data.prepend(reinterpret_cast<const char*>(m_context->extradata), m_context->extradata_size);
+				packet.data.insert(packet.data.begin(), m_context->extradata, m_context->extradata + m_context->extradata_size);
 			if (!hasParameters()) {
-				m_error = QStringLiteral("%1: keyframe is missing video parameter sets").arg(m_name);
+				m_error = m_name + ": keyframe is missing video parameter sets";
 				return false;
 			}
 			const int sps = findNal(packet.data, spsType, hevc);
 			if (hevc) {
 				m_codec = hevcCodec(packet.data, sps);
-			} else if (sps + 3 < packet.data.size()) {
-				const auto* bytes = reinterpret_cast<const uchar*>(packet.data.constData()) + sps;
-				m_codec = QString::asprintf("avc1.%02x%02x%02x", bytes[1], bytes[2], bytes[3]);
+			} else if (sps + 3 < int(packet.data.size())) {
+				const uint8_t* bytes = packet.data.data() + sps;
+				m_codec = format("avc1.%02x%02x%02x", bytes[1], bytes[2], bytes[3]);
 			}
 		}
-		packets->append(packet);
+		packets->push_back(std::move(packet));
 	}
 #else
-	Q_UNUSED(packets);
+	(void) packets;
 	return false;
 #endif
 }
 
-bool MobileVideoEncoder::encode(const QImage& frame, bool keyframe, QList<Packet>* packets) {
+bool MobileVideoEncoder::encode(const VideoFrame& source, bool keyframe, std::vector<Packet>* packets) {
 #ifdef USE_FFMPEG
-	if (frame.isNull()) return true;
-	const QImage source = frame.format() == QImage::Format_RGBX8888 ? frame :
-	                                                                  frame.convertToFormat(QImage::Format_RGBX8888);
+	if (!source.pixels || source.width <= 0 || source.height <= 0) return true;
+	const VideoSize size{ source.width, source.height };
 	while (true) {
-		if (!m_context || source.size() != m_source) {
-			if (!open(source.size())) return false;
+		if (!m_context || size != m_source) {
+			if (!open(size)) return false;
 		}
 		bool ok = av_frame_make_writable(m_frame) >= 0;
 		if (ok) {
-			const uint8_t* planes[] = {source.constBits()};
-			const int strides[] = {int(source.bytesPerLine())};
-			sws_scale(m_scaler, planes, strides, 0, source.height(), m_frame->data, m_frame->linesize);
+			const uint8_t* planes[] = {source.pixels};
+			const int strides[] = {source.stride};
+			sws_scale(m_scaler, planes, strides, 0, source.height, m_frame->data, m_frame->linesize);
 			m_frame->pts = m_pts++;
 			const bool key = keyframe || m_needKey;
 			m_frame->pict_type = key ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
@@ -324,7 +350,7 @@ bool MobileVideoEncoder::encode(const QImage& frame, bool keyframe, QList<Packet
 			m_frame->key_frame = key;
 #endif
 			const int status = avcodec_send_frame(m_context, m_frame);
-			if (status < 0) m_error = QStringLiteral("%1: %2").arg(m_name, describe(status));
+			if (status < 0) m_error = m_name + ": " + describe(status);
 			ok = status >= 0 && drain(packets);
 		}
 		if (ok) {
@@ -336,14 +362,14 @@ bool MobileVideoEncoder::encode(const QImage& frame, bool keyframe, QList<Packet
 		// A hardware session can fail mid-stream (driver reset, session limit).
 		// Drop it and continue with the next encoder from a fresh keyframe.
 		packets->clear();
-		m_candidates.removeAll(m_name);
+		m_candidates.erase(std::remove(m_candidates.begin(), m_candidates.end(), m_name), m_candidates.end());
 		close();
 	}
 #else
-	Q_UNUSED(frame);
-	Q_UNUSED(keyframe);
-	Q_UNUSED(packets);
-	m_error = QStringLiteral("This build has no FFmpeg");
+	(void) source;
+	(void) keyframe;
+	(void) packets;
+	m_error = "This build has no FFmpeg";
 	return false;
 #endif
 }
