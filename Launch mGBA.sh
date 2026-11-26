@@ -39,7 +39,7 @@ echo "To enable mgba in your terminal, run \"Launch mGBA.sh\" --install-terminal
 echo "The mGBA Willow system tray icon shows when the iPhone link is ready."
 echo "To open mGBA Willow minimized at sign-in, run \"Launch mGBA.sh\" --install-startup."
 echo "Sign-in launches use the last build; run --remove-startup to undo."
-echo "To play from your iPhone, click Pair iPhone in the Willow window to see the QR code, then pick a game on the phone."
+echo "To play from your iPhone, click Pair iPhone in the Willow window, then scan the QR code or use Copy Link to send the link to the phone."
 echo "iPhone pairing needs Node.js 20+ and Tailscale; allow Willow to use Tailscale once with: sudo tailscale set --operator=\$USER"
 echo "Tap Auto Play on the phone to let Codex play, or Stop Auto Play to stop the current run."
 echo "Auto Play models marked Pi run in the Pi agent harness; install it with npm install -g @earendil-works/pi-coding-agent."

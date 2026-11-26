@@ -6,12 +6,15 @@
 #include "MobilePairing.h"
 
 #include <QApplication>
+#include <QClipboard>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QHBoxLayout>
 #include <QJsonObject>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QPainter>
 #include <QPixmap>
@@ -49,6 +52,22 @@ MobilePairing::MobilePairing(QWidget* parent)
 	m_qr = new QLabel(this);
 	m_qr->setAccessibleName(tr("Willow Mobile pairing QR code"));
 	layout->addWidget(m_qr, 0, Qt::AlignHCenter);
+
+	// The full link, to paste into a message for another device.
+	m_linkRow = new QWidget(this);
+	auto* linkLayout = new QHBoxLayout(m_linkRow);
+	linkLayout->setContentsMargins(0, 0, 0, 0);
+	m_link = new QLineEdit(m_linkRow);
+	m_link->setReadOnly(true);
+	m_link->setAccessibleName(tr("Willow Mobile pairing link"));
+	linkLayout->addWidget(m_link, 1);
+	m_copy = new QPushButton(tr("Copy Link"), m_linkRow);
+	m_copy->setAutoDefault(false);
+	linkLayout->addWidget(m_copy);
+	layout->addWidget(m_linkRow);
+	connect(m_copy, &QPushButton::clicked, this, &MobilePairing::copyLink);
+	m_copied.setSingleShot(true);
+	connect(&m_copied, &QTimer::timeout, this, [this]() { m_copy->setText(tr("Copy Link")); });
 
 	auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
 	m_start = buttons->addButton(tr("Start"), QDialogButtonBox::ActionRole);
@@ -112,6 +131,8 @@ void MobilePairing::enableTray() {
 	auto* menu = new QMenu(this);
 	m_trayStatus = menu->addAction(QString());
 	m_trayStatus->setEnabled(false);
+	m_trayCopy = menu->addAction(tr("Copy Pairing Link"), this, &MobilePairing::copyLink);
+	m_trayCopy->setEnabled(!m_link->text().isEmpty());
 	menu->addSeparator();
 	const auto showWindow = [window = parentWidget()]() {
 		window->setWindowState(window->windowState() & ~Qt::WindowMinimized);
@@ -248,6 +269,20 @@ void MobilePairing::scheduleRetry() {
 void MobilePairing::clearPairing() {
 	m_qr->clear();
 	m_qr->hide();
+	m_link->clear();
+	m_linkRow->hide();
+	if (m_trayCopy) {
+		m_trayCopy->setEnabled(false);
+	}
+}
+
+void MobilePairing::copyLink() {
+	if (m_link->text().isEmpty()) {
+		return;
+	}
+	QApplication::clipboard()->setText(m_link->text());
+	m_copy->setText(tr("Copied"));
+	m_copied.start(2000);
 }
 
 void MobilePairing::readUpdates() {
@@ -278,16 +313,24 @@ void MobilePairing::readUpdates() {
 				setStatus(Status::UNAVAILABLE, tr("Could not load the pairing QR code."));
 				return;
 			}
-			// Funnel links are public, so the iPhone does not need Tailscale for them.
+			// Funnel links are public, so the other device does not need Tailscale for them.
 			const auto steps = update.value("access").toString() == "funnel" ?
-			    tr("Scan this code with your iPhone Camera. Keep it private: anyone with the link can pair.") :
-			    tr("Connect your iPhone to Tailscale, then scan this code with Camera.");
+			    tr("Scan this code with your iPhone Camera, or copy the link and open it on another device. Keep it "
+			       "private: anyone with the link can pair.") :
+			    tr("Connect your iPhone to Tailscale, then scan this code with Camera or open the copied link.");
 			const auto origin = update.value("origin").toString();
-			setStatus(Status::READY, QString("%1\n%2").arg(steps, origin),
-			          tr("On. Your iPhone can pair at %1").arg(origin));
+			const auto link = update.value("link").toString();
 			m_retryDelay = 0;
 			m_qr->setPixmap(qr);
 			m_qr->show();
+			m_link->setText(link.isEmpty() ? origin : link);
+			m_link->setCursorPosition(0);
+			m_copy->setText(tr("Copy Link"));
+			m_linkRow->show();
+			if (m_trayCopy) {
+				m_trayCopy->setEnabled(true);
+			}
+			setStatus(Status::READY, steps, tr("On. Your iPhone can pair at %1").arg(origin));
 			adjustSize();
 		}
 	}

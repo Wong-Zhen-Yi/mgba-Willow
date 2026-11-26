@@ -29,6 +29,10 @@ its saves stay on the PC. Audio plays on the PC.
    status, or right-click it to open Willow or pair an iPhone. Windows may
    place the icon in the hidden icons menu next to the clock.
 3. Scan the QR code with the iPhone Camera and open the link in any browser.
+   You can also click **Copy Link** under the QR code (or **Copy Pairing
+   Link** in the tray menu) and send the link to the phone or another device
+   in a message. The link includes the pairing code, so send it only to
+   yourself.
 4. Pick a game. The phone opens on your Willow game library, with the same
    games and cover art as the PC. Tapping a game starts it on the PC and opens
    the game screen and controls.

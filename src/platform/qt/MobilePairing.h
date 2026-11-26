@@ -11,6 +11,7 @@
 
 class QAction;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QSystemTrayIcon;
 
@@ -42,6 +43,7 @@ private:
 	void readUpdates();
 	void clearPairing();
 	void scheduleRetry();
+	void copyLink();
 
 	QProcess m_process;
 	QTimer m_retry;
@@ -50,10 +52,15 @@ private:
 	QString m_summary;
 	QLabel* m_status;
 	QLabel* m_qr;
+	QWidget* m_linkRow;
+	QLineEdit* m_link;
+	QPushButton* m_copy;
+	QTimer m_copied;
 	QPushButton* m_start;
 	QPushButton* m_stop;
 	QSystemTrayIcon* m_tray = nullptr;
 	QAction* m_trayStatus = nullptr;
+	QAction* m_trayCopy = nullptr;
 	Status m_state = Status::STARTING;
 	bool m_stopping = false;
 	bool m_reportedError = false;

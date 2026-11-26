@@ -30,7 +30,7 @@ echo To enable mgba in your terminal, run "Launch mGBA.cmd" --install-terminal-c
 echo The mGBA Willow system tray icon shows when the iPhone link is ready.
 echo To add or update mGBA Willow in Windows Startup apps, run "Launch mGBA.cmd" --install-startup.
 echo Sign-in launches use the last build; run --remove-startup to undo.
-echo To play from your iPhone, click Pair iPhone in the Willow window to see the QR code, then pick a game on the phone.
+echo To play from your iPhone, click Pair iPhone in the Willow window, then scan the QR code or use Copy Link to send the link to the phone.
 echo Tap Auto Play on the phone to let Codex play, or Stop Auto Play to stop the current run.
 echo Auto Play models marked Pi run in the Pi agent harness; install it with npm install -g @earendil-works/pi-coding-agent.
 echo Tap Settings on the phone for game speed, the Auto Play model, video, button size and keeping the screen awake.
