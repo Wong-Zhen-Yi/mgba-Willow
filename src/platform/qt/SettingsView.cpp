@@ -469,9 +469,23 @@ void SettingsView::setMobileStatus(const QString& status) {
 namespace {
 
 QString startupShortcutPath() {
+#ifdef Q_OS_WIN
 	return QDir(QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation))
 	    .filePath("Startup/mGBA Willow.lnk");
+#else
+	return QDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation))
+	    .filePath("autostart/mgba-willow.desktop");
+#endif
 }
+
+// The script that adds or removes the sign-in launch on this platform.
+#ifdef Q_OS_WIN
+const char* const kStartupScript = "install-startup.ps1";
+#elif defined(Q_OS_LINUX)
+const char* const kStartupScript = "install-startup.sh";
+#else
+const char* const kStartupScript = nullptr;
+#endif
 
 // Willow's launcher scripts sit beside the MCP folder that Launch mGBA.cmd points Willow at.
 QString willowToolsScript(const QString& name) {
@@ -643,7 +657,6 @@ QWidget* SettingsView::createWillowPage() {
 	                              autoPlay));
 	layout->addWidget(autoPlay);
 
-#ifdef Q_OS_WIN
 	auto* mobile = new QGroupBox(tr("iPhone"), page);
 	auto* mobileForm = new QFormLayout(mobile);
 	m_mobileStatus = new QLabel(tr("Off."), mobile);
@@ -656,17 +669,22 @@ QWidget* SettingsView::createWillowPage() {
 	pairRow->addWidget(pair);
 	pairRow->addStretch(1);
 	mobileForm->addRow(QString(), pairRow);
+#ifdef Q_OS_WIN
 	m_startAtSignIn = new QCheckBox(tr("Open Willow minimized when you sign in to Windows"), mobile);
+	const QString launcherName = QStringLiteral("Launch mGBA.cmd");
+#else
+	m_startAtSignIn = new QCheckBox(tr("Open Willow minimized when you sign in"), mobile);
+	const QString launcherName = QStringLiteral("Launch mGBA.sh");
+#endif
 	mobileForm->addRow(m_startAtSignIn);
 	QLabel* signInNote = makeNote(
 	    tr("Keeps the iPhone link available whenever this PC is on. Sign-in launches use the last build."), mobile);
 	mobileForm->addRow(signInNote);
-	if (willowToolsScript("install-startup.ps1").isEmpty()) {
+	if (!kStartupScript || willowToolsScript(kStartupScript).isEmpty()) {
 		m_startAtSignIn->setEnabled(false);
-		signInNote->setText(tr("Open Willow using Launch mGBA.cmd to change this."));
+		signInNote->setText(tr("Open Willow using %1 to change this.").arg(launcherName));
 	}
 	layout->addWidget(mobile);
-#endif
 
 	layout->addStretch(1);
 	return page;
@@ -768,20 +786,28 @@ void SettingsView::applyStartAtSignIn() {
 	if (!m_startAtSignIn || m_startAtSignIn->isChecked() == m_loadedStartAtSignIn) {
 		return;
 	}
-	const QString script = willowToolsScript("install-startup.ps1");
+	const QString script = kStartupScript ? willowToolsScript(kStartupScript) : QString();
 	if (script.isEmpty()) {
 		return;
-	}
-	QStringList arguments{ "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", QDir::toNativeSeparators(script) };
-	if (!m_startAtSignIn->isChecked()) {
-		arguments << "-Remove";
 	}
 	QProcess process;
 	process.setStandardOutputFile(QProcess::nullDevice());
 	process.setStandardErrorFile(QProcess::nullDevice());
 	QApplication::setOverrideCursor(Qt::WaitCursor);
+#ifdef Q_OS_WIN
+	QStringList arguments{ "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", QDir::toNativeSeparators(script) };
+	if (!m_startAtSignIn->isChecked()) {
+		arguments << "-Remove";
+	}
 	process.start(QDir(qEnvironmentVariable("SystemRoot")).filePath("System32/WindowsPowerShell/v1.0/powershell.exe"),
 	              arguments);
+#else
+	QStringList arguments{ script };
+	if (!m_startAtSignIn->isChecked()) {
+		arguments << "--remove";
+	}
+	process.start(QStringLiteral("/bin/sh"), arguments);
+#endif
 	process.waitForFinished(20000);
 	QApplication::restoreOverrideCursor();
 	m_loadedStartAtSignIn = QFileInfo::exists(startupShortcutPath());

@@ -105,6 +105,10 @@ void MobilePairing::open() {
 
 void MobilePairing::enableTray() {
 #ifndef QT_NO_SYSTEMTRAYICON
+	// Some Linux desktops (for example GNOME without an extension) have no tray.
+	if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+		return;
+	}
 	auto* menu = new QMenu(this);
 	m_trayStatus = menu->addAction(QString());
 	m_trayStatus->setEnabled(false);

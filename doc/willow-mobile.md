@@ -1,6 +1,6 @@
 # Willow Mobile
 
-Use the iPhone as a touch controller and game screen for mGBA running on Windows.
+Use the iPhone as a touch controller and game screen for mGBA running on Windows or Linux.
 The iPhone opens an HTTPS link such as
 `https://desktop.example.ts.net:10000`. Tailscale issues and renews the
 certificate, so there is nothing to install or trust on the phone. The game and
@@ -8,9 +8,11 @@ its saves stay on the PC. Audio plays on the PC.
 
 ## Pair an iPhone
 
-1. Connect the Windows Tailscale app on the PC. Pairing on Windows also needs
-   Node.js 20 or newer.
-2. Double-click **Launch mGBA.cmd** as usual. Willow starts serving the phone
+1. Connect the Tailscale app on the PC. Pairing also needs Node.js 20 or newer.
+   On Linux, let your user run Tailscale Serve and Funnel once with
+   `sudo tailscale set --operator=$USER`.
+2. Double-click **Launch mGBA.cmd** (Windows) or the **mGBA Willow** desktop
+   icon (Linux, added by `./"Launch mGBA.sh" --install-desktop`) as usual. Willow starts serving the phone
    link in the background a few seconds after it opens. Click **Pair iPhone**
    in the game library or choose **Tools → Pair iPhone** during gameplay to
    see the QR code.
@@ -18,7 +20,9 @@ its saves stay on the PC. Audio plays on the PC.
    Run `"Launch mGBA.cmd" --install-startup` to add or update **mGBA Willow**
    in Windows Startup apps. Willow opens minimized when you sign in and uses
    the last build. The next normal launch still rebuilds changed sources.
-   `"Launch mGBA.cmd" --remove-startup` removes the startup entry.
+   `"Launch mGBA.cmd" --remove-startup` removes the startup entry. On Linux,
+   `./"Launch mGBA.sh" --install-startup` and `--remove-startup` do the same
+   through `~/.config/autostart`.
 
    The **mGBA Willow** system tray icon turns green and shows a notification
    when Willow Mobile is ready. Hover over the icon to check the server

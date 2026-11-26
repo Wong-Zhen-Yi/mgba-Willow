@@ -151,9 +151,7 @@ Window::Window(CoreManager* manager, ConfigController* config, int playerId, QWi
 	if (m_playerId == 0) {
 		// Serve Willow Mobile from startup so the phone can pair without opening the dialog first.
 		m_mobilePairing = new MobilePairing(this);
-#ifdef Q_OS_WIN
 		m_mobilePairing->enableTray();
-#endif
 		connect(this, &Window::shutdown, m_mobilePairing, &MobilePairing::stop);
 		QTimer::singleShot(2000, m_mobilePairing, &MobilePairing::start);
 	}
@@ -1849,9 +1847,7 @@ void Window::setupMenu(QMenuBar* menubar) {
 #endif
 
 	m_actions.addMenu(tr("&Tools"), "tools");
-#ifdef Q_OS_WIN
 	m_actions.addAction(tr("Pair iPhone…"), "pairMobile", this, &Window::showMobilePairing, "tools");
-#endif
 	m_actions.addAction(tr("View &logs..."), "viewLogs", static_cast<QWidget*>(m_logView), &QWidget::show, "tools");
 
 	m_actions.addAction(tr("Game &overrides..."), "overrideWindow", [this]() {

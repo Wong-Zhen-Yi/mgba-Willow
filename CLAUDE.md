@@ -28,6 +28,22 @@ The notes below add Claude-specific, Windows-specific details to AGENTS.md.
   `Launch mGBA.cmd`. That file uses CRLF line endings, so keep them.
   Python's `read_text()` silently turns them into LF.
 
+## Linux build loop
+
+- `Launch mGBA.sh` → `tools/launch-linux.sh` installs the apt build packages
+  once, hashes `src/`, `include/` and `res/`, rebuilds `build-auto-linux/`
+  (shared libmgba, Qt 6) on change, runs `npm ci` in `tools/mcp` if needed,
+  then starts `qt/mgba-qt` detached with the same `WILLOW_*` variables.
+  Logs: `build-auto-linux/launcher.log` and `build-auto-linux/mgba.log`.
+- `--install-desktop` writes `~/Desktop/mGBA Willow.desktop` and
+  `~/.local/share/applications/mgba-willow.desktop` with absolute paths and
+  marks them trusted for XFCE/GNOME; rerun it if the checkout moves.
+- Linux does not lock a running binary, so rebuilding while mGBA runs is safe;
+  restart mGBA to pick up the new build.
+- The bridge uses a Unix socket in `$TMPDIR` and descriptors in
+  `~/.local/share/mgba-willow/ai/sessions`. Tailscale Serve/Funnel needs
+  `tailscale set --operator=$USER`.
+
 ## MCP server (`tools/mcp/`)
 
 - `npm test` runs every `test/*.test.mjs` with `node:test`. Run it after any

@@ -127,14 +127,12 @@ int main(int argc, char** argv) {
 	makeFile(folder + "/archive.zip");
 
 	GameLibrary library;
-#ifdef Q_OS_WIN
 	bool pairingRequested = false;
 	QObject::connect(&library, &GameLibrary::mobilePairingRequested, [&]() { pairingRequested = true; });
 	auto* pairMobile = library.findChild<QPushButton*>("pairMobile");
 	CHECK(pairMobile);
 	pairMobile->click();
 	CHECK(pairingRequested);
-#endif
 	library.resize(1060, 700);
 	library.show();
 	auto* cards = library.findChild<QListWidget*>("gameCards");

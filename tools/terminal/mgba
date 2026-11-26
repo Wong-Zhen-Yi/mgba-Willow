@@ -1,0 +1,4 @@
+#!/bin/sh
+# Terminal command: open Willow, resolving ROM paths from the caller's directory.
+tools_dir=$(cd -- "$(dirname -- "$(readlink -f -- "$0")")/.." && pwd)
+exec /bin/bash "$tools_dir/launch-linux.sh" --caller-directory -- "$@"

@@ -42,6 +42,7 @@ echo After opening a ROM, multiple agents can connect; button actions run one at
 echo Connected agents can update the Objective box with the set_objective MCP tool.
 echo After an update, restart the MCP server so agents discover the latest tools.
 echo If mGBA is already running, save and close it before rebuilding changed sources.
+echo On Ubuntu or other Linux desktops, use "Launch mGBA.sh" instead; run it with --install-desktop for a double-click icon.
 echo.
 if exist "%~dp0POKEMON_EMERALD_OBJECTIVES.md" (
     echo Pokemon Emerald source of truth: "%~dp0POKEMON_EMERALD_OBJECTIVES.md"

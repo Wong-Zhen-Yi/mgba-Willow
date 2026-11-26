@@ -186,11 +186,9 @@ GameLibrary::GameLibrary(QWidget* parent)
 	nav->addWidget(library);
 	auto* open = makeButton(tr("Open ROM…"), "openROM", sidebar);
 	nav->addWidget(open);
-#ifdef Q_OS_WIN
 	auto* pairMobile = makeButton(tr("Pair iPhone…"), "pairMobile", sidebar);
 	nav->addWidget(pairMobile);
 	connect(pairMobile, &QPushButton::clicked, this, &GameLibrary::mobilePairingRequested);
-#endif
 	nav->addStretch();
 	auto* settings = makeButton(tr("Settings"), "settings", sidebar);
 	nav->addWidget(settings);

@@ -27,7 +27,7 @@ files are skipped. Other supported formats can still use **Open ROM**. Save your
 catalog remains available under **File → Classic library** in enabled builds.
 Launching with a ROM argument still opens that game directly.
 
-**Launch mGBA.cmd** builds and opens this checkout's MCP-enabled emulator.
+**Launch mGBA.cmd** (Windows) or the **mGBA Willow** desktop icon (Linux) builds and opens this checkout's MCP-enabled emulator.
 Open a game, then connect from Codex to play through the MCP tools. To let Codex
 play by itself, click **Auto Play** in the status bar (GPT-6.1 Terra on medium by
 default, or GPT-6 Luna on extra high from **AI → Auto Play Model** or
@@ -36,7 +36,7 @@ the Pi agent harness. See [Auto Play](tools/mcp/README.md#auto-play).
 
 **Settings** is one scrolling page. Willow's own options come first: the ROM
 folder, the Auto Play model, and iPhone pairing, including opening Willow at
-Windows sign-in. The emulator's sections follow. Click a section in the sidebar
+sign-in (Windows or Linux). The emulator's sections follow. Click a section in the sidebar
 to jump to it, or type in **Search settings** (Ctrl+F) to show only the
 sections that mention a word.
 
@@ -188,6 +188,18 @@ To launch Willow from any Windows terminal, register the command once from Power
 ```
 
 Open a new terminal window and run `mgba` to open the game library or `mgba ".\My Game.gba"` to open a ROM. The command uses the same automatic build and accepts mGBA's usual arguments. If you move the checkout, register the command again from the new location.
+
+### Linux launcher (Ubuntu)
+
+Run this once from the checkout folder to add a double-click **mGBA Willow** icon to the desktop and the applications menu:
+
+```sh
+./"Launch mGBA.sh" --install-desktop
+```
+
+Double-click the icon (or run `./"Launch mGBA.sh"`). The first launch installs the Qt 6, SDL2, FFmpeg and compiler packages with `apt` (it asks for your password if needed), builds this checkout into `build-auto-linux`, installs the MCP server's Node packages, and opens mGBA. Later launches rebuild only when `src/`, `include/` or `res/` change. The setup log is `build-auto-linux/launcher.log` and the app's output is `build-auto-linux/mgba.log`. Tested on Ubuntu 26.04; Ubuntu 24.04 or newer and Debian 13 are expected to work.
+
+Other options: `--install-terminal-command` links an `mgba` command into `~/.local/bin`, `--install-startup` opens Willow minimized at sign-in through `~/.config/autostart`, and `--remove-startup` undoes it. iPhone pairing needs Node.js 20 or newer and Tailscale; allow your user to run Tailscale Serve and Funnel once with `sudo tailscale set --operator=$USER`.
 
 #### Docker building
 
