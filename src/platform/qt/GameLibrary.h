@@ -13,13 +13,16 @@
 
 #include <memory>
 
-class QDirIterator;
 class QLabel;
 class QLineEdit;
 class QNetworkAccessManager;
 class QListWidget;
 class QPushButton;
 class QStackedWidget;
+
+namespace Willow::Library {
+class Scanner;
+}
 
 namespace QGBA {
 
@@ -46,7 +49,7 @@ public:
 
 	QList<Entry> entries() const;
 	QImage artwork(const QString& id, int width) const;
-	bool scanning() const { return bool(m_iterator); }
+	bool scanning() const { return bool(m_scanner); }
 	// Emits gameSelected for a listed game that still exists on disk.
 	bool launch(const QString& id);
 
@@ -72,7 +75,7 @@ private:
 
 	QString m_folder;
 	QTimer m_scanTimer;
-	std::unique_ptr<QDirIterator> m_iterator;
+	std::unique_ptr<Willow::Library::Scanner> m_scanner;
 	QListWidget* m_games;
 	QLineEdit* m_search;
 	QLabel* m_count;

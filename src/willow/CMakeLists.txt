@@ -5,6 +5,7 @@ set(WILLOW_SOURCES
 	Bridge.cpp
 	EmeraldGameState.cpp
 	EmeraldMusic.cpp
+	Library.cpp
 	MobileVideo.cpp)
 
 add_library(willow STATIC ${WILLOW_SOURCES})
@@ -19,7 +20,7 @@ target_compile_definitions(willow PUBLIC ${FEATURE_DEFINES} ${FUNCTION_DEFINES} 
 
 if(BUILD_SUITE OR BUILD_AI_TESTS)
 	enable_testing()
-	foreach(TEST_NAME aigameplay bridge emeraldgamestate emeraldmusic mobilevideo)
+	foreach(TEST_NAME aigameplay bridge emeraldgamestate emeraldmusic library mobilevideo)
 		add_executable(test-willow-${TEST_NAME} test/${TEST_NAME}.cpp)
 		target_link_libraries(test-willow-${TEST_NAME} willow)
 		add_test(willow-${TEST_NAME} test-willow-${TEST_NAME})

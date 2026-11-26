@@ -7,14 +7,9 @@
 
 #include <QCryptographicHash>
 #include <QDir>
-#include <QDirIterator>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
-#include <QHash>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -23,14 +18,13 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
-#include <QRegularExpression>
 #include <QSaveFile>
 #include <QStackedWidget>
 #include <QStandardPaths>
 #include <QStyledItemDelegate>
 #include <QVBoxLayout>
 
-#include <mgba-util/vfs.h>
+#include "willow/Library.h"
 
 #include "moc_GameLibrary.cpp"
 
@@ -40,158 +34,18 @@ namespace {
 
 enum GameRole { PathRole = Qt::UserRole, GamePlatformRole, LocationRole, ArtworkRole };
 
-QString artworkKey(QString title) {
-	// Ignore release metadata, but retain unknown qualifiers (including ROM hack names).
-	static const QRegularExpression metadata(
-	    QStringLiteral("\\((?:(?:USA|Europe|Japan|World|Australia|Canada|France|Germany|Italy|Spain|Korea|China|"
-		               "Brazil|Netherlands|Sweden|U|E|J|[A-Z][a-z])(?:, ?(?:[A-Za-z]+))*|"
-		               "Rev [0-9.]+|V[0-9.]+|SGB Enhanced|CGB\\+SGB Enhanced|GB Compatible)\\)"),
-	    QRegularExpression::CaseInsensitiveOption);
-	title.remove(metadata);
-	title.remove(QStringLiteral("[!]"));
-	title.remove(QRegularExpression(QStringLiteral("\\bVersion\\b"), QRegularExpression::CaseInsensitiveOption));
-	title.remove(QRegularExpression(QStringLiteral("\\band\\b"), QRegularExpression::CaseInsensitiveOption));
-	title = title.normalized(QString::NormalizationForm_D).toLower();
-	title.remove(QRegularExpression(QStringLiteral("[^a-z0-9]")));
-	if (title == QStringLiteral("pokemonyellow")) {
-		title = QStringLiteral("pokemonyellowspecialpikachuedition");
-	}
-	return title;
-}
-
-QString artworkUrl(const QString& title, const QString& platform) {
-	static const QHash<QString, QStringList> catalog = []() {
+// Built on first use from the bundled title index.
+const Willow::Library::ArtworkCatalog& artworkCatalog() {
+	static const Willow::Library::ArtworkCatalog catalog([]() {
 		QFile file(QStringLiteral(":/library-titles.json"));
-		if (!file.open(QIODevice::ReadOnly)) {
-			return QHash<QString, QStringList>();
-		}
-		QJsonObject systems = QJsonDocument::fromJson(file.readAll()).object();
-		QHash<QString, QStringList> names;
-		for (auto system = systems.constBegin(); system != systems.constEnd(); ++system) {
-			for (const QJsonValue& entry : system.value().toArray()) {
-				QString name = entry.toString();
-				names[system.key() + ":" + artworkKey(name)].append(name);
-			}
-		}
-		return names;
-	}();
-	QString matchedPlatform = platform;
-	QString key = matchedPlatform + ":" + artworkKey(title);
-	// Some dual-mode Game Boy Color releases are distributed with a .gb extension.
-	if (!catalog.contains(key) && (platform == "GB" || platform == "GBC")) {
-		matchedPlatform = platform == "GB" ? "GBC" : "GB";
-		key = matchedPlatform + ":" + artworkKey(title);
-	}
-	QString best;
-	int bestScore = -1;
-	QStringList regions;
-	const QRegularExpression regionTag(QStringLiteral("\\b(USA|Europe|Japan|World|Australia|Canada|France|Germany|"
-	                                                  "Italy|Spain|Korea|China|Brazil|Netherlands|Sweden)\\b"));
-	auto tags = QRegularExpression(QStringLiteral("\\([^)]*\\)")).globalMatch(title);
-	while (tags.hasNext()) {
-		auto matches = regionTag.globalMatch(tags.next().captured());
-		while (matches.hasNext()) {
-			regions.append(matches.next().captured());
-		}
-	}
-	for (const QString& name : catalog.value(key)) {
-		if (!regions.isEmpty()) {
-			bool sameRegion = false;
-			for (const QString& region : regions) {
-				sameRegion |= name.contains(region);
-			}
-			if (!sameRegion) {
-				continue;
-			}
-		}
-		int score = name.contains("(USA") ? 3 : name.contains("(World") ? 2 : name.contains("(Europe") ? 1 : 0;
-		if (!name.contains("(Rev ")) {
-			++score;
-		}
-		// Preserve a supplied region/revision instead of borrowing a different release's splash.
-		if (name.compare(title, Qt::CaseInsensitive) == 0) {
-			score += 100;
-		}
-		if (score > bestScore) {
-			best = name;
-			bestScore = score;
-		}
-	}
-	if (best.isEmpty()) {
-		return { };
-	}
-	QString system = matchedPlatform == "GBA" ? "Nintendo_-_Game_Boy_Advance" :
-	    matchedPlatform == "GBC"              ? "Nintendo_-_Game_Boy_Color" :
-	                                            "Nintendo_-_Game_Boy";
-	return QStringLiteral("https://raw.githubusercontent.com/libretro-thumbnails/%1/master/Named_Titles/%2.png")
-	    .arg(system, QString::fromLatin1(QUrl::toPercentEncoding(best)));
+		return file.open(QIODevice::ReadOnly) ? file.readAll().toStdString() : std::string();
+	}());
+	return catalog;
 }
 
 QString artworkCachePath(const QString& url) {
 	return QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + QStringLiteral("/library-artwork/") +
 	    QString::fromLatin1(QCryptographicHash::hash(url.toUtf8(), QCryptographicHash::Sha256).toHex()) + ".png";
-}
-
-QString romPlatform(const QString& suffix) {
-	if (suffix == QStringLiteral("gba") || suffix == QStringLiteral("agb")) {
-		return QStringLiteral("GBA");
-	}
-	if (suffix == QStringLiteral("gbc")) {
-		return QStringLiteral("GBC");
-	}
-	if (suffix == QStringLiteral("gb") || suffix == QStringLiteral("sgb")) {
-		return QStringLiteral("GB");
-	}
-	return { };
-}
-
-bool isMetadata(const QString& path) {
-	for (const QString& part : QDir::fromNativeSeparators(path).split('/')) {
-		if (part == QStringLiteral("__MACOSX") || part == QStringLiteral(".DS_Store") || part.startsWith("._")) {
-			return true;
-		}
-	}
-	return false;
-}
-
-QString archivePlatform(const QFileInfo& file, QString* romName, QString* platform) {
-	QString format;
-	QString suffix = file.suffix().toLower();
-#if defined(USE_LIBZIP) || defined(USE_MINIZIP)
-	if (suffix == QStringLiteral("zip")) {
-		format = QStringLiteral("ZIP");
-	}
-#endif
-#ifdef USE_LZMA
-	if (suffix == QStringLiteral("7z")) {
-		format = QStringLiteral("7Z");
-	}
-#endif
-	if (format.isEmpty()) {
-		return { };
-	}
-	// Inspect names only: don't extract/decompress ROMs while browsing the library.
-	VDir* archive = VDirOpenArchive(file.absoluteFilePath().toUtf8().constData());
-	if (!archive) {
-		return { };
-	}
-	bool hasRom = false;
-	while (VDirEntry* entry = archive->listNext(archive)) {
-		QString name = QString::fromUtf8(entry->name(entry));
-		if (entry->type(entry) == VFS_DIRECTORY || isMetadata(name)) {
-			continue;
-		}
-		QString extension = QFileInfo(name).suffix().toLower();
-		if (!romPlatform(extension).isEmpty() || extension == QStringLiteral("rom") ||
-		    extension == QStringLiteral("bin") || extension == QStringLiteral("mb")) {
-			hasRom = true;
-			*romName = QFileInfo(name).completeBaseName();
-			*platform = romPlatform(extension);
-			break;
-		}
-	}
-	archive->close(archive);
-	return hasRom ? format : QString();
 }
 
 // Paint cards rather than creating a widget and loading artwork for every ROM.
@@ -447,49 +301,38 @@ void GameLibrary::setFolder(const QString& folder) {
 
 void GameLibrary::refresh() {
 	m_scanTimer.stop();
-	m_iterator.reset();
+	m_scanner.reset();
 	m_games->clear();
 	m_artworkQueue.clear();
 	m_requestedArtwork.clear();
 	QFileInfo directory(m_folder);
 	if (!m_folder.isEmpty() && directory.isDir() && directory.isReadable()) {
-		// Do not follow directory symlinks: avoid loops and scanning outside the chosen tree.
-		m_iterator = std::make_unique<QDirIterator>(m_folder, QDir::Files | QDir::Readable | QDir::NoSymLinks,
-		                                            QDirIterator::Subdirectories);
+		// The scanner skips links, so it never loops or leaves the chosen tree.
+		m_scanner = std::make_unique<Willow::Library::Scanner>(m_folder.toStdString());
 		m_scanTimer.start();
 	}
 	m_folderLabel->setText(m_folder.isEmpty() ? tr("Your folder choice is remembered on this computer.") :
 	                                            tr("ROM folder: %1").arg(QDir::toNativeSeparators(m_folder)));
 	updateStatus();
-	if (!m_iterator) {
+	if (!m_scanner) {
 		emit scanFinished();
 	}
 }
 
 void GameLibrary::scanBatch() {
 	// Yield between batches so search, folder changes and window events remain responsive.
-	for (int i = 0; i < 128 && m_iterator->hasNext(); ++i) {
-		m_iterator->next();
-		QFileInfo file = m_iterator->fileInfo();
-		QString relativePath = QDir(m_folder).relativeFilePath(file.absoluteFilePath());
-		if (isMetadata(relativePath)) {
+	std::string path, relativePath;
+	for (int i = 0; i < 128 && m_scanner->next(&path, &relativePath); ++i) {
+		Willow::Library::Game game;
+		if (!Willow::Library::classify(path, relativePath, &game)) {
 			continue;
 		}
-		QString platform = romPlatform(file.suffix().toLower());
-		QString artworkPlatform = platform;
-		QString romName = file.completeBaseName();
-		bool compressed = platform.isEmpty();
-		if (compressed) {
-			platform = archivePlatform(file, &romName, &artworkPlatform);
-		}
-		if (platform.isEmpty()) {
-			continue;
-		}
-		auto* item = new QListWidgetItem(file.completeBaseName(), m_games);
-		item->setData(PathRole, file.absoluteFilePath());
-		item->setData(GamePlatformRole, platform);
-		item->setData(LocationRole, relativePath);
-		QString url = artworkUrl(romName, artworkPlatform);
+		const QString absolutePath = QString::fromStdString(game.path);
+		auto* item = new QListWidgetItem(QString::fromStdString(game.title), m_games);
+		item->setData(PathRole, absolutePath);
+		item->setData(GamePlatformRole, QString::fromStdString(game.platform));
+		item->setData(LocationRole, QString::fromStdString(game.relativePath));
+		QString url = QString::fromStdString(artworkCatalog().url(game.romName, game.artworkPlatform));
 		item->setData(ArtworkRole, url);
 		if (!url.isEmpty()) {
 			QPixmap cached(artworkCachePath(url));
@@ -500,20 +343,20 @@ void GameLibrary::scanBatch() {
 				m_artworkQueue.enqueue(url);
 			}
 		}
-		item->setToolTip(compressed ? tr("%1\nCompressed ROM: plays directly without extracting files.\n"
-		                                 "For multi-game archives, Play opens the first compatible ROM.")
-		                                  .arg(file.absoluteFilePath()) :
-		                              file.absoluteFilePath());
+		item->setToolTip(game.compressed ? tr("%1\nCompressed ROM: plays directly without extracting files.\n"
+		                                      "For multi-game archives, Play opens the first compatible ROM.")
+		                                       .arg(absolutePath) :
+		                                   absolutePath);
 		item->setHidden(!item->text().contains(m_search->text().trimmed(), Qt::CaseInsensitive));
-		if (compressed) {
+		if (game.compressed) {
 			// Opening archives can take longer than ordinary file discovery. Yield after each one.
 			break;
 		}
 	}
 	loadArtwork();
-	if (!m_iterator->hasNext()) {
+	if (m_scanner->done()) {
 		m_scanTimer.stop();
-		m_iterator.reset();
+		m_scanner.reset();
 		m_games->sortItems(Qt::AscendingOrder);
 		updateStatus();
 		emit scanFinished();
@@ -569,16 +412,16 @@ void GameLibrary::updateStatus() {
 		visible += !m_games->item(i)->isHidden();
 	}
 	m_count->setText(
-	    m_iterator ?
+	    m_scanner ?
 	        tr("Finding games… %1 found").arg(m_games->count()) :
 	        tr("%1 of %2 games · Game Boy / Game Boy Color / Game Boy Advance").arg(visible).arg(m_games->count()));
 	m_pages->setCurrentIndex(visible ? 0 : 1);
-	m_emptyChoose->setVisible(m_folder.isEmpty() || (!m_iterator && !m_games->count()));
+	m_emptyChoose->setVisible(m_folder.isEmpty() || (!m_scanner && !m_games->count()));
 	if (m_folder.isEmpty()) {
 		m_emptyTitle->setText(tr("Your next adventure starts here"));
 		m_emptyText->setText(tr("Choose the folder containing your ROMs. We’ll remember it for next time.\n"
 		                        "Your files stay exactly where they are."));
-	} else if (m_iterator) {
+	} else if (m_scanner) {
 		m_emptyTitle->setText(tr("Finding your games…"));
 		m_emptyText->setText(tr("Looking through your ROM folder and its subfolders."));
 	} else if (!QFileInfo(m_folder).isDir() || !QFileInfo(m_folder).isReadable()) {
@@ -619,8 +462,7 @@ void GameLibrary::launchSelected() {
 }
 
 QString GameLibrary::gameId(const QString& path) {
-	const auto canonical = QDir::cleanPath(QFileInfo(path).absoluteFilePath());
-	return QString::fromLatin1(QCryptographicHash::hash(canonical.toUtf8(), QCryptographicHash::Sha1).toHex().left(20));
+	return QString::fromStdString(Willow::Library::gameId(path.toStdString()));
 }
 
 QList<GameLibrary::Entry> GameLibrary::entries() const {

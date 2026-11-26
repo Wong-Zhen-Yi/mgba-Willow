@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is the mGBA emulator with Willow's local MCP controls and Emerald-specific adapters. Emulator code lives in `src/` (`arm/`, `gb/`, `gba/`, `core/`, `util/`); public headers are in `include/mgba/`. Frontends live under `src/platform/`, especially `qt/` and `sdl/`. Willow logic that any frontend needs (the MCP bridge protocol checks, memory reads and checkpoints, AI gameplay, Emerald state and music, phone video) lives in `src/willow/` as libwillow, which must not depend on Qt; it uses the standard library and the vendored `src/third-party/nlohmann/json.hpp`. The Node.js MCP server, setup scripts, and tests are in `tools/mcp/`. Assets are in `res/`, documentation in `doc/`, and emulation regression fixtures in `cinema/`. Keep vendored dependencies in `src/third-party/` separate from project changes.
+This is the mGBA emulator with Willow's local MCP controls and Emerald-specific adapters. Emulator code lives in `src/` (`arm/`, `gb/`, `gba/`, `core/`, `util/`); public headers are in `include/mgba/`. Frontends live under `src/platform/`, especially `qt/` and `sdl/`. Willow logic that any frontend needs (the MCP bridge protocol checks, memory reads and checkpoints, ROM library scanning and artwork matching, AI gameplay, Emerald state and music, phone video) lives in `src/willow/` as libwillow, which must not depend on Qt; it uses the standard library and the vendored `src/third-party/nlohmann/json.hpp`. The Node.js MCP server, setup scripts, and tests are in `tools/mcp/`. Assets are in `res/`, documentation in `doc/`, and emulation regression fixtures in `cinema/`. Keep vendored dependencies in `src/third-party/` separate from project changes.
 
 ## Build, Test, and Development Commands
 

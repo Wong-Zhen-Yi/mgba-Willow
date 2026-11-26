@@ -20,3 +20,6 @@ avoid treating a hack or unrelated edition as the original game. If there is no
 match or a download fails, the cartridge remains a placeholder. Refresh retries
 failed downloads. Cached images work offline. ROMs are never executed to obtain
 artwork, and browsing does not change saves or extract archives to disk.
+
+Scanning and matching live in `src/willow/Library.cpp`; `test-willow-library`
+covers them.
