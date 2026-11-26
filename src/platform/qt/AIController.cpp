@@ -6,7 +6,6 @@
 #include "GameLibrary.h"
 #include "willow/MobileVideo.h"
 #include "MultiplayerController.h"
-#include "VFileDevice.h"
 #include "Window.h"
 
 #include <QAction>
@@ -25,30 +24,18 @@
 #include <QMenuBar>
 #include <QSaveFile>
 #include <QScopedValueRollback>
-#include <QStandardPaths>
 #include <QStatusBar>
 #include <QUuid>
-#include <QRegularExpression>
-#include <cmath>
-#include <mgba/core/serialize.h>
 
 using namespace QGBA;
+namespace Bridge = Willow::Bridge;
 
 namespace {
 QString dataDirectory() {
-	QString root = qEnvironmentVariable("LOCALAPPDATA");
-	if (root.isEmpty()) root = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-	return root + "/mgba-willow/ai";
+	return QString::fromStdString(Bridge::dataDirectory());
 }
 bool integer(const QJsonValue& v, double min, double max) {
-	return v.isDouble() && std::isfinite(v.toDouble()) && v.toDouble() == std::floor(v.toDouble()) && v.toDouble() >= min && v.toDouble() <= max;
-}
-bool readable(const mCoreMemoryBlock& b) {
-	// Only ordinary ROM/RAM backing stores: no MMIO, BIOS, virtual registers,
-	// cartridge control, or EEPROM interfaces.
-	const QString name = QString::fromUtf8(b.internalName);
-	const QStringList safe{"cart0", "cart1", "cart2", "wram", "iwram", "vram", "palette", "oam", "hram"};
-	return (b.flags & mCORE_MEMORY_READ) && !(b.flags & mCORE_MEMORY_VIRTUAL) && safe.contains(name);
+	return Bridge::isInteger(toWillowJson(v), min, max);
 }
 }
 
@@ -67,7 +54,7 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 		m_window->config()->write();
 	}, this);
 	int initialSpeed = window->config()->getOption("aiSpeed", 4).toInt();
-	if (initialSpeed != 1 && initialSpeed != 2 && initialSpeed != 4 && initialSpeed != 8 && initialSpeed != -1) initialSpeed = 4;
+	if (!Bridge::isAISpeed(initialSpeed)) initialSpeed = 4;
 	window->config()->setOption("aiSpeed", initialSpeed);
 	m_status = new QLabel(tr("MCP: disabled"), window);
 	window->statusBar()->addPermanentWidget(m_status);
@@ -148,11 +135,12 @@ void AIController::setEnabled(bool enabled) {
 		m_status->setText(tr("MCP: disabled"));
 	} else {
 		if (m_server.isListening()) return;
-		const QString pipe = "mgba-willow-ai-" + m_id;
+		const QString pipe = QString::fromStdString(Bridge::pipeName(m_id.toStdString()));
 		bool ok = m_server.listen(pipe) && QDir().mkpath(dataDirectory() + "/sessions");
 		if (ok) {
 			QSaveFile descriptor(m_descriptor);
-			const QByteArray data = QJsonDocument(QJsonObject{{"session_id", m_id}, {"pipe", pipe}, {"pid", double(QCoreApplication::applicationPid())}, {"protocol", 1}}).toJson(QJsonDocument::Compact);
+			const auto session = Bridge::sessionDescriptor(m_id.toStdString(), QCoreApplication::applicationPid());
+			const QByteArray data = QJsonDocument(toQJson(session)).toJson(QJsonDocument::Compact);
 			ok = descriptor.open(QIODevice::WriteOnly) && descriptor.write(data) == data.size() && descriptor.commit();
 		}
 		if (!ok) {
@@ -316,7 +304,7 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 	}
 	if (method == "mobile_speed") {
 		const int speed = args.value("multiplier").toInt(-2);
-		if (speed != -1 && speed != 0 && speed != 1 && speed != 2 && speed != 4 && speed != 8) {
+		if (!Bridge::isMobileSpeed(speed)) {
 			fail(tr("Invalid mobile speed"));
 			return;
 		}
@@ -343,7 +331,7 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 		return;
 	}
 	if (method == "mobile_keys") {
-		if (!integer(args.value("keys"), 0, m_mobileCore->platform() == mPLATFORM_GBA ? 0x3FF : 0xFF)) {
+		if (!integer(args.value("keys"), 0, Bridge::keyMask(m_mobileCore->platform() == mPLATFORM_GBA))) {
 			fail(tr("Invalid mobile buttons"));
 			return;
 		}
@@ -436,10 +424,10 @@ void AIController::answerMobileFrame() {
 
 void AIController::receive(QLocalSocket* socket) {
 	// Bound messages before allocating or parsing them.
-	if (socket->bytesAvailable() > 65536) { socket->abort(); return; }
+	if (socket->bytesAvailable() > qint64(Bridge::MaxLineBytes)) { socket->abort(); return; }
 	while (socket->canReadLine()) {
 		QJsonParseError error;
-		auto document = QJsonDocument::fromJson(socket->readLine(65537), &error);
+		auto document = QJsonDocument::fromJson(socket->readLine(Bridge::MaxLineBytes + 1), &error);
 		if (error.error != QJsonParseError::NoError || !document.isObject()) {
 			reply(socket, {}, {}, tr("Invalid JSON request"));
 			continue;
@@ -448,35 +436,35 @@ void AIController::receive(QLocalSocket* socket) {
 	}
 }
 
+Bridge::Session AIController::sessionInfo() const {
+	Bridge::Session session;
+	session.id = m_id.toStdString();
+	session.clients = int(m_clients.size());
+	session.mcpEnabled = m_server.isListening();
+	session.objective = m_window->aiObjective().toStdString();
+	session.aiSpeed = m_window->config()->getOption("aiSpeed", 4).toInt();
+	if (auto core = m_window->controller()) {
+		session.hasGame = true;
+		session.title = core->title().toStdString();
+		session.gameId = m_gameId.toStdString();
+		session.gba = core->platform() == mPLATFORM_GBA;
+		session.started = core->hasStarted();
+		session.aiControl = core->aiControl();
+		session.frame = core->frameCounter();
+		session.paused = core->isPaused();
+		session.openGL = core->hardwareAccelerated();
+		session.humanKeys = core->humanKeys();
+		session.aiKeys = core->aiKeys();
+	}
+	return session;
+}
+
 QJsonObject AIController::session() const {
-	auto core = m_window->controller();
-	return { { "session_id", m_id },
-	         { "title", core ? core->title() : QString() },
-	         { "game_id", core ? m_gameId : QString() },
-	         { "platform", core ? (core->platform() == mPLATFORM_GBA ? "GBA" : "GB/GBC") : "none" },
-	         { "started", core && core->hasStarted() },
-	         { "ai_control", core && core->aiControl() },
-	         { "frame", core ? double(core->frameCounter()) : 0 },
-	         { "paused", core && core->isPaused() },
-	         { "renderer", core && core->hardwareAccelerated() ? "opengl" : "software" },
-	         { "connected", !m_clients.isEmpty() },
-	         { "connected_clients", int(m_clients.size()) },
-	         { "mcp_enabled", m_server.isListening() },
-	         { "objective", m_window->aiObjective() },
-	         { "ai_speed",
-		       m_window->config()->getOption("aiSpeed", 4).toInt() == -1 ?
-		           QJsonValue("maximum") :
-		           QJsonValue(m_window->config()->getOption("aiSpeed", 4).toInt()) },
-	         { "human_keys", core ? int(core->humanKeys()) : 0 },
-	         { "ai_keys", core ? int(core->aiKeys()) : 0 },
-	         { "effective_keys", core ? int(AIGameplay::mergeKeys(core->humanKeys(), core->aiKeys())) : 0 } };
+	return toQJson(Bridge::sessionJson(sessionInfo()));
 }
 
 QJsonObject AIController::mobileSession() const {
-	auto result = session();
-	if (result.value("platform") == QLatin1String("GBA") && result.value("title") == QLatin1String("POKEMON EMER"))
-		result.insert("title", tr("Pokémon Emerald"));
-	return result;
+	return toQJson(Bridge::mobileSessionJson(sessionInfo()));
 }
 
 QJsonObject AIController::observation(bool screenshot) {
@@ -507,14 +495,8 @@ QJsonObject AIController::observation(bool screenshot) {
 }
 
 QJsonArray AIController::completedSteps() const {
-	QJsonArray steps;
-	if (!m_core) return steps;
-	quint64 frame = m_start;
-	for (size_t i = 0; i < m_core->aiCompletedSteps() && i < size_t(m_stepFrames.size()); ++i) {
-		steps.append(QJsonObject{{"action_start_frame", double(frame)}, {"action_end_frame", double(frame + m_stepFrames[int(i)])}});
-		frame += m_stepFrames[int(i)];
-	}
-	return steps;
+	if (!m_core) return { };
+	return toQJsonValue(Bridge::completedSteps(m_start, m_stepFrames, m_core->aiCompletedSteps())).toArray();
 }
 
 void AIController::finishPending(bool cancelled, const QString& reason) {
@@ -536,16 +518,10 @@ void AIController::finishPending(bool cancelled, const QString& reason) {
 		if (cancelled) { stateActionResult.insert("reason", reason); stateActionResult.insert("completed", false); stateActionResult.insert("stop_frame", double(m_core->frameCounter())); }
 		result.insert("progress", stateActionResult);
 	}
-	else if (m_directionKeys && m_actionState.value("available").toBool()) {
-		const auto end = toQJson(m_core->aiGameState().state(false));
-		const auto startPlayer = m_actionState.value("player").toObject(), endPlayer = end.value("player").toObject();
-		const bool sameMap = end.value("map") == m_actionState.value("map");
-		const bool unchanged = end.value("available").toBool() && sameMap && startPlayer.value("x") == endPlayer.value("x") && startPlayer.value("y") == endPlayer.value("y");
-		const QString signature = QString::number(m_actionState.value("map").toObject().value("id").toInt()) + ":" +
-			QString::number(startPlayer.value("x").toInt()) + ":" + QString::number(startPlayer.value("y").toInt()) + ":" + QString::number(m_directionKeys);
-		int repeats = unchanged ? (m_lastStall.value(m_actionOwner) == signature ? m_stallCount.value(m_actionOwner) + 1 : 1) : 0;
-		m_lastStall[m_actionOwner] = signature; m_stallCount[m_actionOwner] = repeats;
-		result.insert("progress", QJsonObject{{"position_unchanged", unchanged}, {"repeated_movement_loop", repeats >= 3}, {"unchanged_attempts", repeats}, {"map_changed", !sameMap}});
+	else if (m_directionKeys) {
+		const auto progress = m_movement.progress(uintptr_t(m_actionOwner.data()), m_actionState,
+		                                          m_core->aiGameState().state(false), m_directionKeys);
+		if (!progress.is_null()) result.insert("progress", toQJson(progress));
 	}
 	const auto id = m_pending;
 	const auto owner = m_actionOwner;
@@ -558,7 +534,7 @@ void AIController::finishPending(bool cancelled, const QString& reason) {
 void AIController::disconnectClient(QLocalSocket* socket) {
 	if (!m_clients.remove(socket)) return;
 	if (m_actionOwner == socket) finishPending(true, tr("Action client disconnected"));
-	m_lastStall.remove(socket); m_stallCount.remove(socket);
+	m_movement.forget(uintptr_t(socket));
 	if (m_clients.isEmpty()) release(tr("ready; disconnected"));
 	else m_status->setText(tr("MCP: connected; %1 AI clients").arg(m_clients.size()));
 }
@@ -571,7 +547,7 @@ void AIController::release(const QString& reason) {
 	if (m_core) m_core->setAIControl(false);
 	m_core.reset();
 	m_clients.clear();
-	m_lastStall.clear(); m_stallCount.clear();
+	m_movement.clear();
 	m_actionOwner.clear();
 	m_toggle->setActive(false);
 	m_status->setText(tr("MCP: %1").arg(reason));
@@ -579,9 +555,10 @@ void AIController::release(const QString& reason) {
 
 void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 	const auto id = req.value("id");
-	QString method = req.value("method").toString();
-	auto args = req.value("args").toObject();
+	const QString method = req.value("method").toString();
+	const auto args = req.value("args").toObject();
 	auto fail = [&](const QString& message) { reply(socket, id, {}, message); };
+	auto failWith = [&](const std::string& message) { fail(QString::fromStdString(message)); };
 	if (!integer(id, 1, 9007199254740991.0)) { fail(tr("Invalid request id")); return; }
 	if (method.startsWith("mobile_")) {
 		if (m_server.isListening())
@@ -605,23 +582,24 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 	if (!m_clients.contains(socket) || !m_core || !m_core->hasStarted() || m_window->controller() != m_core || m_core->path() != m_gamePath) {
 		fail(tr("No controlled game; connect first")); return;
 	}
+	const std::string name = method.toStdString();
+	const Willow::Json arguments = toWillowJson(args);
+	std::string error;
 	if (method == "disconnect") {
 		const bool paused = m_core->isPaused();
 		disconnectClient(socket); reply(socket, id, {{"paused", paused}}); return;
 	}
 	if (method == "set_objective") {
-		const auto text = args.value("text");
-		if (!text.isString() || text.toString().size() > 512) {
+		if (!Bridge::isObjective(arguments.value("text", Willow::Json()))) {
 			fail(tr("Expected objective text of at most 512 characters"));
 			return;
 		}
-		m_window->setAIObjective(text.toString());
+		m_window->setAIObjective(args.value("text").toString());
 		reply(socket, id, { { "objective", m_window->aiObjective() } });
 		return;
 	}
 	if (method == "observe" || method == "get_game_state" || method == "get_local_map") {
-		if (args.contains("screenshot") && !args.value("screenshot").isBool()) { fail(tr("Expected boolean screenshot")); return; }
-		if (method == "get_local_map" && args.contains("radius") && !integer(args.value("radius"), 1, 16)) { fail(tr("Expected radius 1–16")); return; }
+		if (!Bridge::checkObserve(name, arguments, &error)) { failWith(error); return; }
 		CoreController::Interrupter guard(m_core);
 		auto result = observation(args.value("screenshot").toBool(method == "observe"));
 		if (method == "get_local_map") result.insert("local_map", toQJson(m_core->aiGameState().localMap(args.value("radius").toInt(4))));
@@ -631,9 +609,8 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		fail(tr("An action is already in progress; observe and retry after it completes")); return;
 	}
 	if (method == "set_speed") {
-		const auto value = args.value("multiplier");
-		int speed = value == QJsonValue("maximum") ? -1 : value.toInt(0);
-		if (value != QJsonValue("maximum") && (!integer(value, 1, 8) || (speed != 1 && speed != 2 && speed != 4 && speed != 8))) {
+		int speed = 0;
+		if (!Bridge::parseSpeed(arguments.value("multiplier", Willow::Json()), &speed)) {
 			fail(tr("Expected speed 1, 2, 4, 8, or maximum")); return;
 		}
 		m_window->config()->setOption("aiSpeed", speed);
@@ -641,152 +618,55 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		reply(socket, id, session()); return;
 	}
 	if (method == "move_to" || method == "wait_until") {
-		if ((args.contains("max_frames") && !integer(args.value("max_frames"), 1, 600)) ||
-			(args.contains("screenshot") && !args.value("screenshot").isBool())) { fail(tr("Expected 1–600 max_frames and boolean screenshot")); return; }
-		if (method == "move_to" && (!integer(args.value("x"), 0, 511) || !integer(args.value("y"), 0, 511))) { fail(tr("Expected map coordinates x/y 0–511")); return; }
-		if (method == "move_to" && args.contains("avoid_trainers") && !args.value("avoid_trainers").isBool()) {
-			fail(tr("Expected boolean avoid_trainers"));
-			return;
-		}
-		const QStringList conditions{"battle_menu_ready", "battle_move_ready", "battle_target_ready", "overworld_ready", "map_transition_complete", "dialogue"};
-		if (method == "wait_until" && (!conditions.contains(args.value("condition").toString()) ||
-			(args.contains("stable_frames") && !integer(args.value("stable_frames"), 1, 60)))) { fail(tr("Unsupported condition or stable_frames (1–60)")); return; }
+		if (!Bridge::checkStateAction(name, arguments, &error)) { failWith(error); return; }
 		CoreController::Interrupter guard(m_core);
 		if (!m_core->aiGameState().supported()) { fail(tr("Unsupported ROM; use the raw tools")); return; }
 		if (!m_core->startAIStateAction(method, args)) { fail(tr("Cannot start: resume manually, release human input, and wait for an initialized overworld on foot")); return; }
 		m_stateAction = true; m_sequence = false; m_stepFrames.clear();
 		m_start = m_core->frameCounter(); m_screenshot = args.value("screenshot").toBool(false);
-		m_pending = id; m_actionOwner = socket; m_timer.start(30000);
+		m_pending = id; m_actionOwner = socket; m_timer.start(Bridge::ActionTimeoutMs);
 		if (!m_core->aiActionPending()) finishPending();
 		return;
 	}
-	if (method == "press") {
-		if (!args.value("button").isString() ||
-		    (args.contains("hold_frames") && !integer(args.value("hold_frames"), 1, 60)) ||
-		    (args.contains("release_frames") && !integer(args.value("release_frames"), 1, 60))) {
-			fail(tr("Expected button, hold_frames and release_frames (1–60)"));
+	if (method == "act" || method == "act_sequence" || method == "press") {
+		Bridge::ActionPlan plan;
+		if (!Bridge::parseAction(name, arguments, m_core->platform() != mPLATFORM_GB, m_core->isPaused(), &plan, &error)) {
+			failWith(error);
 			return;
 		}
-		args.insert("actions",
-		            QJsonArray { QJsonObject { { "buttons", QJsonArray {} }, { "frames", 2 } },
-		                         QJsonObject { { "buttons", QJsonArray { args.value("button") } },
-		                                       { "frames", args.value("hold_frames").toInt(2) } },
-		                         QJsonObject { { "buttons", QJsonArray {} },
-		                                       { "frames", args.value("release_frames").toInt(2) } } });
-		if (!args.contains("screenshot"))
-			args.insert("screenshot", false);
-		method = "act_sequence";
-	}
-	if (method == "act" || method == "act_sequence") {
-		if (m_core->isPaused()) { fail(tr("Game paused; resume manually before acting")); return; }
-		if (args.contains("screenshot") && !args.value("screenshot").isBool()) { fail(tr("Expected boolean screenshot")); return; }
-		QJsonArray actions;
-		if (method == "act") actions.append(args);
-		else if (args.value("actions").isArray()) actions = args.value("actions").toArray();
-		if (actions.isEmpty() || actions.size() > int(AIGameplay::MaxSteps)) { fail(tr("Expected 1–200 actions")); return; }
-		const QStringList names{"A", "B", "Select", "Start", "Right", "Left", "Up", "Down", "R", "L"};
-		std::vector<AIGameplay::Step> steps;
-		QList<int> durations;
-		int total = 0;
-		for (const auto& value : actions) {
-			const auto action = value.toObject();
-			if (!value.isObject() || !integer(action.value("frames"), 1, 600) || !action.value("buttons").isArray() || action.value("buttons").toArray().size() > 10) {
-				fail(tr("Expected buttons array and 1–600 frames")); return;
-			}
-			unsigned keys = 0;
-			for (const auto& button : action.value("buttons").toArray()) {
-				int index = names.indexOf(button.toString());
-				if (!button.isString() || index < 0) { fail(tr("Unknown button")); return; }
-				if (m_core->platform() == mPLATFORM_GB && index >= 8) { fail(tr("L/R are only available on GBA")); return; }
-				keys |= 1U << index;
-			}
-			int frames = action.value("frames").toInt();
-			total += frames;
-			durations.append(frames);
-			steps.push_back({keys, frames});
-		}
-		if (total > 600) { fail(tr("Sequence exceeds 600 total frames")); return; }
 		CoreController::Interrupter guard(m_core);
-		m_actionState = toQJson(m_core->aiGameState().state(false));
-		m_directionKeys = 0;
-		for (const auto& step : steps) m_directionKeys |= step.keys & 0xF0;
-		if (!m_core->advanceAI(steps)) { fail(tr("Cannot advance game; resume manually if paused")); return; }
+		m_actionState = m_core->aiGameState().state(false);
+		m_directionKeys = plan.directionKeys;
+		if (!m_core->advanceAI(plan.steps)) { fail(tr("Cannot advance game; resume manually if paused")); return; }
 		m_start = m_core->aiActionStart();
 		m_stateAction = false;
-		m_stepFrames = durations;
-		m_sequence = method == "act_sequence";
-		m_screenshot = args.value("screenshot").toBool(true);
+		m_stepFrames = plan.frames;
+		m_sequence = plan.sequence;
+		m_screenshot = plan.screenshot;
 		m_pending = id;
 		m_actionOwner = socket;
-		m_timer.start(30000);
+		m_timer.start(Bridge::ActionTimeoutMs);
 		return;
 	}
 	CoreController::Interrupter guard(m_core);
 	auto core = m_core->thread()->core;
-	if (method == "memory_map" || method == "read_memory") {
-		const mCoreMemoryBlock* blocks = nullptr;
-		size_t count = core->listMemoryBlocks(core, &blocks);
-		if (method == "memory_map") {
-			QJsonArray regions;
-			for (size_t i = 0; i < count; ++i) {
-				const auto& b = blocks[i];
-				regions.append(QJsonObject{{"name", QString::fromUtf8(b.internalName)}, {"description", QString::fromUtf8(b.longName)},
-					{"start", double(b.start)}, {"end", double(b.end)}, {"size", double(b.size)},
-					{"max_segment", b.maxSegment}, {"segment_start", double(b.segmentStart)}, {"readable", readable(b)}});
-			}
-			reply(socket, id, {{"regions", regions}}); return;
-		}
-		if (!integer(args.value("address"), 0, 4294967295.0) || !integer(args.value("length"), 1, 4096) ||
-			(args.contains("segment") && !integer(args.value("segment"), -1, 65535))) { fail(tr("Invalid address, length, or segment")); return; }
-		const auto address = quint32(args.value("address").toDouble());
-		const int length = args.value("length").toInt();
-		const int segment = args.value("segment").toInt(-1);
-		const mCoreMemoryBlock* region = nullptr;
-		for (size_t i = 0; i < count; ++i) if (readable(blocks[i]) && address >= blocks[i].start && quint64(address) + length <= blocks[i].end) { region = &blocks[i]; break; }
-		if (!region || !readable(*region) || !region->size || (segment >= 0 && (segment > region->maxSegment || address < region->segmentStart))) {
-			fail(tr("Unsupported memory region, range, or bank; consult memory_map")); return;
-		}
-		QByteArray bytes(length, '\0');
-		if (core->platform(core) == mPLATFORM_GBA) {
-			// GBA rawRead8 can enter GPIO/EEPROM handlers in cartridge space.
-			// Read the backing store directly to guarantee no peripheral effects.
-			size_t size = 0;
-			const auto* backing = static_cast<const char*>(core->getMemoryBlock(core, region->id, &size));
-			const quint64 offset = address - region->start;
-			if (!backing || offset + length > size) { fail(tr("Read exceeds memory backing store")); return; }
-			bytes = QByteArray(backing + offset, length);
-		} else {
-			for (int i = 0; i < length; ++i) bytes[i] = core->rawRead8(core, address + i, segment);
-		}
-		reply(socket, id, {{"address", double(address)}, {"length", length}, {"segment", segment}, {"hex", QString::fromLatin1(bytes.toHex())}});
+	if (method == "memory_map") {
+		reply(socket, id, toQJson(Bridge::memoryMap(core)));
+		return;
+	}
+	if (method == "read_memory") {
+		Willow::Json result;
+		if (!Bridge::readMemory(core, arguments, &result, &error)) { failWith(error); return; }
+		reply(socket, id, toQJson(result));
 		return;
 	}
 	if (method == "save_checkpoint" || method == "load_checkpoint") {
-		QString name = args.value("name").toString();
-		if (!QRegularExpression("^[A-Za-z0-9_-]{1,64}$").match(name).hasMatch()) { fail(tr("Checkpoint names must contain 1–64 letters, digits, underscores, or hyphens")); return; }
-		quint32 crc = 0;
-		core->checksum(core, &crc, mCHECKSUM_CRC32);
-		QString directory = dataDirectory() + "/checkpoints/" + QString::number(crc, 16);
-		if (!QDir().mkpath(directory)) { fail(tr("Cannot create checkpoint directory")); return; }
-		const QString path = directory + "/" + name + ".state";
-		bool save = method == "save_checkpoint";
-		bool ok = false;
-		if (save) {
-			VFileDevice state(VFileDevice::openMemory());
-			if (state.isOpen() && mCoreSaveStateNamed(core, state, SAVESTATE_ALL) && state.seek(0)) {
-				const QByteArray bytes = state.readAll();
-				QSaveFile output(path);
-				ok = output.open(QIODevice::WriteOnly) && output.write(bytes) == bytes.size() && output.commit();
-			}
-		} else {
-			VFileDevice file(path, QIODevice::ReadOnly);
-			if (!file.isOpen()) { fail(tr("Cannot open checkpoint")); return; }
-			ok = mCoreLoadStateNamed(core, file, SAVESTATE_ALL);
+		if (!Bridge::checkpoint(core, name, arguments, &error)) { failWith(error); return; }
+		if (method == "load_checkpoint") {
+			m_core->cancelAIAction();
+			m_core->refreshAIFrame();
+			m_movement.clear();
 		}
-		if (!ok) { fail(tr("Checkpoint operation failed (wrong ROM or damaged state)")); return; }
-		if (!save) m_core->cancelAIAction();
-		if (!save) m_core->refreshAIFrame();
-		if (!save) { m_lastStall.clear(); m_stallCount.clear(); }
 		guard.resume();
 		reply(socket, id, observation());
 		return;

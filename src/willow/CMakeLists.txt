@@ -1,6 +1,8 @@
-# libwillow: Willow's frontend-independent logic (AI gameplay, Emerald
-# adapters). It must not depend on Qt so that any frontend can link it.
+# libwillow: Willow's frontend-independent logic (the MCP bridge protocol,
+# AI gameplay, Emerald adapters, phone video). It must not depend on Qt so
+# that any frontend can link it.
 set(WILLOW_SOURCES
+	Bridge.cpp
 	EmeraldGameState.cpp
 	EmeraldMusic.cpp
 	MobileVideo.cpp)
@@ -17,7 +19,7 @@ target_compile_definitions(willow PUBLIC ${FEATURE_DEFINES} ${FUNCTION_DEFINES} 
 
 if(BUILD_SUITE OR BUILD_AI_TESTS)
 	enable_testing()
-	foreach(TEST_NAME aigameplay emeraldgamestate emeraldmusic mobilevideo)
+	foreach(TEST_NAME aigameplay bridge emeraldgamestate emeraldmusic mobilevideo)
 		add_executable(test-willow-${TEST_NAME} test/${TEST_NAME}.cpp)
 		target_link_libraries(test-willow-${TEST_NAME} willow)
 		add_test(willow-${TEST_NAME} test-willow-${TEST_NAME})

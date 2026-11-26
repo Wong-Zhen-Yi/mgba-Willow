@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QHash>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QLocalServer>
@@ -9,6 +8,9 @@
 #include <QSet>
 #include <QTimer>
 #include <memory>
+#include <vector>
+
+#include "willow/Bridge.h"
 
 class QLabel;
 class QLocalSocket;
@@ -49,6 +51,7 @@ private:
 	void finishPending(bool cancelled = false, const QString& reason = { });
 	QJsonArray completedSteps() const;
 	QJsonObject observation(bool screenshot = true);
+	Willow::Bridge::Session sessionInfo() const;
 	QJsonObject session() const;
 	QJsonObject mobileSession() const;
 	Window* m_window;
@@ -77,14 +80,13 @@ private:
 	QString m_gamePath;
 	QJsonValue m_pending;
 	quint64 m_start = 0;
-	QList<int> m_stepFrames;
+	std::vector<int> m_stepFrames;
 	bool m_screenshot = true;
 	bool m_sequence = false;
 	bool m_stateAction = false;
-	QJsonObject m_actionState;
+	Willow::Json m_actionState;
 	unsigned m_directionKeys = 0;
-	QHash<QLocalSocket*, QString> m_lastStall;
-	QHash<QLocalSocket*, int> m_stallCount;
+	Willow::Bridge::MovementTracker m_movement;
 	bool m_changingEnabled = false;
 	QList<QMetaObject::Connection> m_coreConnections;
 };
