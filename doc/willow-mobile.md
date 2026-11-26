@@ -15,12 +15,15 @@ its saves stay on the PC. Audio plays on the PC.
    in the game library or choose **Tools → Pair iPhone** during gameplay to
    see the QR code.
 
-   To serve the link whenever the PC is on, run
-   `"Launch mGBA.cmd" --install-startup` once. Willow then opens minimized on
-   the taskbar when you sign in to Windows. Sign-in launches skip the source
-   check and use the last build, so they start quickly. The next normal launch
-   still rebuilds changed sources. `"Launch mGBA.cmd" --remove-startup` undoes
-   it.
+   Run `"Launch mGBA.cmd" --install-startup` to add or update **mGBA Willow**
+   in Windows Startup apps. Willow opens minimized when you sign in and uses
+   the last build. The next normal launch still rebuilds changed sources.
+   `"Launch mGBA.cmd" --remove-startup` removes the startup entry.
+
+   The **mGBA Willow** system tray icon turns green and shows a notification
+   when Willow Mobile is ready. Hover over the icon to check the server
+   status, or right-click it to open Willow or pair an iPhone. Windows may
+   place the icon in the hidden icons menu next to the clock.
 3. Scan the QR code with the iPhone Camera and open the link in any browser.
 4. Pick a game. The phone opens on your Willow game library, with the same
    games and cover art as the PC. Tapping a game starts it on the PC and opens
@@ -60,7 +63,8 @@ while Settings is open.
   Willow’s desktop settings. Desktop fast-forward controls take priority when
   active. Willow returns to **PC speed** when the phone disconnects or returns
   to **Games**.
-- **Auto Play → Model** chooses the Codex model for the next Auto Play run.
+- **Auto Play → Model** chooses the model for the next Auto Play run. **Pi ·**
+  models use the Pi agent harness with your Codex sign-in.
   The list comes from the PC, so it fills in the first time a game opens.
 - **Video → Video stream** picks the stream format (see below), and shows the
   codec and encoder in use.

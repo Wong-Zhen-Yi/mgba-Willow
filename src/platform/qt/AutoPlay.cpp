@@ -23,13 +23,25 @@ using namespace QGBA;
 
 namespace {
 
+// Ids match the profiles in tools/mcp/autoplay.mjs. Pi models run in the Pi harness.
 const struct {
 	const char* id;
 	const char* label;
+	bool pi;
 } _models[] = {
-	{ "terra", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "GPT-6.1 Terra (medium)") },
-	{ "luna", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "GPT-6 Luna (extra high)") },
+	{ "terra", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "GPT-6.1 Terra (medium)"), false },
+	{ "luna", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "GPT-6 Luna (extra high)"), false },
+	{ "pi-terra", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "Pi · GPT-6.1 Terra (medium)"), true },
+	{ "pi-luna", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "Pi · GPT-6 Luna (extra high)"), true },
 };
+
+bool usesPi(const QString& model) {
+	for (const auto& profile : _models) {
+		if (model == QLatin1String(profile.id))
+			return profile.pi;
+	}
+	return false;
+}
 
 QString findProgram(const QString& name, const QString& installedPath) {
 	if (!installedPath.isEmpty() && QFileInfo(installedPath).isExecutable())
@@ -76,7 +88,7 @@ AutoPlay::AutoPlay(Window* window, ActionMapper* actions, const QString& session
 	m_button->setCheckable(true);
 	m_button->setAutoRaise(true);
 	m_button->setText(tr("▶ Auto Play"));
-	m_button->setToolTip(tr("Let Codex play this game"));
+	m_button->setToolTip(tr("Let Codex or Pi play this game"));
 	m_button->setAccessibleName(tr("Auto Play"));
 	window->statusBar()->addPermanentWidget(m_button);
 	connect(m_button, &QToolButton::clicked, this, [this](bool checked) { checked ? start() : stop(); });
@@ -108,7 +120,7 @@ AutoPlay::AutoPlay(Window* window, ActionMapper* actions, const QString& session
 
 AutoPlay::~AutoPlay() {
 	m_process.closeWriteChannel();
-	// The runner ends Codex and its MCP server before exiting.
+	// The runner ends the agent and its MCP server before exiting.
 	if (m_process.state() != QProcess::NotRunning && !m_process.waitForFinished(5000)) {
 		m_process.kill();
 		m_process.waitForFinished(500);
@@ -133,20 +145,29 @@ void AutoPlay::start(const QString& model) {
 	const auto node = findProgram("node", QDir(qEnvironmentVariable("ProgramFiles")).filePath("nodejs/node.exe"));
 	if (node.isEmpty())
 		return fail(tr("Auto Play: install Node.js 20 or newer, then reopen Willow."));
-	const auto codex = findProgram(
-	    "codex", QDir(qEnvironmentVariable("LOCALAPPDATA")).filePath("Programs/OpenAI/Codex/bin/codex.exe"));
-	if (codex.isEmpty())
-		return fail(tr("Auto Play: install Codex and sign in, then try again."));
+	const auto selectedModel = model.isEmpty() ? m_window->config()->getOption("autoPlayModel", defaultModel()) : model;
+	if (!supportsModel(selectedModel))
+		return fail(tr("Auto Play: invalid model."));
+	// Pi uses the Codex sign-in too, but only needs the Pi CLI installed.
+	QString agent;
+	if (usesPi(selectedModel)) {
+		agent = findProgram("pi", QDir(qEnvironmentVariable("APPDATA")).filePath("npm/pi.cmd"));
+		if (agent.isEmpty())
+			return fail(tr("Auto Play: install Pi with \"npm install -g @earendil-works/pi-coding-agent\", then try "
+			               "again."));
+	} else {
+		agent = findProgram(
+		    "codex", QDir(qEnvironmentVariable("LOCALAPPDATA")).filePath("Programs/OpenAI/Codex/bin/codex.exe"));
+		if (agent.isEmpty())
+			return fail(tr("Auto Play: install Codex and sign in, then try again."));
+	}
 
 	m_stopping = false;
 	m_reportedError = false;
 	m_updates.clear();
-	const auto selectedModel = model.isEmpty() ? m_window->config()->getOption("autoPlayModel", defaultModel()) : model;
-	if (!supportsModel(selectedModel))
-		return fail(tr("Auto Play: invalid model."));
 	setRunning(true);
 	showMessage(tr("Auto Play is starting…"));
-	m_process.start(node, { script, m_sessionId, codex, selectedModel });
+	m_process.start(node, { script, m_sessionId, agent, selectedModel });
 }
 
 void AutoPlay::stop() {
@@ -196,7 +217,7 @@ void AutoPlay::setRunning(bool running) {
 	m_button->setChecked(running);
 	m_button->setText(running ? tr("■ Stop Auto Play") : tr("▶ Auto Play"));
 	if (!running)
-		m_button->setToolTip(tr("Let Codex play this game"));
+		m_button->setToolTip(tr("Let Codex or Pi play this game"));
 }
 
 void AutoPlay::showMessage(const QString& message, bool persistent) {

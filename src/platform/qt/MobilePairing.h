@@ -9,8 +9,10 @@
 #include <QProcess>
 #include <QTimer>
 
+class QAction;
 class QLabel;
 class QPushButton;
+class QSystemTrayIcon;
 
 namespace QGBA {
 
@@ -23,6 +25,8 @@ public:
 
 	void start();
 	void stop();
+	void open();
+	void enableTray();
 
 	// One line for Settings: what Willow Mobile is doing now.
 	QString summary() const { return m_summary; }
@@ -31,7 +35,10 @@ signals:
 	void summaryChanged(const QString& summary);
 
 private:
-	void setStatus(const QString& text, const QString& summary = {});
+	enum class Status { OFF, STARTING, READY, UNAVAILABLE };
+
+	void setStatus(Status status, const QString& text, const QString& summary = { });
+	void updateTray();
 	void readUpdates();
 	void clearPairing();
 	void scheduleRetry();
@@ -45,6 +52,9 @@ private:
 	QLabel* m_qr;
 	QPushButton* m_start;
 	QPushButton* m_stop;
+	QSystemTrayIcon* m_tray = nullptr;
+	QAction* m_trayStatus = nullptr;
+	Status m_state = Status::STARTING;
 	bool m_stopping = false;
 	bool m_reportedError = false;
 };

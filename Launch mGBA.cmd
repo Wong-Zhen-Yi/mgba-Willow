@@ -27,11 +27,12 @@ echo Use File / Return to game library after saving your current game.
 echo Multi-agent MCP support remains available during gameplay.
 echo Changed emulator sources will be rebuilt automatically.
 echo To enable mgba in your terminal, run "Launch mGBA.cmd" --install-terminal-command.
-echo Willow serves the iPhone link in the background from startup.
-echo To open Willow minimized and serve the iPhone link at Windows sign-in, run "Launch mGBA.cmd" --install-startup.
+echo The mGBA Willow system tray icon shows when the iPhone link is ready.
+echo To add or update mGBA Willow in Windows Startup apps, run "Launch mGBA.cmd" --install-startup.
 echo Sign-in launches use the last build; run --remove-startup to undo.
 echo To play from your iPhone, click Pair iPhone in the Willow window to see the QR code, then pick a game on the phone.
 echo Tap Auto Play on the phone to let Codex play, or Stop Auto Play to stop the current run.
+echo Auto Play models marked Pi run in the Pi agent harness; install it with npm install -g @earendil-works/pi-coding-agent.
 echo Tap Settings on the phone for game speed, the Auto Play model, video, button size and keeping the screen awake.
 echo Settings on the PC is one page: Willow options first, then the emulator; use the sidebar or Ctrl+F to find a setting.
 echo The iPhone link uses Tailscale Funnel HTTPS; Tailscale handles the certificate.

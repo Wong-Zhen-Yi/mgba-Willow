@@ -44,7 +44,7 @@ async function harness(t, plan) {
     controller,
     calls: async () => JSON.parse(await readFile(log, 'utf8')),
     run: options => runAutoPlay({
-      codex: process.execPath, codexPrefix: [script], profile: profiles.luna, sessionId, cwd: root,
+      program: process.execPath, prefix: [script], profile: profiles.luna, sessionId, cwd: root,
       report: (type, fields) => reports.push({ type, ...fields }), signal: controller.signal,
       state: async () => ({ started: true, paused: false }), pauseInterval: 5, retryDelay: 5, turnDelay: 5,
       ...options,

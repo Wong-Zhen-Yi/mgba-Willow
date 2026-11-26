@@ -5,16 +5,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #include "MobilePairing.h"
 
-#include <QCoreApplication>
+#include <QApplication>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QMenu>
+#include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
 #include <QStandardPaths>
+#include <QSystemTrayIcon>
 #include <QVBoxLayout>
 
 using namespace QGBA;
@@ -67,7 +70,8 @@ MobilePairing::MobilePairing(QWidget* parent)
 	connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
 		if (error != QProcess::FailedToStart)
 			return;
-		setStatus(tr("Could not start Willow Mobile. Check your Node.js installation and try again."));
+		setStatus(Status::UNAVAILABLE,
+		          tr("Could not start Willow Mobile. Check your Node.js installation and try again."));
 		m_start->setEnabled(true);
 		m_stop->setEnabled(false);
 	});
@@ -78,17 +82,104 @@ MobilePairing::MobilePairing(QWidget* parent)
 		if (m_stopping)
 			return;
 		if (!m_reportedError)
-			setStatus(tr("Willow Mobile stopped."));
+			setStatus(Status::UNAVAILABLE, tr("Willow Mobile stopped."));
 		scheduleRetry();
 	});
 }
 
 MobilePairing::~MobilePairing() {
+	m_stopping = true;
 	m_process.closeWriteChannel();
 	if (m_process.state() != QProcess::NotRunning && !m_process.waitForFinished(2000)) {
 		m_process.kill();
 		m_process.waitForFinished(500);
 	}
+}
+
+void MobilePairing::open() {
+	start();
+	show();
+	raise();
+	activateWindow();
+}
+
+void MobilePairing::enableTray() {
+#ifndef QT_NO_SYSTEMTRAYICON
+	auto* menu = new QMenu(this);
+	m_trayStatus = menu->addAction(QString());
+	m_trayStatus->setEnabled(false);
+	menu->addSeparator();
+	const auto showWindow = [window = parentWidget()]() {
+		window->setWindowState(window->windowState() & ~Qt::WindowMinimized);
+		window->show();
+		window->raise();
+		window->activateWindow();
+	};
+	menu->addAction(tr("Open mGBA Willow"), this, showWindow);
+	menu->addAction(tr("Pair iPhone…"), this, [this, showWindow]() {
+		showWindow();
+		open();
+	});
+
+	m_tray = new QSystemTrayIcon(this);
+	m_tray->setContextMenu(menu);
+	connect(m_tray, &QSystemTrayIcon::activated, this, [showWindow](QSystemTrayIcon::ActivationReason reason) {
+		if (reason == QSystemTrayIcon::Trigger) {
+			showWindow();
+		}
+	});
+	connect(m_tray, &QSystemTrayIcon::messageClicked, this, showWindow);
+	updateTray();
+	m_tray->show();
+#endif
+}
+
+void MobilePairing::updateTray() {
+#ifndef QT_NO_SYSTEMTRAYICON
+	if (!m_tray) {
+		return;
+	}
+	QString label;
+	QColor color;
+	switch (m_state) {
+	case Status::STARTING:
+		label = tr("Willow Mobile is starting");
+		color = QColor(240, 169, 39);
+		break;
+	case Status::READY:
+		label = tr("Willow Mobile is ready");
+		color = QColor(46, 195, 100);
+		break;
+	case Status::UNAVAILABLE:
+		label = tr("Willow Mobile is unavailable");
+		color = QColor(234, 78, 78);
+		break;
+	case Status::OFF:
+		label = tr("Willow Mobile is off");
+		color = QColor(153, 160, 170);
+		break;
+	}
+	QIcon icon;
+	for (int size : { 16, 20, 24, 32 }) {
+		QPixmap pixmap(size, size);
+		pixmap.fill(Qt::transparent);
+		QPainter painter(&pixmap);
+		QApplication::windowIcon().paint(&painter, pixmap.rect());
+		painter.setRenderHint(QPainter::Antialiasing);
+		painter.setPen(QPen(Qt::white, 1));
+		painter.setBrush(color);
+		const qreal diameter = size * 0.4;
+		painter.drawEllipse(QRectF(size - diameter - 0.5, size - diameter - 0.5, diameter, diameter));
+		painter.end();
+		icon.addPixmap(pixmap);
+	}
+	m_tray->setIcon(icon);
+	m_tray->setToolTip(tr("mGBA Willow") + '\n' + label);
+	m_trayStatus->setText(label);
+	if (m_state == Status::READY) {
+		m_tray->showMessage(tr("mGBA Willow"), label);
+	}
+#endif
 }
 
 void MobilePairing::start() {
@@ -97,21 +188,22 @@ void MobilePairing::start() {
 		return;
 	const auto script = qEnvironmentVariable("WILLOW_MOBILE_SCRIPT");
 	if (!QFileInfo(script).isFile()) {
-		setStatus(tr("Open Willow using Launch mGBA.cmd to set up iPhone pairing."));
+		setStatus(Status::UNAVAILABLE, tr("Open Willow using Launch mGBA.cmd to set up iPhone pairing."));
 		return;
 	}
 	const auto programFiles = qEnvironmentVariable("ProgramFiles");
 	const auto node = findProgram("node", QDir(programFiles).filePath("nodejs/node.exe"));
 	const auto tailscale = findProgram("tailscale", QDir(programFiles).filePath("Tailscale/tailscale.exe"));
 	if (node.isEmpty() || tailscale.isEmpty()) {
-		setStatus(node.isEmpty() ? tr("Install Node.js 20 or newer, then reopen Willow.") :
+		setStatus(Status::UNAVAILABLE,
+		          node.isEmpty() ? tr("Install Node.js 20 or newer, then reopen Willow.") :
 		                           tr("Install and connect Tailscale on this PC, then try again."));
 		return;
 	}
 	m_stopping = false;
 	m_reportedError = false;
 	m_updates.clear();
-	setStatus(tr("Starting Willow Mobile…"));
+	setStatus(Status::STARTING, tr("Starting Willow Mobile…"));
 	m_start->setEnabled(false);
 	m_stop->setEnabled(true);
 	m_process.start(node, { script, QString::number(QCoreApplication::applicationPid()), tailscale });
@@ -123,12 +215,16 @@ void MobilePairing::stop() {
 	m_retryDelay = 0;
 	clearPairing();
 	m_stop->setEnabled(false);
-	setStatus(tr("Willow Mobile is off. Choose Start to pair again."), tr("Off."));
+	setStatus(Status::OFF, tr("Willow Mobile is off. Choose Start to pair again."), tr("Off."));
 	m_process.closeWriteChannel();
 }
 
-void MobilePairing::setStatus(const QString& text, const QString& summary) {
+void MobilePairing::setStatus(Status status, const QString& text, const QString& summary) {
 	m_status->setText(text);
+	if (m_state != status) {
+		m_state = status;
+		updateTray();
+	}
 	const auto line = summary.isEmpty() ? text : summary;
 	if (line == m_summary)
 		return;
@@ -140,7 +236,8 @@ void MobilePairing::scheduleRetry() {
 	// 30 s, then doubling up to 5 min: one short Node run per attempt, nothing in between.
 	m_retryDelay = m_retryDelay ? qMin(m_retryDelay * 2, 300) : 30;
 	const auto retry = tr("Willow will try again in %n second(s).", nullptr, m_retryDelay);
-	setStatus(QString("%1\n%2").arg(m_status->text(), retry), QString("%1 %2").arg(m_summary, retry));
+	setStatus(Status::UNAVAILABLE, QString("%1\n%2").arg(m_status->text(), retry),
+	          QString("%1 %2").arg(m_summary, retry));
 	m_retry.start(m_retryDelay * 1000);
 }
 
@@ -156,7 +253,7 @@ void MobilePairing::readUpdates() {
 	m_updates += bytes;
 	if (m_updates.size() > 128 * 1024) {
 		stop();
-		setStatus(tr("Willow Mobile returned an invalid pairing response."));
+		setStatus(Status::UNAVAILABLE, tr("Willow Mobile returned an invalid pairing response."));
 		return;
 	}
 	int end;
@@ -166,12 +263,15 @@ void MobilePairing::readUpdates() {
 		const auto type = update.value("type").toString();
 		if (type == "error" || type == "progress") {
 			m_reportedError = type == "error";
-			setStatus(update.value("message").toString());
+			if (m_reportedError) {
+				clearPairing();
+			}
+			setStatus(m_reportedError ? Status::UNAVAILABLE : Status::STARTING, update.value("message").toString());
 		} else if (type == "ready") {
 			QPixmap qr;
 			if (!qr.loadFromData(QByteArray::fromBase64(update.value("qr").toString().toLatin1()), "PNG")) {
 				stop();
-				setStatus(tr("Could not load the pairing QR code."));
+				setStatus(Status::UNAVAILABLE, tr("Could not load the pairing QR code."));
 				return;
 			}
 			// Funnel links are public, so the iPhone does not need Tailscale for them.
@@ -179,7 +279,8 @@ void MobilePairing::readUpdates() {
 			    tr("Scan this code with your iPhone Camera. Keep it private: anyone with the link can pair.") :
 			    tr("Connect your iPhone to Tailscale, then scan this code with Camera.");
 			const auto origin = update.value("origin").toString();
-			setStatus(QString("%1\n%2").arg(steps, origin), tr("On. Your iPhone can pair at %1").arg(origin));
+			setStatus(Status::READY, QString("%1\n%2").arg(steps, origin),
+			          tr("On. Your iPhone can pair at %1").arg(origin));
 			m_retryDelay = 0;
 			m_qr->setPixmap(qr);
 			m_qr->show();

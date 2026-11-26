@@ -21,7 +21,7 @@ class Action;
 class ActionMapper;
 class Window;
 
-// Runs Codex against this window's MCP session (tools/mcp/autoplay.mjs).
+// Runs Codex or Pi against this window's MCP session (tools/mcp/autoplay.mjs).
 class AutoPlay : public QObject {
 	Q_OBJECT
 

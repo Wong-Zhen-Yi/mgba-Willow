@@ -31,7 +31,8 @@ Launching with a ROM argument still opens that game directly.
 Open a game, then connect from Codex to play through the MCP tools. To let Codex
 play by itself, click **Auto Play** in the status bar (GPT-6.1 Terra on medium by
 default, or GPT-6 Luna on extra high from **AI → Auto Play Model** or
-**Settings → Willow → Auto Play**). See [Auto Play](tools/mcp/README.md#auto-play).
+**Settings → Willow → Auto Play**). The **Pi ·** models run the same models in
+the Pi agent harness. See [Auto Play](tools/mcp/README.md#auto-play).
 
 **Settings** is one scrolling page. Willow's own options come first: the ROM
 folder, the Auto Play model, and iPhone pairing, including opening Willow at

@@ -35,6 +35,11 @@ The notes below add Claude-specific, Windows-specific details to AGENTS.md.
 - Each mGBA window writes a session descriptor and serves a named pipe
   (`bridge.mjs` → `Bridge`, `descriptors`). Stale descriptors from closed
   windows are normal; skip ones that fail with `ENOENT`.
+- Auto Play profiles live in `autoplay.mjs` (`profiles`) and `AutoPlay.cpp`
+  (`_models`); keep the ids in sync. `pi-*` profiles run `pi --mode json -p`
+  with `pi-extension.mjs`, which wraps `server.mjs` as Pi tools and adds the
+  `willow-codex` provider from `~/.codex/auth.json` (access token only). Pi's
+  own `openai-codex` login on this machine is expired; don't rely on it.
 - Phone-only commands are named `mobile_*` and are handled in
   `AIController::mobileRequest`. `mobile_session`, `mobile_library`,
   `mobile_artwork`, `mobile_launch` and `mobile_connect` work without an

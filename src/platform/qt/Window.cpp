@@ -151,6 +151,9 @@ Window::Window(CoreManager* manager, ConfigController* config, int playerId, QWi
 	if (m_playerId == 0) {
 		// Serve Willow Mobile from startup so the phone can pair without opening the dialog first.
 		m_mobilePairing = new MobilePairing(this);
+#ifdef Q_OS_WIN
+		m_mobilePairing->enableTray();
+#endif
 		connect(this, &Window::shutdown, m_mobilePairing, &MobilePairing::stop);
 		QTimer::singleShot(2000, m_mobilePairing, &MobilePairing::start);
 	}
@@ -1401,10 +1404,7 @@ void Window::showMobilePairing() {
 		m_mobilePairing = new MobilePairing(this);
 		connect(this, &Window::shutdown, m_mobilePairing, &MobilePairing::stop);
 	}
-	m_mobilePairing->start();
-	m_mobilePairing->show();
-	m_mobilePairing->raise();
-	m_mobilePairing->activateWindow();
+	m_mobilePairing->open();
 }
 
 void Window::setupMenu(QMenuBar* menubar) {

@@ -81,10 +81,23 @@ To let Codex play without opening a chat, open a game and click **▶ Auto Play*
 
 - **GPT-6.1 Terra (medium)**, the default.
 - **GPT-6 Luna (extra high)**, for harder decisions. It is slower and uses more of your Codex limits.
+- **Pi · GPT-6.1 Terra (medium)** and **Pi · GPT-6 Luna (extra high)** run the same models in the [Pi](https://pi.dev) agent harness instead of `codex exec`. See [Pi harness](#pi-harness).
 
 Auto Play runs `codex exec` from this repository using your Codex sign-in and usage limits. It starts this checkout's bundled MCP server scoped to the window you started it from. Install the Node dependencies with `npm ci` in `tools/mcp` for desktop Auto Play. Pairing installs them automatically for mobile use. Auto Play follows `AGENTS.md` and [Willow control and verification](../../doc/willow-control.md), including in-game saves and progress notes. Codex runs with the workspace-write sandbox and is told to edit only `CURRENT_HANDOFF.md`, `POKEMON_EMERALD_OBJECTIVES.md` and `STORY_PROGRESS_NOTES.md`.
 
-When a Codex turn ends, Auto Play resumes the same conversation. Activity appears in the status bar. Auto Play waits while the game is paused and continues when you resume. It stops and shows the reason if Codex says it needs you, ends two turns without playing, fails three times in a row, or reaches a usage limit. Your keyboard and controller keep working alongside it.
+When a turn ends, Auto Play resumes the same conversation. Activity, including a per-turn summary of game actions and tokens, appears in the status bar. Auto Play waits while the game is paused and continues when you resume. It stops and shows the reason if the agent says it needs you, ends two turns without playing, fails three times in a row, or reaches a usage limit. Your keyboard and controller keep working alongside it.
+
+### Pi harness
+
+The Pi models need the Pi CLI (`npm install -g @earendil-works/pi-coding-agent`) and a Codex sign-in; Pi's own `/login` is not used. Each turn runs `pi --mode json -p` with [`pi-extension.mjs`](pi-extension.mjs), which:
+
+- starts this checkout's `server.mjs` over stdio and registers every `mgba-willow` tool as a Pi tool, with the server's instructions appended to the system prompt. Game tools run one at a time;
+- registers a `willow-codex` provider that reads the access token from the Codex CLI's `auth.json` (`CODEX_HOME`, default `~/.codex`). It never uses the refresh token, so Codex stays signed in. If the token has expired, open Codex once to refresh it;
+- turns off the shell (`--exclude-tools bash`) and blocks `edit` and `write` outside the three progress notes. Unlike Codex's sandbox, this is enforced per tool call;
+- keeps screenshots only in the newest three game tool results and trims game-state text older than the newest twelve before each model call. Game state is stale by then, and this keeps long turns from resending hundreds of thousands of tokens;
+- gives each turn a budget of 60 game actions (`WILLOW_PI_TURN_ACTIONS`). At the budget it asks the agent to reach a safe point, update the handoff and end the turn; at twice the budget it refuses further game input until the next turn.
+
+Pi keeps the conversation in a session file under `%LOCALAPPDATA%/mgba-willow/ai/pi-sessions` and compacts it automatically when it grows. Later turns pass the same `--session-id`; after a failed turn Auto Play starts a new session. Other extensions, skills and prompt templates are not loaded; `AGENTS.md` is.
 
 ## Availability, shared controls, and speed
 

@@ -637,7 +637,9 @@ QWidget* SettingsView::createWillowPage() {
 	m_ui.normalSpeedMusic->setParent(autoPlay);
 	autoPlayForm->addRow(m_ui.normalSpeedMusic);
 	autoPlayForm->addRow(makeNote(tr("Click ▶ Auto Play in the status bar, or tap Auto Play on your iPhone, to let Codex "
-	                                 "play the open game. A new model applies the next time Auto Play starts."),
+	                                 "play the open game. Pi models run the same game through the Pi agent harness, "
+	                                 "signed in with your Codex account. A new model applies the next time Auto Play "
+	                                 "starts."),
 	                              autoPlay));
 	layout->addWidget(autoPlay);
 

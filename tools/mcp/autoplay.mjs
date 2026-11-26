@@ -1,18 +1,25 @@
-// Willow Auto Play: runs Codex turns against one mGBA window until stdin closes.
+// Willow Auto Play: runs Codex or Pi turns against one mGBA window until stdin closes.
 // Started by the Qt app (AI → Auto Play). Reports JSON lines on stdout.
 import { execFile, spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Bridge, descriptors, sessionDirectory } from './bridge.mjs';
 
+// harness: which agent CLI runs the turns. Pi models are "<provider>/<id>"; the
+// willow-codex provider (pi-extension.mjs) reuses the Codex CLI's sign-in.
 export const profiles = {
-  terra: { model: 'gpt-6.1-terra', effort: 'medium', label: 'GPT-6.1 Terra · medium' },
-  luna: { model: 'gpt-6-luna', effort: 'xhigh', label: 'GPT-6 Luna · extra high' },
+  terra: { harness: 'codex', model: 'gpt-6.1-terra', effort: 'medium', label: 'GPT-6.1 Terra · medium' },
+  luna: { harness: 'codex', model: 'gpt-6-luna', effort: 'xhigh', label: 'GPT-6 Luna · extra high' },
+  'pi-terra': { harness: 'pi', model: 'willow-codex/gpt-6.1-terra', effort: 'medium', label: 'Pi · GPT-6.1 Terra · medium' },
+  'pi-luna': { harness: 'pi', model: 'willow-codex/gpt-6-luna', effort: 'xhigh', label: 'Pi · GPT-6 Luna · extra high' },
 };
 
 const repository = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const serverScript = fileURLToPath(new URL('./server.mjs', import.meta.url));
+const piExtension = fileURLToPath(new URL('./pi-extension.mjs', import.meta.url));
 const gameActions = new Set(['press', 'act', 'act_sequence', 'move_to', 'train_battle']);
 
 export function autoPlayPrompt(sessionId) {
@@ -53,12 +60,76 @@ export function codexArguments({ profile, sessionId, thread, directory = session
     : ['exec', '--json', ...settings, autoPlayPrompt(sessionId)];
 }
 
-// Short activity text for one Codex JSON event, or undefined for events not worth showing.
+// Pi runs one print-mode turn per process and keeps the conversation in its own
+// session file, so later turns pass the same --session-id. Bash is off; the
+// extension also limits edits to the progress notes.
+export function piArguments({ profile, sessionId, session, resume, sessionDir }) {
+  return [
+    '--mode', 'json', '-p',
+    '--no-extensions', '-e', piExtension,
+    '--no-skills', '--no-prompt-templates', '--no-themes',
+    '--exclude-tools', 'bash',
+    '--session-dir', sessionDir,
+    '--session-id', session,
+    '--model', profile.model,
+    '--thinking', profile.effort,
+    resume ? continuePrompt(sessionId) : autoPlayPrompt(sessionId),
+  ];
+}
+
+// Finds Pi's cli.js beside an npm shim (pi.cmd) so it runs under this Node without a shell.
+export function piCommand(program) {
+  if (/\.[cm]?js$/i.test(program)) return { command: process.execPath, prefix: [program] };
+  const directory = path.dirname(program);
+  for (const scope of ['@earendil-works', '@mariozechner']) {
+    const cli = path.join(directory, 'node_modules', scope, 'pi-coding-agent', 'dist', 'cli.js');
+    if (existsSync(cli)) return { command: process.execPath, prefix: [cli] };
+  }
+  return { command: program, prefix: [] };
+}
+
+// Short activity text for one Codex or Pi JSON event, or undefined for events not worth showing.
 export function describe(event) {
   const item = event?.item;
   if (event?.type === 'item.started' && item?.type === 'mcp_tool_call' && item.server === 'mgba-willow')
     return `Using ${item.tool}`;
+  if (event?.type === 'tool_execution_start' && event.toolName) return `Using ${event.toolName}`;
+  if (event?.type === 'auto_retry_start') return `Retrying the model request (${event.attempt}/${event.maxAttempts})`;
+  if (event?.type === 'compaction_start') return 'Compacting the conversation';
   return undefined;
+}
+
+const messageText = message => (message?.content ?? [])
+  .filter(part => part.type === 'text').map(part => part.text).join('\n');
+
+// Folds one Codex `exec --json` event into the turn result.
+export function readCodexEvent(event, result) {
+  const item = event.item;
+  if (event.type === 'thread.started') result.thread = event.thread_id;
+  if (event.type === 'item.completed' && item?.type === 'mcp_tool_call' &&
+      item.server === 'mgba-willow' && gameActions.has(item.tool) && item.status === 'completed' && !item.error) {
+    result.tools++;
+  }
+  if (event.type === 'item.completed' && item?.type === 'agent_message') result.message = item.text ?? '';
+  if (event.type === 'error' || event.type === 'turn.failed') {
+    result.error = event.message ?? event.error?.message ?? 'Codex reported an error.';
+  }
+}
+
+// Folds one Pi `--mode json` event into the turn result. Pi exits 0 even when the
+// model request fails, so errors come from the last assistant message.
+export function readPiEvent(event, result) {
+  if (event.type === 'session') result.thread = event.id;
+  if (event.type === 'tool_execution_end' && gameActions.has(event.toolName) && !event.isError) result.tools++;
+  if (event.type === 'message_end' && event.message?.role === 'assistant') {
+    const { stopReason, errorMessage } = event.message;
+    const text = messageText(event.message);
+    if (text) result.message = text;
+    result.error = stopReason === 'error' || stopReason === 'aborted'
+      ? errorMessage || `Pi stopped (${stopReason}).` : '';
+    result.tokens += event.message.usage?.totalTokens ?? 0;
+  }
+  if (event.type === 'auto_retry_end' && !event.success && event.finalError) result.error = event.finalError;
 }
 
 export function turnStatus(text) {
@@ -76,16 +147,16 @@ function killTree(child) {
   }
 }
 
-// Runs one Codex turn. Resolves with the thread id, the final message and tool-call count.
-function runTurn({ codex, codexPrefix, args, cwd, report, signal, activityTimeout }) {
+// Runs one agent turn. Resolves with the thread id, the final message and tool-call count.
+function runTurn({ command, prefix, args, cwd, env, read, name, report, signal, activityTimeout }) {
   return new Promise(resolve => {
-    const child = spawn(codex, [...codexPrefix, ...args], { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    const result = { thread: undefined, message: '', tools: 0, error: '', code: null };
+    const child = spawn(command, [...prefix, ...args], { cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const result = { thread: undefined, message: '', tools: 0, tokens: 0, error: '', code: null };
     let buffer = '';
     let stderr = '';
     const abort = () => killTree(child);
     const watchdog = setTimeout(() => {
-      result.error = 'Codex stopped responding during Auto Play.';
+      result.error = `${name} stopped responding during Auto Play.`;
       abort();
     }, activityTimeout);
     signal.addEventListener('abort', abort, { once: true });
@@ -99,16 +170,7 @@ function runTurn({ codex, codexPrefix, args, cwd, report, signal, activityTimeou
         let event;
         try { event = JSON.parse(line); } catch { continue; }
         watchdog.refresh();
-        if (event.type === 'thread.started') result.thread = event.thread_id;
-        const item = event.item;
-        if (event.type === 'item.completed' && item?.type === 'mcp_tool_call' &&
-            item.server === 'mgba-willow' && gameActions.has(item.tool) && item.status === 'completed' && !item.error) {
-          result.tools++;
-        }
-        if (event.type === 'item.completed' && event.item?.type === 'agent_message') result.message = event.item.text ?? '';
-        if (event.type === 'error' || event.type === 'turn.failed') {
-          result.error = event.message ?? event.error?.message ?? 'Codex reported an error.';
-        }
+        read(event, result);
         const activity = describe(event);
         if (activity) report('activity', { message: activity });
       }
@@ -120,7 +182,7 @@ function runTurn({ codex, codexPrefix, args, cwd, report, signal, activityTimeou
       signal.removeEventListener('abort', abort);
       result.code = code;
       if (code !== 0 && !result.error) {
-        result.error = stderr.trim().split('\n').filter(Boolean).pop() || `Codex exited with code ${code}.`;
+        result.error = stderr.trim().split('\n').filter(Boolean).pop() || `${name} exited with code ${code}.`;
       }
       resolve(result);
     });
@@ -142,14 +204,53 @@ async function sessionState(sessionId, directory) {
   }
 }
 
+// Errors that retrying cannot fix: sign-in, quota, missing model or tools.
+const fatalError = /usage limit|rate limit|quota|not logged in|log in again|unauthorized|no api key|required MCP|model.*not (?:found|supported|available)/i;
+
+// How one harness starts and reads its turns. Codex resumes its thread id; Pi
+// reuses one session id until a turn fails.
+function harnessFor({ profile, program, prefix, sessionId, directory, piSessionDir }) {
+  if (profile.harness === 'pi') {
+    const resolved = prefix ? { command: program, prefix } : piCommand(program);
+    let session = randomUUID();
+    let resume = false;
+    return {
+      name: 'Pi', read: readPiEvent, ...resolved,
+      env: { ...process.env, MGBA_WILLOW_SESSION_DIR: directory, WILLOW_AUTOPLAY_SESSION_ID: sessionId },
+      args: () => piArguments({ profile, sessionId, session, resume, sessionDir: piSessionDir }),
+      finished: () => { resume = true; },
+      // A dropped model connection leaves the session file intact, so the first
+      // retry continues it; a second failure in a row starts over.
+      reset: failures => {
+        const saved = failures < 2 && existsSync(piSessionDir) &&
+          readdirSync(piSessionDir).some(name => name.endsWith(`_${session}.jsonl`));
+        if (saved) resume = true;
+        else { session = randomUUID(); resume = false; }
+      },
+      explain: error => /no api key|willow-codex/i.test(error)
+        ? `Pi could not use your Codex sign-in (${error}). Open Codex, sign in, then start Auto Play again.` : error,
+    };
+  }
+  let thread;
+  return {
+    name: 'Codex', read: readCodexEvent, command: program, prefix: prefix ?? [], env: undefined,
+    args: () => codexArguments({ profile, sessionId, thread, directory }),
+    finished: turn => { thread = turn.thread ?? thread; },
+    reset: () => { thread = undefined; },
+    explain: error => error,
+  };
+}
+
 export async function runAutoPlay({
-  codex, codexPrefix = [], profile, sessionId, cwd = repository, report, signal, directory = sessionDirectory,
-  activityTimeout = 120000,
+  program, prefix, profile, sessionId, cwd = repository, report, signal, directory = sessionDirectory,
+  piSessionDir = path.join(path.dirname(directory), 'pi-sessions'), activityTimeout = 120000,
   state = () => sessionState(sessionId, directory), pauseInterval = 2000, retryDelay = 10000, turnDelay = 1000,
 }) {
-  let thread;
+  const harness = harnessFor({ profile, program, prefix, sessionId, directory, piSessionDir });
+  const { name } = harness;
   let failures = 0;
   let idle = 0;
+  let turns = 0;
   report('status', { message: `Auto Play is starting with ${profile.label}…` });
   while (!signal.aborted) {
     const session = await state();
@@ -161,32 +262,34 @@ export async function runAutoPlay({
       continue;
     }
     report('status', { message: `Auto Play is running with ${profile.label}.` });
-    const args = codexArguments({ profile, sessionId, thread, directory });
-    const turn = await runTurn({ codex, codexPrefix, args, cwd, report, signal, activityTimeout });
+    const turn = await runTurn({
+      command: harness.command, prefix: harness.prefix, args: harness.args(), cwd, env: harness.env,
+      read: harness.read, name, report, signal, activityTimeout,
+    });
     if (signal.aborted) break;
     if (turn.error) {
-      if (/usage limit|rate limit|quota|not logged in|log in again|unauthorized|required MCP|model.*not (?:found|supported|available)/i.test(turn.error)) {
-        return report('error', { message: turn.error });
-      }
-      if (++failures >= 3) return report('error', { message: `Codex failed three times in a row: ${turn.error}` });
-      report('status', { message: `Codex stopped unexpectedly (${turn.error}). Retrying…` });
-      thread = undefined;
+      if (fatalError.test(turn.error)) return report('error', { message: harness.explain(turn.error) });
+      if (++failures >= 3) return report('error', { message: `${name} failed three times in a row: ${turn.error}` });
+      report('status', { message: `${name} stopped unexpectedly (${turn.error}). Retrying…` });
+      harness.reset(failures);
       await delay(retryDelay, undefined, { signal }).catch(() => {});
       continue;
     }
     failures = 0;
-    thread = turn.thread ?? thread;
+    harness.finished(turn);
     const { status, reason } = turnStatus(turn.message);
-    if (status === 'blocked') return report('error', { message: `Auto Play needs you: ${reason || 'Codex could not continue.'}` });
-    // Guard usage: stop if Codex keeps ending turns without touching the game.
+    if (status === 'blocked') return report('error', { message: `Auto Play needs you: ${reason || `${name} could not continue.`}` });
+    // Guard usage: stop if the agent keeps ending turns without touching the game.
     idle = turn.tools === 0 && status !== 'paused' ? idle + 1 : 0;
-    if (idle >= 2) return report('error', { message: 'Codex ended two turns without playing. Auto Play stopped.' });
+    if (idle >= 2) return report('error', { message: `${name} ended two turns without playing. Auto Play stopped.` });
+    const usage = turn.tokens ? `, ${Math.round(turn.tokens / 1000)}k tokens` : '';
+    report('activity', { message: `Turn ${++turns} done (${turn.tools} game actions${usage})`, turn: turns, tools: turn.tools });
     await delay(turnDelay, undefined, { signal }).catch(() => {});
   }
 }
 
 async function main() {
-  const [sessionId, codex, profileName] = process.argv.slice(2);
+  const [sessionId, program, profileName] = process.argv.slice(2);
   const profile = Object.hasOwn(profiles, profileName) ? profiles[profileName] : profiles.terra;
   const report = (type, fields) => process.stdout.write(JSON.stringify({ type, ...fields }) + '\n');
   const controller = new AbortController();
@@ -195,12 +298,12 @@ async function main() {
   process.stdin.on('close', stop);
   process.stdin.resume();
   for (const name of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.once(name, stop);
-  if (!/^[0-9a-f-]{36}$/.test(sessionId ?? '') || !codex) {
+  if (!/^[0-9a-f-]{36}$/.test(sessionId ?? '') || !program) {
     report('error', { message: 'Start Auto Play from the AI menu in mGBA Willow.' });
     process.exit(1);
   }
   try {
-    await runAutoPlay({ codex, profile, sessionId, report, signal: controller.signal });
+    await runAutoPlay({ program, profile, sessionId, report, signal: controller.signal });
   } catch (error) {
     report('error', { message: error.message });
   }
