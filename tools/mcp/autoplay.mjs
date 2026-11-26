@@ -4,7 +4,7 @@ import { execFile, spawn } from 'node:child_process';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Bridge, descriptors } from './bridge.mjs';
+import { Bridge, descriptors, sessionDirectory } from './bridge.mjs';
 
 export const profiles = {
   terra: { model: 'gpt-6.1-terra', effort: 'medium', label: 'GPT-6.1 Terra · medium' },
@@ -12,11 +12,13 @@ export const profiles = {
 };
 
 const repository = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
+const serverScript = fileURLToPath(new URL('./server.mjs', import.meta.url));
+const gameActions = new Set(['press', 'act', 'act_sequence', 'move_to', 'train_battle']);
 
 export function autoPlayPrompt(sessionId) {
   return `You are Willow Auto Play. Play the game open in mGBA Willow by yourself. Nobody reads or answers this chat, so never ask questions or wait for a reply.
 
-- Use the mgba-willow MCP tools. Connect only to session_id "${sessionId}" (call list_sessions first if needed). Never control another mGBA window.
+- Begin by calling the mgba-willow connect tool with session_id "${sessionId}". The MCP server is already scoped to that window. If you cannot connect, report AUTOPLAY: blocked with the connection error.
 - Each turn starts with a fresh MCP connection, so connect again before acting.
 - Follow AGENTS.md and doc/willow-control.md for control, verification, in-game saves and progress notes. For Pokémon Emerald, read CURRENT_HANDOFF.md first.
 - Make steady story progress toward the current objective. Keep going through battles, dialogue and travel for a long stretch (roughly 30 to 60 tool calls) before ending the turn.
@@ -30,9 +32,18 @@ export function continuePrompt(sessionId) {
   return `Continue Willow Auto Play from the live game state with the same rules. Connect to session_id "${sessionId}" again before acting, and end with the AUTOPLAY status line.`;
 }
 
-export function codexArguments({ profile, sessionId, thread }) {
+export function codexArguments({ profile, sessionId, thread, directory = sessionDirectory }) {
+  const mcpConfig = [
+    `command=${JSON.stringify(process.execPath)}`,
+    `args=[${JSON.stringify(serverScript)}]`,
+    `env={MGBA_WILLOW_SESSION_DIR=${JSON.stringify(directory)},WILLOW_AUTOPLAY_SESSION_ID=${JSON.stringify(sessionId)}}`,
+    'required=true',
+  ].join(',');
   const settings = [
     '-m', profile.model,
+    '--ignore-user-config',
+    '-c', `mcp_servers.mgba-willow={${mcpConfig}}`,
+    '-c', 'windows.sandbox="unelevated"',
     '-c', `model_reasoning_effort="${profile.effort}"`,
     '-c', 'approval_policy="never"',
     '-c', 'sandbox_mode="workspace-write"',
@@ -45,11 +56,8 @@ export function codexArguments({ profile, sessionId, thread }) {
 // Short activity text for one Codex JSON event, or undefined for events not worth showing.
 export function describe(event) {
   const item = event?.item;
-  if (event?.type === 'item.started' && item?.type === 'mcp_tool_call') return `Using ${item.tool}`;
-  if (event?.type === 'item.completed' && item?.type === 'agent_message' && typeof item.text === 'string') {
-    const line = item.text.split('\n').map(text => text.trim()).filter(Boolean).find(text => !text.startsWith('AUTOPLAY:'));
-    return line && line.slice(0, 160);
-  }
+  if (event?.type === 'item.started' && item?.type === 'mcp_tool_call' && item.server === 'mgba-willow')
+    return `Using ${item.tool}`;
   return undefined;
 }
 
@@ -69,13 +77,17 @@ function killTree(child) {
 }
 
 // Runs one Codex turn. Resolves with the thread id, the final message and tool-call count.
-function runTurn({ codex, codexPrefix, args, cwd, report, signal }) {
+function runTurn({ codex, codexPrefix, args, cwd, report, signal, activityTimeout }) {
   return new Promise(resolve => {
     const child = spawn(codex, [...codexPrefix, ...args], { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     const result = { thread: undefined, message: '', tools: 0, error: '', code: null };
     let buffer = '';
     let stderr = '';
     const abort = () => killTree(child);
+    const watchdog = setTimeout(() => {
+      result.error = 'Codex stopped responding during Auto Play.';
+      abort();
+    }, activityTimeout);
     signal.addEventListener('abort', abort, { once: true });
     child.stdout.setEncoding('utf8').on('data', chunk => {
       buffer += chunk;
@@ -86,8 +98,13 @@ function runTurn({ codex, codexPrefix, args, cwd, report, signal }) {
         if (!line.startsWith('{')) continue;
         let event;
         try { event = JSON.parse(line); } catch { continue; }
+        watchdog.refresh();
         if (event.type === 'thread.started') result.thread = event.thread_id;
-        if (event.type === 'item.started' && event.item?.type === 'mcp_tool_call') result.tools++;
+        const item = event.item;
+        if (event.type === 'item.completed' && item?.type === 'mcp_tool_call' &&
+            item.server === 'mgba-willow' && gameActions.has(item.tool) && item.status === 'completed' && !item.error) {
+          result.tools++;
+        }
         if (event.type === 'item.completed' && event.item?.type === 'agent_message') result.message = event.item.text ?? '';
         if (event.type === 'error' || event.type === 'turn.failed') {
           result.error = event.message ?? event.error?.message ?? 'Codex reported an error.';
@@ -99,6 +116,7 @@ function runTurn({ codex, codexPrefix, args, cwd, report, signal }) {
     child.stderr.setEncoding('utf8').on('data', chunk => { stderr = (stderr + chunk).slice(-4000); });
     child.on('error', error => { result.error = error.message; });
     child.on('close', code => {
+      clearTimeout(watchdog);
       signal.removeEventListener('abort', abort);
       result.code = code;
       if (code !== 0 && !result.error) {
@@ -125,7 +143,8 @@ async function sessionState(sessionId, directory) {
 }
 
 export async function runAutoPlay({
-  codex, codexPrefix = [], profile, sessionId, cwd = repository, report, signal, directory,
+  codex, codexPrefix = [], profile, sessionId, cwd = repository, report, signal, directory = sessionDirectory,
+  activityTimeout = 120000,
   state = () => sessionState(sessionId, directory), pauseInterval = 2000, retryDelay = 10000, turnDelay = 1000,
 }) {
   let thread;
@@ -142,10 +161,13 @@ export async function runAutoPlay({
       continue;
     }
     report('status', { message: `Auto Play is running with ${profile.label}.` });
-    const turn = await runTurn({ codex, codexPrefix, args: codexArguments({ profile, sessionId, thread }), cwd, report, signal });
+    const args = codexArguments({ profile, sessionId, thread, directory });
+    const turn = await runTurn({ codex, codexPrefix, args, cwd, report, signal, activityTimeout });
     if (signal.aborted) break;
     if (turn.error) {
-      if (/usage limit|rate limit|quota|not logged in|log in again|unauthorized/i.test(turn.error)) return report('error', { message: turn.error });
+      if (/usage limit|rate limit|quota|not logged in|log in again|unauthorized|required MCP|model.*not (?:found|supported|available)/i.test(turn.error)) {
+        return report('error', { message: turn.error });
+      }
       if (++failures >= 3) return report('error', { message: `Codex failed three times in a row: ${turn.error}` });
       report('status', { message: `Codex stopped unexpectedly (${turn.error}). Retrying…` });
       thread = undefined;
@@ -165,7 +187,7 @@ export async function runAutoPlay({
 
 async function main() {
   const [sessionId, codex, profileName] = process.argv.slice(2);
-  const profile = profiles[profileName] ?? profiles.terra;
+  const profile = Object.hasOwn(profiles, profileName) ? profiles[profileName] : profiles.terra;
   const report = (type, fields) => process.stdout.write(JSON.stringify({ type, ...fields }) + '\n');
   const controller = new AbortController();
   const stop = () => controller.abort();

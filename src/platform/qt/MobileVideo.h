@@ -19,11 +19,11 @@ struct SwsContext;
 
 namespace QGBA {
 
-// Low-latency H.264 for the Willow Mobile stream. Hardware encoders come first
-// (NVENC, AMF, Quick Sync, Media Foundation), then x264. Native-size frames are
+// Low-latency HEVC via NVIDIA NVENC, or H.264 with hardware encoders
+// preferred over x264. Native-size frames are
 // scaled by an integer factor with nearest-neighbour sampling so 4:2:0 chroma
 // never spans two console pixels; frames 480 or more pixels wide pass unscaled.
-// Output is Annex B with SPS/PPS on every keyframe and no B-frames, which
+// Output is Annex B with in-band parameter sets and no B-frames, which
 // WebCodecs can decode without extra configuration.
 class MobileVideoEncoder {
 public:
@@ -33,7 +33,7 @@ public:
 	};
 
 	static bool available();
-	static QStringList defaultEncoders();
+	static QStringList defaultEncoders(bool hevc = false);
 
 	explicit MobileVideoEncoder(QStringList encoders = defaultEncoders(), int scale = 2);
 	~MobileVideoEncoder();

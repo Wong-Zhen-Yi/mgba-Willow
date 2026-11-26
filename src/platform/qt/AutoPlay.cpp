@@ -23,6 +23,14 @@ using namespace QGBA;
 
 namespace {
 
+const struct {
+	const char* id;
+	const char* label;
+} _models[] = {
+	{ "terra", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "GPT-6.1 Terra (medium)") },
+	{ "luna", QT_TRANSLATE_NOOP("QGBA::AutoPlay", "GPT-6 Luna (extra high)") },
+};
+
 QString findProgram(const QString& name, const QString& installedPath) {
 	if (!installedPath.isEmpty() && QFileInfo(installedPath).isExecutable())
 		return installedPath;
@@ -52,8 +60,8 @@ AutoPlay::AutoPlay(Window* window, ActionMapper* actions, const QString& session
 
 	actions->addMenu(tr("Auto Play Model"), "autoPlayModel", "ai");
 	auto* model = window->config()->addOption("autoPlayModel");
-	model->addValue(tr("GPT-6.1 Terra (medium)"), "terra", actions, "autoPlayModel");
-	model->addValue(tr("GPT-6 Luna (extra high)"), "luna", actions, "autoPlayModel");
+	for (const auto& profile : _models)
+		model->addValue(tr(profile.label), profile.id, actions, "autoPlayModel");
 	model->connect(
 	    [this](const QVariant&) {
 		    m_window->config()->write();
@@ -62,7 +70,7 @@ AutoPlay::AutoPlay(Window* window, ActionMapper* actions, const QString& session
 	    },
 	    this);
 	const auto initial = window->config()->getOption("autoPlayModel", "terra");
-	window->config()->setOption("autoPlayModel", initial == "luna" ? "luna" : "terra");
+	window->config()->setOption("autoPlayModel", supportsModel(initial) ? initial : QStringLiteral("terra"));
 
 	m_button = new QToolButton(window);
 	m_button->setCheckable(true);
@@ -81,9 +89,13 @@ AutoPlay::AutoPlay(Window* window, ActionMapper* actions, const QString& session
 		setRunning(false);
 		showMessage(tr("Auto Play could not start. Check your Node.js installation."), true);
 	});
-	connect(&m_process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this]() {
+	connect(&m_process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this](int code) {
 		setRunning(false);
-		if (!m_reportedError)
+		if (m_reportedError)
+			return;
+		if (code != 0 && !m_stopping)
+			showMessage(tr("Auto Play runner exited with code %1.").arg(code), true);
+		else
 			showMessage(tr("Auto Play is off."));
 	});
 	connect(window, &Window::gameLoaded, this, [this]() {
@@ -103,7 +115,7 @@ AutoPlay::~AutoPlay() {
 	}
 }
 
-void AutoPlay::start() {
+void AutoPlay::start(const QString& model) {
 	if (m_process.state() != QProcess::NotRunning) {
 		setRunning(true);
 		return;
@@ -129,10 +141,12 @@ void AutoPlay::start() {
 	m_stopping = false;
 	m_reportedError = false;
 	m_updates.clear();
-	const auto model = m_window->config()->getOption("autoPlayModel", "terra");
+	const auto selectedModel = model.isEmpty() ? m_window->config()->getOption("autoPlayModel", "terra") : model;
+	if (!supportsModel(selectedModel))
+		return fail(tr("Auto Play: invalid model."));
 	setRunning(true);
 	showMessage(tr("Auto Play is starting…"));
-	m_process.start(node, { script, m_sessionId, codex, model });
+	m_process.start(node, { script, m_sessionId, codex, selectedModel });
 }
 
 void AutoPlay::stop() {
@@ -149,7 +163,25 @@ void AutoPlay::stop() {
 
 QJsonObject AutoPlay::status() const {
 	const bool running = m_process.state() != QProcess::NotRunning;
-	return { { "running", running }, { "stopping", running && m_stopping }, { "message", m_message } };
+	return { { "running", running },
+		     { "stopping", running && m_stopping },
+		     { "message", m_message },
+		     { "default_model", m_window->config()->getOption("autoPlayModel", "terra") } };
+}
+
+QJsonArray AutoPlay::models() const {
+	QJsonArray models;
+	for (const auto& profile : _models)
+		models.append(QJsonObject { { "id", QString::fromLatin1(profile.id) }, { "label", tr(profile.label) } });
+	return models;
+}
+
+bool AutoPlay::supportsModel(const QString& model) {
+	for (const auto& profile : _models) {
+		if (model == QLatin1String(profile.id))
+			return true;
+	}
+	return false;
 }
 
 void AutoPlay::setRunning(bool running) {

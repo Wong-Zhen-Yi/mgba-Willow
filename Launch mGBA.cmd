@@ -1,5 +1,8 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
+rem Use Windows PowerShell without inheriting modules from a developer terminal.
+set "PSModulePath=%SystemRoot%\System32\WindowsPowerShell\v1.0\Modules"
+if /i "%~1"=="--install-terminal-command" goto install_terminal_command
 title mGBA Willow - Game Library + Multi-Agent MCP
 rem Resolve all launcher paths from this checkout, not the caller's directory.
 cd /d "%~dp0"
@@ -21,11 +24,12 @@ echo Select a game card and click Play, or double-click a card to start.
 echo Use File / Return to game library after saving your current game.
 echo Multi-agent MCP support remains available during gameplay.
 echo Changed emulator sources will be rebuilt automatically.
+echo To enable mgba in your terminal, run "Launch mGBA.cmd" --install-terminal-command.
 echo To play from your iPhone, click Pair iPhone in the Willow window, then pick a game on the phone.
-echo Tap Auto Play or Stop Auto Play on the phone game screen to control Codex.
-echo Use Game speed on the phone to change playback speed while connected.
+echo Tap Auto Play to choose a Codex model, or Stop Auto Play to stop the current run.
+echo Open Settings on the phone to change game speed or video format.
 echo The iPhone link uses Tailscale Funnel HTTPS; Tailscale handles the certificate.
-echo The iPhone stream is H.264 video encoded on the GPU (NVENC/AMF/Quick Sync), with CPU and PNG fallbacks.
+echo Auto video tries NVIDIA NVENC HEVC first, with H.264 and PNG fallbacks.
 echo GBA games render on the GPU with OpenGL; Willow uses the software renderer while an AI agent has control.
 echo After opening a ROM, multiple agents can connect; button actions run one at a time.
 echo Connected agents can update the Objective box with the set_objective MCP tool.
@@ -40,12 +44,13 @@ if exist "%~dp0POKEMON_EMERALD_OBJECTIVES.md" (
     echo Pokemon Emerald objectives file is missing: "%~dp0POKEMON_EMERALD_OBJECTIVES.md"
 )
 echo.
-rem Use Windows PowerShell without changing the system execution policy.
-rem Do not inherit PowerShell 7 modules from a developer terminal.
-set "PSModulePath=%SystemRoot%\System32\WindowsPowerShell\v1.0\Modules"
 "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\launch-windows.ps1" %*
 if not errorlevel 1 exit /b 0
 echo.
 echo Setup or launch did not finish. Double-click this launcher to retry.
 pause
 exit /b 1
+
+:install_terminal_command
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\install-terminal-command.ps1"
+exit /b %errorlevel%

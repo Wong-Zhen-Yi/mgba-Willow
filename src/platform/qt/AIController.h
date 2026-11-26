@@ -43,6 +43,7 @@ private:
 	QJsonArray completedSteps() const;
 	QJsonObject observation(bool screenshot = true);
 	QJsonObject session() const;
+	QJsonObject mobileSession() const;
 	Window* m_window;
 	AutoPlay* m_autoPlay;
 	QLocalServer m_server;
@@ -59,6 +60,7 @@ private:
 	std::shared_ptr<CoreController> m_mobileCore;
 	QList<QMetaObject::Connection> m_mobileConnections;
 	std::unique_ptr<MobileVideoEncoder> m_mobileVideo;
+	QString m_mobileVideoCodec;
 	QTimer m_mobileFrameWait;
 	QJsonValue m_mobileFrameId = QJsonValue(QJsonValue::Undefined);
 	QJsonObject m_mobileFrameArgs;

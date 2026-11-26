@@ -82,7 +82,7 @@ To let Codex play without opening a chat, open a game and click **▶ Auto Play*
 - **GPT-6.1 Terra (medium)**, the default.
 - **GPT-6 Luna (extra high)**, for harder decisions. It is slower and uses more of your Codex limits.
 
-Auto Play runs `codex exec` from this repository with the `mgba-willow` MCP server you registered in Setup, so it uses your Codex sign-in and usage limits. Codex connects only to the window you started it from. It follows `AGENTS.md` and [Willow control and verification](../../doc/willow-control.md), including in-game saves and progress notes. Codex runs with the workspace-write sandbox and is told to edit only `CURRENT_HANDOFF.md`, `POKEMON_EMERALD_OBJECTIVES.md` and `STORY_PROGRESS_NOTES.md`.
+Auto Play runs `codex exec` from this repository using your Codex sign-in and usage limits. It starts this checkout's bundled MCP server scoped to the window you started it from. Install the Node dependencies with `npm ci` in `tools/mcp` for desktop Auto Play. Pairing installs them automatically for mobile use. Auto Play follows `AGENTS.md` and [Willow control and verification](../../doc/willow-control.md), including in-game saves and progress notes. Codex runs with the workspace-write sandbox and is told to edit only `CURRENT_HANDOFF.md`, `POKEMON_EMERALD_OBJECTIVES.md` and `STORY_PROGRESS_NOTES.md`.
 
 When a Codex turn ends, Auto Play resumes the same conversation. Activity appears in the status bar. Auto Play waits while the game is paused and continues when you resume. It stops and shows the reason if Codex says it needs you, ends two turns without playing, fails three times in a row, or reaches a usage limit. Your keyboard and controller keep working alongside it.
 

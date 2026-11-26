@@ -22,12 +22,13 @@ on PC**. Tap **Continue** to control it. The phone never closes a running game,
 because it may have unsaved progress. To switch games, save on the PC and
 return to the game library there first.
 
-Tap **Auto Play** on the game screen to let Codex play using the model selected
-in Willow under **AI → Auto Play Model**. Tap **Stop Auto Play** on the phone or
-PC to stop it. Auto Play waits while the game is paused and keeps running on the
-PC if you return to **Games** or close the mobile page.
+Tap **Auto Play**, choose a model, and tap **Start Auto Play**. The picker
+starts with the PC's **AI → Auto Play Model** setting. Your choice applies to
+that run. Tap **Stop Auto Play** on the phone or PC to stop it. Auto Play waits
+while the game is paused and keeps running on the PC if you return to **Games**
+or close the mobile page.
 
-Use **Game speed** to choose **1×**, **2×**, **4×**, **8×**, or **Maximum** for
+Open **Settings → Game speed** to choose **1×**, **2×**, **4×**, **8×**, or **Maximum** for
 manual play and Auto Play. **PC speed** follows Willow’s desktop settings.
 Desktop fast-forward controls take priority when active. Willow returns to
 **PC speed** when the phone disconnects or returns to **Games**.
@@ -41,18 +42,18 @@ private.
 
 ## Video stream
 
-Willow streams the game to the phone as H.264 video at the game's frame rate.
-The PC encodes it on the GPU when it can, trying NVIDIA NVENC first, then AMD
-AMF, Intel Quick Sync and Windows Media Foundation. If none of these work, it
-uses x264 on the CPU. The phone decodes the video in hardware with WebCodecs.
-The status line on the phone shows **GPU video** or **CPU video**. Frames are
-doubled with sharp pixel edges before encoding, so a GBA game streams at
-480×320 and uses about 1–2 Mbit/s.
+**Settings → Video stream** defaults to **Auto (prefer NVIDIA HEVC)**. If the
+browser supports HEVC decoding, Willow tries encoding HEVC (H.265) on the PC's
+NVIDIA GPU with NVENC. It falls back to H.264 if either side cannot use HEVC.
+For H.264, the PC tries NVENC, AMD AMF, Intel Quick Sync, and Windows Media
+Foundation, then x264 on the CPU. Settings shows the active codec and encoder.
+Frames are doubled with sharp pixel edges before encoding, so a GBA game
+typically streams at 480×320.
 
-The phone falls back to still PNG frames, at up to 20 per second, when it has
-no WebCodecs (for example on a plain `http://` link) or when the PC cannot
-encode H.264. To force an encoder for testing, set `WILLOW_MOBILE_ENCODER`
-before launching Willow, for example `WILLOW_MOBILE_ENCODER=libx264`.
+You can also select **H.264** or **PNG** directly. Willow uses PNG stills at up
+to 20 frames per second when the browser or PC cannot use video. To force a
+PC encoder for testing, set `WILLOW_MOBILE_ENCODER` before launching Willow,
+for example `WILLOW_MOBILE_ENCODER=libx264`.
 
 ## GPU rendering on the PC
 

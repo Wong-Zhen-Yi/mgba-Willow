@@ -29,7 +29,8 @@ test('a paired mobile controller streams frames and controls input, speed and Lu
   const name = `mgba-willow-ai-${id}`;
   const pipe = process.platform === 'win32' ? `\\\\.\\pipe\\${name}` : path.join(os.tmpdir(), name);
   const sockets = new Set();
-  const game = { session_id: id, game_id: gameId, platform: 'GBA', started: true, paused: false, title: 'Test ROM' };
+  const game = { session_id: id, game_id: gameId, platform: 'GBA', started: true, paused: false, title: 'Pokémon Emerald' };
+  const models = [{ id: 'terra', label: 'GPT-6.1 Terra (medium)' }, { id: 'luna', label: 'GPT-6 Luna (extra high)' }];
   const autoplayCalls = [];
   const speedCalls = [];
   let autoplay = { running: false, stopping: false, message: '' };
@@ -51,7 +52,7 @@ test('a paired mobile controller streams frames and controls input, speed and Lu
           case 'mobile_session': result = game; break;
           case 'mobile_connect':
             attached = request.args.game_id === gameId;
-            if (attached) result = { ...game, autoplay, speed: 0 };
+            if (attached) result = { ...game, autoplay, autoplay_models: models, speed: 0 };
             else error = 'Game changed';
             break;
           case 'mobile_frame':
@@ -108,7 +109,9 @@ test('a paired mobile controller streams frames and controls input, speed and Lu
   assert.equal(page.status, 200);
   assert.match(page.csp, /connect-src ws:\/\/100\.94\.12\.10:9444/);
   assert.match(page.body, /<button id="autoplay" type="button" disabled>Auto Play<\/button>/);
-  assert.match(page.body, /<select id="speed" aria-label="Game speed" disabled>/);
+  assert.match(page.body, /<dialog id="settings-dialog"/);
+  assert.match(page.body, /<select id="autoplay-model" required>/);
+  assert.match(page.body, /<label for="speed">Game speed<\/label>/);
   assert.equal((await get('/', { Host: 'example.com' })).status, 404);
   assert.equal((await get('/Willow-Mobile.mobileconfig')).status, 404);
 
@@ -145,6 +148,8 @@ test('a paired mobile controller streams frames and controls input, speed and Lu
   const attached = await read();
   assert.equal(attached.type, 'attached');
   assert.deepEqual(attached.autoplay, autoplay);
+  assert.deepEqual(attached.autoplay_models, models);
+  assert.equal(attached.title, 'Pokémon Emerald');
   assert.equal(attached.speed, 0);
   if (!packets[1]) await once(ws, 'message');
   // PNG frames carry a leading 0 type byte.
@@ -160,9 +165,11 @@ test('a paired mobile controller streams frames and controls input, speed and Lu
   assert.deepEqual(speedCalls, [4]);
 
   send({ type: 'autoplay', enabled: 'true' });
-  send({ type: 'autoplay', enabled: true });
+  send({ type: 'autoplay', enabled: true, model: 3 });
+  assert.equal((await read('autoplay-error')).message, 'Invalid Auto Play model.');
+  send({ type: 'autoplay', enabled: true, model: 'luna' });
   assert.deepEqual(await read(), { type: 'autoplay', acknowledged: true, autoplay });
-  assert.deepEqual(autoplayCalls, [{ enabled: true }]);
+  assert.deepEqual(autoplayCalls, [{ enabled: true, model: 'luna' }]);
 
   // A pause and progress from the PC are sent even though the frame is unchanged.
   game.paused = true;
@@ -182,7 +189,7 @@ test('a paired mobile controller streams frames and controls input, speed and Lu
   send({ type: 'autoplay', enabled: false });
   assert.deepEqual(await read(), { type: 'autoplay', acknowledged: true, autoplay });
   assert.equal(autoplay.stopping, true);
-  assert.deepEqual(autoplayCalls, [{ enabled: true }, { enabled: false }]);
+  assert.deepEqual(autoplayCalls, [{ enabled: true, model: 'luna' }, { enabled: false }]);
   autoplay = { running: false, stopping: false, message: 'Auto Play is off.' };
   assert.deepEqual(await read(), { type: 'autoplay', acknowledged: false, autoplay });
 
@@ -312,7 +319,7 @@ test('the phone lists the PC library, loads artwork and launches a game', { time
   assert.deepEqual(after.running, { game_id: 'game-1', title: 'Emerald', platform: 'GBA' });
 });
 
-test('a phone with a hardware decoder gets the H.264 stream, keyframes on request and PNG on encoder failure', { timeout: 10000 }, async t => {
+test('a phone can switch from NVENC HEVC to H.264 and PNG', { timeout: 10000 }, async t => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'willow-mobile-'));
   const id = randomUUID();
   const gameId = randomUUID();
@@ -338,7 +345,11 @@ test('a phone with a hardware decoder gets the H.264 stream, keyframes on reques
         else if (request.method === 'mobile_frame') {
           requests.push(request.args);
           result = { frame: ++frame, paused: false, autoplay: null };
-          if (request.args.codec !== 'h264') result.png = fixtureFrame.toString('base64');
+          if (request.args.codec === 'hevc') {
+            result.video = { encoder: 'hevc_nvenc', hardware: true, codec: 'hvc1.1.6.L90.B0', width: 480, height: 320,
+                             packets: [{ key: true, data: Buffer.from([0, 0, 0, 1, 38, 1]).toString('base64') }] };
+          }
+          else if (request.args.codec !== 'h264') result.png = fixtureFrame.toString('base64');
           else if (failing) result.video_error = 'libx264: not built in';
           else {
             const key = Boolean(request.args.keyframe);
@@ -390,10 +401,14 @@ test('a phone with a hardware decoder gets the H.264 stream, keyframes on reques
 
   send({ type: 'pair', token });
   await json('paired');
-  send({ type: 'video', codec: 'h264' });
+  send({ type: 'video', codec: 'hevc' });
   send({ type: 'video', codec: 'vp9' });
   send({ type: 'connect', session: id, game: gameId });
   await json('attached');
+  assert.deepEqual(await json('video'),
+    { type: 'video', codec: 'hevc', encoder: 'hevc_nvenc', hardware: true, format: 'hvc1.1.6.L90.B0', width: 480, height: 320 });
+  assert.deepEqual([...(await chunk(2)).subarray(1)], [0, 0, 0, 1, 38, 1]);
+  send({ type: 'video', codec: 'h264' });
 
   // The decoder configuration arrives before the first keyframe.
   assert.deepEqual(await json('video'),
@@ -409,13 +424,13 @@ test('a phone with a hardware decoder gets the H.264 stream, keyframes on reques
   assert.equal(video.at(-1).after, frame - 1);
   // Back-to-back pulls outpace the 50 ms PNG timer.
   assert.ok(video.length >= 3);
-  assert.ok(!requests.some(args => args.codec && args.codec !== 'h264'));
+  assert.ok(!requests.some(args => args.codec === 'vp9'));
 
   send({ type: 'keyframe' });
   await chunk(2);
 
   // When the PC cannot encode, the phone is told to expect PNG and gets it.
   failing = true;
-  assert.deepEqual(await json('video'), { type: 'video', codec: 'png', reason: 'libx264: not built in' });
+  assert.deepEqual(await json('video'), { type: 'video', codec: 'png', failed: 'h264', reason: 'libx264: not built in' });
   assert.deepEqual(await chunk(0), Buffer.concat([Buffer.from([0]), fixtureFrame]));
 });

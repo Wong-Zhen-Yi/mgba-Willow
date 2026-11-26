@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #pragma once
 
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
 #include <QProcess>
@@ -26,9 +27,11 @@ public:
 	AutoPlay(Window* window, ActionMapper* actions, const QString& sessionId);
 	~AutoPlay() override;
 
-	void start();
+	void start(const QString& model = {});
 	void stop();
 	QJsonObject status() const;
+	QJsonArray models() const;
+	static bool supportsModel(const QString& model);
 
 private:
 	void readUpdates();

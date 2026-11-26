@@ -13,6 +13,8 @@ const verification = `For verified Emerald, use one press then inspect each new 
 const server = new McpServer({ name: 'mgba-willow', version: '1.1.0' }, { instructions: `${instructions} ${verification} After connecting, use set_objective to display the current goal in the window and update it when the goal changes. Keep it short; this shared display does not replace story notes. Only atomic:true certifies screenshot/state frame alignment. Unsupported ROMs retain raw tools.` });
 let bridge;
 const stateResponses = new StateResponses();
+const autoPlaySession = process.env.WILLOW_AUTOPLAY_SESSION_ID;
+const sessionDirectory = process.env.MGBA_WILLOW_SESSION_DIR;
 let queue = Promise.resolve();
 
 export function content(result) {
@@ -71,16 +73,17 @@ async function controlledInput(method, args) {
 }
 
 register('list_sessions', 'List visible mGBA windows, game titles, platforms, and AI control status. Open a ROM with Launch mGBA.cmd first.', {}, true,
-  async () => ({ sessions: await listSessions() }));
+  async () => ({ sessions: await listSessions(sessionDirectory, autoPlaySession) }));
 register('connect', 'Join shared AI control of one game window, preserve its pause state, and return its screenshot. Multiple agents can connect; actions run one at a time. Human controls remain active.', {
   session_id: z.string().uuid(),
 }, false, async ({ session_id }) => {
+  if (autoPlaySession && session_id !== autoPlaySession) throw new Error('Auto Play is assigned to another game session.');
   stateResponses.reset();
   if (bridge) {
     try { await bridge.request('disconnect'); } catch {}
     bridge.close(); bridge = undefined;
   }
-  const descriptor = (await descriptors()).find(item => item.session_id === session_id);
+  const descriptor = (await descriptors(sessionDirectory)).find(item => item.session_id === session_id);
   if (!descriptor) throw new Error('Session not found. Use list_sessions again.');
   const candidate = await Bridge.open(descriptor);
   try {

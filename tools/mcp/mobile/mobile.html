@@ -31,7 +31,10 @@
           <h1>Willow <span>Mobile</span></h1>
           <p id="game-title" hidden></p>
         </div>
-        <button id="back" type="button">Games</button>
+        <div class="header-actions">
+          <button id="settings" type="button">Settings</button>
+          <button id="back" type="button">Games</button>
+        </div>
       </header>
       <div class="screen" id="screen">
         <canvas id="frame" role="img" aria-label="Live game screen" width="240" height="160" hidden></canvas>
@@ -41,24 +44,14 @@
       </div>
       <div class="player-controls">
         <p id="status" role="status"></p>
-        <div class="player-actions">
-          <select id="speed" aria-label="Game speed" disabled>
-            <option value="0">PC speed</option>
-            <option value="1">1×</option>
-            <option value="2">2×</option>
-            <option value="4">4×</option>
-            <option value="8">8×</option>
-            <option value="-1">Maximum</option>
-          </select>
-          <button id="autoplay" type="button" disabled>Auto Play</button>
-        </div>
+        <button id="autoplay" type="button" disabled>Auto Play</button>
       </div>
     </section>
     <section class="gamepad" aria-label="Gamepad" inert>
-      <div class="shoulders">
-        <button type="button" data-key="512">L</button>
-        <button type="button" data-key="256">R</button>
-      </div>
+      <button type="button" class="left-shoulder" data-key="512">L</button>
+      <button type="button" class="select-key" data-key="4">Select</button>
+      <button type="button" class="start-key" data-key="8">Start</button>
+      <button type="button" class="right-shoulder" data-key="256">R</button>
       <div class="primary">
         <div class="directions" role="group" aria-label="Direction pad">
           <button type="button" data-key="64" aria-label="Up">▲</button>
@@ -72,11 +65,41 @@
           <button type="button" data-key="1">A</button>
         </div>
       </div>
-      <div class="system">
-        <button type="button" data-key="4">Select</button>
-        <button type="button" data-key="8">Start</button>
-      </div>
     </section>
   </main>
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <h2 id="settings-title">Settings</h2>
+    <label for="speed">Game speed</label>
+    <select id="speed" disabled>
+      <option value="0">PC speed</option>
+      <option value="1">1×</option>
+      <option value="2">2×</option>
+      <option value="4">4×</option>
+      <option value="8">8×</option>
+      <option value="-1">Maximum</option>
+    </select>
+    <label for="video-mode">Video stream</label>
+    <select id="video-mode">
+      <option value="auto">Auto (prefer NVIDIA HEVC)</option>
+      <option value="h264">H.264</option>
+      <option value="png">PNG</option>
+    </select>
+    <p id="stream-status" role="status"></p>
+    <p id="settings-status"></p>
+    <form method="dialog" class="dialog-actions">
+      <button type="submit">Done</button>
+    </form>
+  </dialog>
+  <dialog id="autoplay-dialog" aria-labelledby="autoplay-title">
+    <h2 id="autoplay-title">Auto Play</h2>
+    <form id="autoplay-form" method="dialog">
+      <label for="autoplay-model">Model</label>
+      <select id="autoplay-model" required></select>
+      <div class="dialog-actions">
+        <button id="autoplay-cancel" type="button">Cancel</button>
+        <button type="submit">Start Auto Play</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>

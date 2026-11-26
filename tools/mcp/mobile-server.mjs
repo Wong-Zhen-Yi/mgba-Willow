@@ -75,8 +75,8 @@ export async function createMobileServer({ origin, token, pid, directory }) {
     let lastFrame;
     let lastPaused;
     let lastAutoPlay;
-    // 'png' polls still frames; 'h264' streams every frame from the PC's encoder.
     let codec = 'png';
+    let streamRevision = 0;
     let keyframe = true;
     let lastVideo;
     let alive = true;
@@ -108,16 +108,18 @@ export async function createMobileServer({ origin, token, pid, directory }) {
       alive = false;
       ws.ping();
     }, 5000);
-    // Binary frames start with a type byte: 0 PNG, 1 H.264 delta, 2 H.264 keyframe.
+    // Binary frames start with a type byte: 0 PNG, 1 video delta, 2 video keyframe.
     const binary = (type, base64) => ws.send(Buffer.concat([Buffer.from([type]), Buffer.from(base64, 'base64')]));
     async function pull() {
       if (!bridge || capturing || ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > 128 * 1024) return;
       const client = bridge;
-      const video = codec === 'h264';
+      const requestedCodec = codec;
+      const revision = streamRevision;
+      const video = requestedCodec !== 'png';
       let streamed = false;
       capturing = true;
       try {
-        // H.264 requests wait on the PC for the next finished frame, so they run back to back.
+        // Video requests wait on the PC for the next frame, so they run back to back.
         const result = await client.request('mobile_frame', video ?
           { after: lastFrame, codec, keyframe, wait: true } : { after: lastFrame });
         if (client !== bridge || ws.readyState !== WebSocket.OPEN) return;
@@ -127,10 +129,11 @@ export async function createMobileServer({ origin, token, pid, directory }) {
         }
         updateAutoPlay(result.autoplay);
         // Ignore a reply that raced a codec switch; the next pull uses the new codec.
-        if (video !== (codec === 'h264')) return;
+        if (revision !== streamRevision) return;
         if (video && result.video_error) {
           codec = 'png';
-          send({ type: 'video', codec, reason: result.video_error });
+          lastFrame = undefined;
+          send({ type: 'video', codec, failed: requestedCodec, reason: result.video_error });
         } else if (video && result.video) {
           const { encoder, hardware, codec: format, width, height, packets } = result.video;
           const config = JSON.stringify([encoder, format, width, height]);
@@ -155,7 +158,7 @@ export async function createMobileServer({ origin, token, pid, directory }) {
       }
       if (streamed) setImmediate(pull);
     }
-    // Paces PNG, and restarts H.264 after a pause or a full send buffer.
+    // Paces PNG, and restarts video after a pause or a full send buffer.
     const frames = setInterval(pull, 50);
 
     ws.on('pong', () => { alive = true; });
@@ -287,7 +290,8 @@ export async function createMobileServer({ origin, token, pid, directory }) {
           lastVideo = undefined;
           lastPaused = game.paused;
           lastAutoPlay = JSON.stringify(game.autoplay);
-          send({ type: 'attached', title: game.title, platform, paused: lastPaused, autoplay: game.autoplay, speed: game.speed });
+          send({ type: 'attached', title: game.title, platform, paused: lastPaused, autoplay: game.autoplay,
+                 autoplay_models: game.autoplay_models, speed: game.speed });
         } catch (error) {
           client?.close();
           send({ type: 'error', message: error.message });
@@ -297,10 +301,9 @@ export async function createMobileServer({ origin, token, pid, directory }) {
         return;
       }
       if (message.type === 'video') {
-        // The phone asks for H.264 once its decoder accepts it, again after a
-        // decoder error (to get a keyframe), or for PNG when it gives up.
-        if (message.codec !== 'h264' && message.codec !== 'png') return;
+        if (!['hevc', 'h264', 'png'].includes(message.codec)) return;
         codec = message.codec;
+        streamRevision++;
         keyframe = true;
         lastVideo = undefined;
         lastFrame = undefined;
@@ -318,10 +321,14 @@ export async function createMobileServer({ origin, token, pid, directory }) {
       }
       if (message.type === 'autoplay' && bridge) {
         if (typeof message.enabled !== 'boolean' || autoplayRequest === bridge) return;
+        if (message.model !== undefined && typeof message.model !== 'string') {
+          send({ type: 'autoplay-error', message: 'Invalid Auto Play model.' });
+          return;
+        }
         const client = bridge;
         autoplayRequest = client;
         try {
-          const result = await client.request('mobile_autoplay', { enabled: message.enabled });
+          const result = await client.request('mobile_autoplay', { enabled: message.enabled, model: message.model });
           if (client === bridge) updateAutoPlay(result, true);
         } catch (error) {
           if (client === bridge) send({ type: 'autoplay-error', message: error.message });

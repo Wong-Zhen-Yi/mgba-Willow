@@ -19,25 +19,67 @@ using namespace QGBA;
 
 namespace {
 
-// Finds the NAL unit of the given type in an Annex B buffer; returns its payload offset or -1.
-int findNal(const QByteArray& data, int type) {
+#ifdef USE_FFMPEG
+int findNal(const QByteArray& data, int type, bool hevc) {
 	const auto* bytes = reinterpret_cast<const uchar*>(data.constData());
 	for (int i = 0; i + 3 < data.size(); ++i) {
 		if (bytes[i] || bytes[i + 1] || bytes[i + 2] != 1) continue;
-		if ((bytes[i + 3] & 0x1F) == type) return i + 3;
+		const int nalType = hevc ? (bytes[i + 3] >> 1) & 0x3F : bytes[i + 3] & 0x1F;
+		if (nalType == type)
+			return i + 3;
 		i += 2;
 	}
 	return -1;
 }
 
-#ifdef USE_FFMPEG
+QString hevcCodec(const QByteArray& data, int sps) {
+	// The SPS starts with the NAL header and one byte before profile_tier_level.
+	// Strip emulation-prevention bytes from its 12-byte general profile.
+	QByteArray profile;
+	int zeros = 0;
+	for (int i = sps + 3; i < data.size() && profile.size() < 12; ++i) {
+		const char byte = data[i];
+		if (zeros >= 2 && byte == 3) {
+			zeros = 0;
+			continue;
+		}
+		profile.append(byte);
+		zeros = byte == 0 ? zeros + 1 : 0;
+	}
+	if (profile.size() != 12)
+		return {};
+
+	const auto* bytes = reinterpret_cast<const uchar*>(profile.constData());
+	const int space = bytes[0] >> 6;
+	const QString prefix = space ? QString(QChar('A' + space - 1)) : QString();
+	const QChar tier = bytes[0] & 0x20 ? 'H' : 'L';
+	// RFC 6381 writes the 32 profile compatibility flags with the first flag in the low bit.
+	quint32 compatible = 0;
+	for (int bit = 0; bit < 32; ++bit) {
+		if (bytes[1 + bit / 8] & (0x80 >> (bit % 8)))
+			compatible |= quint32(1) << bit;
+	}
+	QString codec = QStringLiteral("hvc1.%1%2.%3.%4%5")
+	                    .arg(prefix)
+	                    .arg(bytes[0] & 0x1F)
+	                    .arg(QString::number(compatible, 16).toUpper())
+	                    .arg(tier)
+	                    .arg(bytes[11]);
+	int lastConstraint = 10;
+	while (lastConstraint >= 5 && !bytes[lastConstraint])
+		--lastConstraint;
+	for (int i = 5; i <= lastConstraint; ++i)
+		codec += QStringLiteral(".%1").arg(bytes[i], 2, 16, QLatin1Char('0')).toUpper();
+	return codec;
+}
+
 void setOption(AVCodecContext* context, const char* key, const char* value) {
 	// Each encoder names its options differently; unknown ones are ignored.
 	av_opt_set(context->priv_data, key, value, 0);
 }
 
 void tune(AVCodecContext* context, const QString& name) {
-	if (name == "h264_nvenc") {
+	if (name.endsWith("_nvenc")) {
 		setOption(context, "preset", "p2");
 		setOption(context, "tune", "ull");
 		setOption(context, "rc", "vbr");
@@ -45,6 +87,8 @@ void tune(AVCodecContext* context, const QString& name) {
 		setOption(context, "delay", "0");
 		setOption(context, "rc-lookahead", "0");
 		setOption(context, "forced-idr", "1");
+		if (name == "hevc_nvenc")
+			setOption(context, "profile", "main");
 	} else if (name == "h264_amf") {
 		setOption(context, "usage", "ultralowlatency");
 		setOption(context, "quality", "speed");
@@ -104,10 +148,21 @@ bool MobileVideoEncoder::available() {
 #endif
 }
 
-QStringList MobileVideoEncoder::defaultEncoders() {
+QStringList MobileVideoEncoder::defaultEncoders(bool hevc) {
 	// WILLOW_MOBILE_ENCODER=libx264 (or a comma-separated list) overrides the order.
 	const QString forced = qEnvironmentVariable("WILLOW_MOBILE_ENCODER").trimmed();
-	if (!forced.isEmpty()) return forced.split(',', Qt::SkipEmptyParts);
+	if (!forced.isEmpty()) {
+		QStringList encoders;
+		for (const auto& entry : forced.split(',', Qt::SkipEmptyParts)) {
+			const auto name = entry.trimmed();
+			const bool isHevc = name.startsWith("hevc_");
+			if (!name.isEmpty() && isHevc == hevc)
+				encoders.append(name);
+		}
+		return encoders;
+	}
+	if (hevc)
+		return { "hevc_nvenc" };
 	return {"h264_nvenc", "h264_amf", "h264_qsv", "h264_mf", "libx264"};
 }
 
@@ -195,7 +250,7 @@ bool MobileVideoEncoder::open(const QSize& source) {
 		close();
 		m_candidates.removeFirst();
 	}
-	m_error = errors.isEmpty() ? QStringLiteral("No H.264 encoder") : errors.join("; ");
+	m_error = errors.isEmpty() ? QStringLiteral("No encoder configured for this codec") : errors.join("; ");
 #else
 	m_error = QStringLiteral("This build has no FFmpeg");
 #endif
@@ -216,13 +271,23 @@ bool MobileVideoEncoder::drain(QList<Packet>* packets) {
 		packet.key = m_packet->flags & AV_PKT_FLAG_KEY;
 		av_packet_unref(m_packet);
 		if (packet.key) {
-			// Some encoders keep SPS/PPS only in extradata; a decoder joining at this
-			// keyframe needs them in band.
-			if (findNal(packet.data, 7) < 0 && m_context->extradata_size > 0) {
+			const bool hevc = m_context->codec_id == AV_CODEC_ID_HEVC;
+			const int spsType = hevc ? 33 : 7;
+			auto hasParameters = [&]() {
+				return findNal(packet.data, spsType, hevc) >= 0 && findNal(packet.data, hevc ? 34 : 8, hevc) >= 0 &&
+				    (!hevc || findNal(packet.data, 32, true) >= 0);
+			};
+			// A decoder joining at a keyframe needs all parameter sets in band.
+			if (!hasParameters() && m_context->extradata_size > 0)
 				packet.data.prepend(reinterpret_cast<const char*>(m_context->extradata), m_context->extradata_size);
+			if (!hasParameters()) {
+				m_error = QStringLiteral("%1: keyframe is missing video parameter sets").arg(m_name);
+				return false;
 			}
-			const int sps = findNal(packet.data, 7);
-			if (sps >= 0 && sps + 3 < packet.data.size()) {
+			const int sps = findNal(packet.data, spsType, hevc);
+			if (hevc) {
+				m_codec = hevcCodec(packet.data, sps);
+			} else if (sps + 3 < packet.data.size()) {
 				const auto* bytes = reinterpret_cast<const uchar*>(packet.data.constData()) + sps;
 				m_codec = QString::asprintf("avc1.%02x%02x%02x", bytes[1], bytes[2], bytes[3]);
 			}
@@ -270,6 +335,7 @@ bool MobileVideoEncoder::encode(const QImage& frame, bool keyframe, QList<Packet
 		}
 		// A hardware session can fail mid-stream (driver reset, session limit).
 		// Drop it and continue with the next encoder from a fresh keyframe.
+		packets->clear();
 		m_candidates.removeAll(m_name);
 		close();
 	}

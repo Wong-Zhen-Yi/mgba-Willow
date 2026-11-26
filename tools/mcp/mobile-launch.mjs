@@ -56,7 +56,8 @@ async function tailscaleCommand(...args) {
 
 async function installDependencies() {
   const directory = fileURLToPath(new URL('.', import.meta.url));
-  const modules = ['qrcode', 'ws'].map(name => path.join(directory, 'node_modules', name, 'package.json'));
+  const modules = ['qrcode', 'ws', '@modelcontextprotocol/sdk', 'zod']
+    .map(name => path.join(directory, 'node_modules', name, 'package.json'));
   try {
     await Promise.all(modules.map(file => access(file)));
   } catch {

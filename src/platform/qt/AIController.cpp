@@ -201,6 +201,7 @@ void AIController::detachMobile() {
 		m_mobileFrameArgs = { };
 	}
 	m_mobileVideo.reset();
+	m_mobileVideoCodec.clear();
 	for (auto connection : m_mobileConnections)
 		QObject::disconnect(connection);
 	m_mobileConnections.clear();
@@ -216,7 +217,7 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
                                  const QJsonObject& args) {
 	auto fail = [&](const QString& message) { reply(socket, id, { }, message, false); };
 	if (method == "mobile_session") {
-		reply(socket, id, session(), { }, false);
+		reply(socket, id, mobileSession(), {}, false);
 		return;
 	}
 	// The phone's first page lists the PC's ROM library and can start a game from it.
@@ -260,11 +261,12 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 		const auto game = args.value("id").toString();
 		if (auto core = m_window->controller()) {
 			if (GameLibrary::gameId(core->path()) == game) {
-				reply(socket, id, session(), { }, false);
+				reply(socket, id, mobileSession(), {}, false);
 				return;
 			}
 			// Never close a running game from the phone; it may have unsaved progress.
-			fail(tr("%1 is open on the PC. Save it and return to the game library first.").arg(core->title()));
+			const auto title = mobileSession().value("title").toString();
+			fail(tr("%1 is open on the PC. Save it and return to the game library first.").arg(title));
 			return;
 		}
 		if (!m_window->gameLibrary()->launch(game)) {
@@ -301,8 +303,9 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 			connect(core.get(), &CoreController::stateLoaded, this, &AIController::detachMobile),
 			connect(core.get(), &CoreController::crashed, this, &AIController::detachMobile),
 		};
-		auto result = session();
+		auto result = mobileSession();
 		result.insert("autoplay", m_autoPlay->status());
+		result.insert("autoplay_models", m_autoPlay->models());
 		result.insert("speed", 0);
 		reply(socket, id, result, {}, false);
 		return;
@@ -327,8 +330,13 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 			fail(tr("Invalid Auto Play setting"));
 			return;
 		}
+		const auto model = args.value("model");
+		if (!model.isUndefined() && (!enabled.toBool() || !AutoPlay::supportsModel(model.toString()))) {
+			fail(tr("Invalid Auto Play model"));
+			return;
+		}
 		if (enabled.toBool())
-			m_autoPlay->start();
+			m_autoPlay->start(model.toString());
 		else
 			m_autoPlay->stop();
 		reply(socket, id, m_autoPlay->status(), {}, false);
@@ -357,15 +365,20 @@ void AIController::mobileRequest(QLocalSocket* socket, const QJsonValue& id, con
 	fail(tr("Unknown mobile command"));
 }
 
-// Sends the newest frame as PNG, or as H.264 packets when args.codec is "h264".
-// With args.wait, an H.264 request for a frame the phone already has is held
+// Sends the newest frame as PNG, H.264, or HEVC.
+// With args.wait, a video request for a frame the phone already has is held
 // until the core finishes the next one, so the stream follows the game's own
 // frame rate rather than a polling timer.
 void AIController::mobileFrame(const QJsonValue& id, const QJsonObject& args, bool waited) {
 	CoreController::Interrupter guard(m_mobileCore);
 	const auto frame = double(m_mobileCore->frameCounter());
 	const bool paused = m_mobileCore->isPaused();
-	const bool video = args.value("codec") == QLatin1String("h264");
+	const auto codec = args.value("codec").toString();
+	const bool video = codec == "hevc" || codec == "h264";
+	if (codec != m_mobileVideoCodec) {
+		m_mobileVideo.reset();
+		m_mobileVideoCodec = codec;
+	}
 	QJsonObject result { { "paused", paused }, { "frame", frame }, { "autoplay", m_autoPlay->status() } };
 	if (args.value("after") == QJsonValue(frame)) {
 		guard.resume();
@@ -381,7 +394,8 @@ void AIController::mobileFrame(const QJsonValue& id, const QJsonObject& args, bo
 	const auto image = m_mobileCore->getPixels().copy();
 	guard.resume();
 	if (video) {
-		if (!m_mobileVideo) m_mobileVideo = std::make_unique<MobileVideoEncoder>();
+		if (!m_mobileVideo)
+			m_mobileVideo = std::make_unique<MobileVideoEncoder>(MobileVideoEncoder::defaultEncoders(codec == "hevc"));
 		QList<MobileVideoEncoder::Packet> packets;
 		if (m_mobileVideo->encode(image, args.value("keyframe").toBool(), &packets)) {
 			QJsonArray encoded;
@@ -452,6 +466,13 @@ QJsonObject AIController::session() const {
 	         { "human_keys", core ? int(core->humanKeys()) : 0 },
 	         { "ai_keys", core ? int(core->aiKeys()) : 0 },
 	         { "effective_keys", core ? int(AIGameplay::mergeKeys(core->humanKeys(), core->aiKeys())) : 0 } };
+}
+
+QJsonObject AIController::mobileSession() const {
+	auto result = session();
+	if (result.value("platform") == QLatin1String("GBA") && result.value("title") == QLatin1String("POKEMON EMER"))
+		result.insert("title", tr("Pokémon Emerald"));
+	return result;
 }
 
 QJsonObject AIController::observation(bool screenshot) {

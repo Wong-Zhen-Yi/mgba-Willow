@@ -77,6 +77,30 @@ test('session discovery ignores stale and invalid descriptors', async t => {
   assert.deepEqual(await listSessions(f.directory), [{ session_id: f.id, started: true }]);
 });
 
+test('the Auto Play MCP only lists and connects to its assigned session', async t => {
+  const requests = [];
+  const f = await fixture(t, (socket, req, id) => {
+    requests.push(req.method);
+    socket.write(JSON.stringify({ id: req.id, result: { session_id: id, started: true } }) + '\n');
+  });
+  const otherId = randomUUID();
+  await writeFile(path.join(f.directory, otherId + '.json'), JSON.stringify({ ...f.descriptor, session_id: otherId }));
+  const client = new Client({ name: 'mgba-autoplay-test', version: '1.0' });
+  t.after(() => client.close());
+  await client.connect(new StdioClientTransport({
+    command: process.execPath, args: [path.resolve('server.mjs')],
+    env: { ...process.env, MGBA_WILLOW_SESSION_DIR: f.directory, WILLOW_AUTOPLAY_SESSION_ID: f.id },
+  }));
+  const listed = await client.callTool({ name: 'list_sessions', arguments: {} });
+  assert.deepEqual(listed.structuredContent.sessions, [{ session_id: f.id, started: true }]);
+  const denied = await client.callTool({ name: 'connect', arguments: { session_id: otherId } });
+  assert.equal(denied.isError, true);
+  assert.deepEqual(requests, ['session']);
+  const connected = await client.callTool({ name: 'connect', arguments: { session_id: f.id } });
+  assert.equal(connected.structuredContent.session_id, f.id);
+  assert.deepEqual(requests, ['session', 'connect']);
+});
+
 test('MCP handshake, tools, schema validation, images, and reconnect', async t => {
   let frame = 10;
   let speed = 4;

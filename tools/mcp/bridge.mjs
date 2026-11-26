@@ -88,8 +88,9 @@ export async function descriptors(directory = sessionDirectory) {
   return results.filter(Boolean);
 }
 
-export async function listSessions(directory = sessionDirectory) {
-  const sessions = await Promise.all((await descriptors(directory)).map(async descriptor => {
+export async function listSessions(directory = sessionDirectory, sessionId) {
+  const candidates = (await descriptors(directory)).filter(item => !sessionId || item.session_id === sessionId);
+  const sessions = await Promise.all(candidates.map(async descriptor => {
     let bridge;
     try {
       bridge = await Bridge.open(descriptor);

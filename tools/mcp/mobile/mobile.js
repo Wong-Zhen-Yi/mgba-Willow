@@ -10,7 +10,11 @@ const screen = byId('frame');
 const painter = screen.getContext('2d', { alpha: false });
 const back = byId('back');
 const autoPlay = byId('autoplay');
+const autoPlayDialog = byId('autoplay-dialog');
+const autoPlayModel = byId('autoplay-model');
+const settingsDialog = byId('settings-dialog');
 const speedSelect = byId('speed');
+const videoMode = byId('video-mode');
 const gamepad = document.querySelector('.gamepad');
 const directions = gamepad.querySelector('.directions');
 const buttons = [...gamepad.querySelectorAll('button')];
@@ -34,16 +38,20 @@ let attached = false;
 let attaching = false;
 let paused = false;
 let autoPlayState;
-let autoPlayPending = false;
+let autoPlayPending;
+let autoPlayModels = [];
 let gameSpeed;
 let gba = false;
-// The PC encodes H.264 on its GPU when it can; WebCodecs decodes it in hardware here.
-// PNG stills remain the fallback (plain-HTTP pages have no WebCodecs).
+// The PC encodes video and WebCodecs decodes it on the phone.
 let decoder;
+let decoderTimer;
 let needKey = true;
 let chunks = 0;
-let videoFailures = 0;
 let video = null;
+let requestedVideo = 'png';
+let videoRequest = 0;
+let videoSupport;
+let streamFallback = '';
 let pngBusy = false;
 let pngNext;
 let retry = 500;
@@ -59,6 +67,9 @@ let wanted = null;
 let artBusy = false;
 const art = new Map();
 const artRequested = new Set();
+
+const savedVideoMode = localStorage.getItem('willow-video-mode');
+if ([...videoMode.options].some(option => option.value === savedVideoMode)) videoMode.value = savedVideoMode;
 
 function send(message) {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -257,7 +268,10 @@ function clearGame() {
   attached = false;
   attaching = false;
   autoPlayState = undefined;
-  autoPlayPending = false;
+  autoPlayPending = undefined;
+  autoPlayModels = [];
+  autoPlayDialog.close();
+  settingsDialog.close();
   renderAutoPlay();
   setSpeed(undefined);
   gamepad.inert = true;
@@ -265,41 +279,84 @@ function clearGame() {
   screen.hidden = true;
   closeDecoder();
   video = null;
+  requestedVideo = 'png';
+  streamFallback = '';
+  videoRequest++;
   pngNext = undefined;
 }
 
 function closeDecoder() {
-  if (decoder && decoder.state !== 'closed') decoder.close();
+  clearTimeout(decoderTimer);
+  const previous = decoder;
   decoder = undefined;
+  if (previous && previous.state !== 'closed') previous.close();
   needKey = true;
 }
 
-async function chooseVideo() {
-  if (!window.isSecureContext || !('VideoDecoder' in window)) return;
+async function supportsVideo(codec) {
+  if (!window.isSecureContext || !('VideoDecoder' in window)) return false;
   try {
-    const { supported } = await VideoDecoder.isConfigSupported({ codec: 'avc1.64001e', optimizeForLatency: true });
-    if (supported) send({ type: 'video', codec: 'h264' });
-  } catch {}
+    return (await VideoDecoder.isConfigSupported({
+      codec, codedWidth: 480, codedHeight: 320, optimizeForLatency: true,
+    })).supported;
+  } catch { return false; }
 }
 
-function configureVideo(message) {
+async function chooseVideo() {
+  const request = ++videoRequest;
+  const mode = videoMode.value;
+  if (mode === 'png') return requestStream('png');
+  videoSupport ??= Promise.all([supportsVideo('hvc1.1.6.L120.B0'), supportsVideo('avc1.64001e')]);
+  const [hevc, h264] = await videoSupport;
+  if (!attached || request !== videoRequest) return;
+  streamFallback = mode === 'auto' && !hevc ? 'HEVC decoding is unavailable in this browser.' : '';
+  if (!h264 && (mode === 'h264' || !hevc)) streamFallback = 'Video decoding is unavailable in this browser.';
+  requestStream(mode === 'auto' && hevc ? 'hevc' : h264 ? 'h264' : 'png', streamFallback);
+}
+
+function requestStream(codec, fallback = '') {
   closeDecoder();
-  video = message;
-  try {
-    decoder = new VideoDecoder({ output: drawFrame, error: videoFailed });
-    decoder.configure({ codec: message.format, codedWidth: message.width, codedHeight: message.height,
-                        optimizeForLatency: true });
-  } catch {
-    videoFailed();
+  video = null;
+  requestedVideo = codec;
+  streamFallback = fallback;
+  send({ type: 'video', codec });
+  if (codec !== 'png') {
+    decoderTimer = setTimeout(() => fallbackVideo(codec, `No ${videoLabel(codec)} frames arrived.`), 5000);
   }
   renderPlayerStatus();
 }
 
-function videoFailed() {
+async function fallbackVideo(codec, reason) {
+  if (!attached || codec !== requestedVideo) return;
+  const request = ++videoRequest;
   closeDecoder();
-  video = null;
-  // Retry once with a fresh decoder and keyframe, then settle for PNG.
-  send({ type: 'video', codec: ++videoFailures > 2 ? 'png' : 'h264' });
+  const [, h264] = await videoSupport;
+  if (!attached || request !== videoRequest) return;
+  requestStream(codec === 'hevc' && h264 ? 'h264' : 'png', reason);
+}
+
+function configureVideo(message) {
+  if (message.codec !== requestedVideo) return;
+  closeDecoder();
+  video = message;
+  const failed = () => fallbackVideo(message.codec, `${videoLabel(message.codec)} could not be decoded.`);
+  try {
+    const current = new VideoDecoder({
+      output: frame => {
+        if (current === decoder) {
+          clearTimeout(decoderTimer);
+          drawFrame(frame);
+        } else frame.close();
+      },
+      error: () => { if (current === decoder) failed(); },
+    });
+    decoder = current;
+    current.configure({ codec: message.format, codedWidth: message.width, codedHeight: message.height,
+                        optimizeForLatency: true, hardwareAcceleration: 'prefer-hardware' });
+    decoderTimer = setTimeout(failed, 5000);
+  } catch {
+    failed();
+  }
   renderPlayerStatus();
 }
 
@@ -315,7 +372,7 @@ function decodeChunk(bytes, key) {
   try {
     decoder.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: chunks++ * 16667, data: bytes }));
   } catch {
-    videoFailed();
+    fallbackVideo(requestedVideo, `${videoLabel(requestedVideo)} could not be decoded.`);
   }
 }
 
@@ -347,7 +404,7 @@ async function showPng(bytes) {
     const image = new Image();
     image.src = url;
     await image.decode();
-    if (attached) paint(image, image.naturalWidth, image.naturalHeight);
+    if (attached && requestedVideo === 'png') paint(image, image.naturalWidth, image.naturalHeight);
   } catch {}
   URL.revokeObjectURL(url);
   pngBusy = false;
@@ -360,9 +417,14 @@ async function showPng(bytes) {
 
 function renderAutoPlay() {
   const running = Boolean(autoPlayState?.running);
-  autoPlay.disabled = !attached || !autoPlayState || autoPlayPending || Boolean(autoPlayState.stopping);
+  if (running) autoPlayDialog.close();
+  autoPlay.disabled = !attached || !autoPlayState || autoPlayPending || Boolean(autoPlayState.stopping)
+    || (!running && !autoPlayModels.length);
   autoPlay.toggleAttribute('data-running', running);
-  autoPlay.textContent = autoPlayState?.stopping ? 'Stopping…' : running ? 'Stop Auto Play' : 'Auto Play';
+  let label = running ? 'Stop Auto Play' : 'Auto Play';
+  if (autoPlayState?.stopping || autoPlayPending === 'stop') label = 'Stopping…';
+  else if (autoPlayPending === 'start') label = 'Starting…';
+  autoPlay.textContent = label;
 }
 
 function setSpeed(speed) {
@@ -371,12 +433,25 @@ function setSpeed(speed) {
   speedSelect.disabled = speed === undefined;
 }
 
+const videoLabel = codec => ({ hevc: 'HEVC', h264: 'H.264', png: 'PNG' })[codec];
+
 function renderPlayerStatus() {
-  const stream = video ? ` · ${video.hardware ? 'GPU' : 'CPU'} video` : '';
-  const connection = paused ? 'Paused on PC. Resume in mGBA to play.' : `Connected${stream}`;
+  const encoder = video?.encoder?.endsWith('_nvenc') ? 'NVIDIA NVENC' : video?.hardware ? 'GPU' : 'CPU';
+  const stream = video ? `${videoLabel(video.codec)} · ${encoder}`
+    : requestedVideo === 'png' ? 'PNG' : `Starting ${videoLabel(requestedVideo)}…`;
+  const connection = paused ? 'Paused on PC. Resume in mGBA to play.' : stream;
   const message = autoPlayState?.message;
-  const text = message ? (paused ? `${connection} ${message}` : message) : connection;
+  showPlayerStatus(message ? (paused ? `${connection} ${message}` : message) : connection, Boolean(message || paused));
+  const streamText = streamFallback ? `${stream}. ${streamFallback}` : stream;
+  const streamStatus = byId('stream-status');
+  if (streamStatus.textContent !== streamText) streamStatus.textContent = streamText;
+}
+
+function showPlayerStatus(text, showInSettings = true) {
   if (status.textContent !== text) status.textContent = text;
+  const details = byId('settings-status');
+  const detail = showInSettings ? text : '';
+  if (details.textContent !== detail) details.textContent = detail;
 }
 
 function showPause(value) {
@@ -396,15 +471,42 @@ function returnToPicker(text) {
 }
 
 back.onclick = () => returnToPicker();
+byId('settings').onclick = () => {
+  release();
+  settingsDialog.showModal();
+};
 autoPlay.onclick = () => {
   if (autoPlay.disabled) return;
-  autoPlayPending = true;
-  renderAutoPlay();
-  send({ type: 'autoplay', enabled: !autoPlayState.running });
+  if (autoPlayState.running) {
+    setAutoPlay(false);
+    return;
+  }
+  autoPlayModel.replaceChildren(...autoPlayModels.map(({ id, label }) => new Option(label, id)));
+  autoPlayModel.value = autoPlayState.default_model;
+  if (autoPlayModel.selectedIndex < 0) autoPlayModel.selectedIndex = 0;
+  release();
+  autoPlayDialog.showModal();
 };
+byId('autoplay-cancel').onclick = () => autoPlayDialog.close();
+byId('autoplay-form').onsubmit = event => {
+  event.preventDefault();
+  autoPlayDialog.close();
+  if (!autoPlay.disabled && !autoPlayState.running) {
+    setAutoPlay(true, autoPlayModel.value);
+  }
+};
+function setAutoPlay(enabled, model) {
+  autoPlayPending = enabled ? 'start' : 'stop';
+  renderAutoPlay();
+  send({ type: 'autoplay', enabled, model });
+}
 speedSelect.onchange = () => {
   speedSelect.disabled = true;
   send({ type: 'speed', multiplier: Number(speedSelect.value) });
+};
+videoMode.onchange = () => {
+  localStorage.setItem('willow-video-mode', videoMode.value);
+  if (attached) chooseVideo();
 };
 
 function handle(message) {
@@ -413,7 +515,6 @@ function handle(message) {
       retry = 500;
       busySince = 0;
       paired = true;
-      chooseVideo();
       if (document.body.dataset.page === 'play' && wanted) send({ type: 'sessions' });
       else {
         setPickerStatus('Loading your games…');
@@ -449,6 +550,7 @@ function handle(message) {
       attached = true;
       attaching = false;
       autoPlayState = message.autoplay;
+      autoPlayModels = message.autoplay_models ?? [];
       renderAutoPlay();
       setSpeed(message.speed);
       gba = message.platform === 'GBA';
@@ -459,6 +561,7 @@ function handle(message) {
       byId('game-title').hidden = false;
       hint.textContent = 'Waiting for the picture…';
       showPause(message.paused);
+      chooseVideo();
       break;
     case 'pause':
       if (attached) showPause(message.paused);
@@ -466,15 +569,15 @@ function handle(message) {
     case 'autoplay':
       if (!attached) break;
       autoPlayState = message.autoplay;
-      if (message.acknowledged) autoPlayPending = false;
+      if (message.acknowledged) autoPlayPending = undefined;
       renderAutoPlay();
       renderPlayerStatus();
       break;
     case 'autoplay-error':
       if (!attached) break;
-      autoPlayPending = false;
+      autoPlayPending = undefined;
       renderAutoPlay();
-      status.textContent = message.message;
+      showPlayerStatus(message.message);
       break;
     case 'speed':
       if (attached) {
@@ -485,16 +588,12 @@ function handle(message) {
     case 'speed-error':
       if (attached) {
         setSpeed(gameSpeed);
-        status.textContent = message.message;
+        showPlayerStatus(message.message);
       }
       break;
     case 'video':
-      if (message.codec === 'h264') configureVideo(message);
-      else {
-        closeDecoder();
-        video = null;
-        renderPlayerStatus();
-      }
+      if (message.failed) fallbackVideo(message.failed, `PC encoder unavailable for ${videoLabel(message.failed)}.`);
+      else if (message.format && attached) configureVideo(message);
       break;
     case 'detached':
       if (document.body.dataset.page === 'play') {
@@ -517,10 +616,11 @@ function connect() {
   socket.onmessage = ({ data }) => {
     if (typeof data === 'string') return handle(JSON.parse(data));
     if (!attached) return;
-    // The first byte says what follows: 0 PNG, 1 H.264 delta, 2 H.264 keyframe.
+    // The first byte says what follows: 0 PNG, 1 video delta, 2 video keyframe.
     const bytes = new Uint8Array(data);
-    if (bytes[0] === 0) showPng(bytes.subarray(1));
-    else decodeChunk(bytes.subarray(1), bytes[0] === 2);
+    if (bytes[0] === 0) {
+      if (requestedVideo === 'png') showPng(bytes.subarray(1));
+    } else decodeChunk(bytes.subarray(1), bytes[0] === 2);
   };
   socket.onclose = ({ code }) => {
     paired = false;
@@ -592,7 +692,7 @@ for (const button of buttons) {
 gamepad.oncontextmenu = event => event.preventDefault();
 window.addEventListener('keydown', event => {
   const bit = keyMap.get(event.code);
-  if (!attached || paused || !bit || (bit > 255 && !gba) || event.target.closest('button, input, select')) return;
+  if (!attached || paused || !bit || (bit > 255 && !gba) || event.target.closest('button, input, select, dialog')) return;
   event.preventDefault();
   keyboard.set(event.code, bit);
   updateKeys();

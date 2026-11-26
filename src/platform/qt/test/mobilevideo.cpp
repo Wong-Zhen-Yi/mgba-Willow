@@ -55,8 +55,8 @@ struct Decoder {
 	AVFrame* frame = av_frame_alloc();
 	QList<QImage> frames;
 
-	Decoder() {
-		const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+	explicit Decoder(AVCodecID id) {
+		const AVCodec* codec = avcodec_find_decoder(id);
 		CHECK(codec);
 		context = avcodec_alloc_context3(codec);
 		context->flags |= AV_CODEC_FLAG_LOW_DELAY;
@@ -99,9 +99,10 @@ int channelError(QRgb a, QRgb b) {
 }
 
 // Encodes a scrolling clip, decodes it, and checks keyframes and colour fidelity.
-bool exercise(const QString& name) {
+bool exercise(const QString& name, AVCodecID id = AV_CODEC_ID_H264) {
 	MobileVideoEncoder encoder({name});
-	Decoder decoder;
+	Decoder decoder(id);
+	Decoder lateDecoder(id);
 	QList<QImage> sources;
 	int keys = 0;
 	QElapsedTimer timer;
@@ -117,17 +118,26 @@ bool exercise(const QString& name) {
 		for (const auto& packet : packets) {
 			if (packet.key) ++keys;
 			decoder.decode(packet.data);
+			if (keys == 2)
+				lateDecoder.decode(packet.data);
 		}
 	}
 	const double milliseconds = timer.nsecsElapsed() / 1e6 / 90;
 	decoder.flush();
+	lateDecoder.flush();
 	CHECK(encoder.encoder() == name);
 	CHECK(encoder.size() == QSize(480, 320));
-	CHECK(encoder.codec().startsWith("avc1."));
-	CHECK(encoder.codec().size() == 11);
+	if (id == AV_CODEC_ID_HEVC) {
+		CHECK(encoder.codec().startsWith("hvc1.1."));
+		CHECK(encoder.hardware());
+	} else {
+		CHECK(encoder.codec().startsWith("avc1."));
+		CHECK(encoder.codec().size() == 11);
+	}
 	// The first frame and the forced one at 60, and nothing else.
 	CHECK(keys == 2);
 	CHECK(decoder.frames.size() == sources.size());
+	CHECK(lateDecoder.frames.size() == sources.size() - 60);
 
 	int worst = 0;
 	double total = 0;
@@ -165,9 +175,11 @@ int main() {
 	CHECK(MobileVideoEncoder::available());
 	CHECK(MobileVideoEncoder::defaultEncoders().first() == "h264_nvenc");
 	CHECK(MobileVideoEncoder::defaultEncoders().last() == "libx264");
+	CHECK(MobileVideoEncoder::defaultEncoders(true) == QStringList { "hevc_nvenc" });
 
 	// Software encoding must always work; hardware runs where the machine has it.
 	CHECK(exercise("libx264"));
+	exercise("hevc_nvenc", AV_CODEC_ID_HEVC);
 	for (const char* name : {"h264_nvenc", "h264_amf", "h264_qsv", "h264_mf"}) exercise(name);
 
 	{

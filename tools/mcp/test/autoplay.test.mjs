@@ -18,7 +18,12 @@ const turn = JSON.parse(fs.readFileSync(process.env.FAKE_CODEX_PLAN, 'utf8'))[ca
 if (turn.fail) { process.stderr.write(turn.fail + '\\n'); process.exit(1); }
 const emit = event => process.stdout.write(JSON.stringify(event) + '\\n');
 emit({ type: 'thread.started', thread_id: 'thread-1' });
-for (let i = 0; i < (turn.tools ?? 0); i++) emit({ type: 'item.started', item: { type: 'mcp_tool_call', tool: 'press' } });
+if (turn.hang) { setInterval(() => {}, 1000); return; }
+for (const tool of turn.actions ?? Array(turn.tools ?? 0).fill({ tool: 'press' })) {
+  const item = { type: 'mcp_tool_call', server: 'mgba-willow', status: 'completed', ...tool };
+  emit({ type: 'item.started', item });
+  emit({ type: 'item.completed', item });
+}
 emit({ type: 'item.completed', item: { type: 'agent_message', text: turn.message } });
 emit({ type: 'turn.completed' });
 `;
@@ -52,6 +57,10 @@ test('profiles use Terra medium by default and Luna extra high as the alternativ
   assert.deepEqual(fresh.slice(0, 4), ['exec', '--json', '-m', 'gpt-6.1-terra']);
   assert.ok(fresh.includes('model_reasoning_effort="medium"'));
   assert.ok(fresh.includes('sandbox_mode="workspace-write"'));
+  const server = fresh.find(arg => arg.startsWith('mcp_servers.mgba-willow='));
+  assert.match(server, /server\.mjs/);
+  assert.match(server, new RegExp(`WILLOW_AUTOPLAY_SESSION_ID="${sessionId}"`));
+  assert.match(server, /required=true/);
   assert.match(fresh.at(-1), new RegExp(sessionId));
   const resumed = codexArguments({ profile: profiles.luna, sessionId, thread: 'thread-9' });
   assert.deepEqual(resumed.slice(0, 5), ['exec', 'resume', '--json', '-m', 'gpt-6-luna']);
@@ -64,8 +73,8 @@ test('turn status and activity come from Codex events', () => {
   assert.deepEqual(turnStatus('Beat the trainer.\nAUTOPLAY: continue'), { status: 'continue', reason: '' });
   assert.deepEqual(turnStatus('AUTOPLAY: blocked Choose a starter'), { status: 'blocked', reason: 'Choose a starter' });
   assert.equal(turnStatus('no status line').status, 'continue');
-  assert.equal(describe({ type: 'item.started', item: { type: 'mcp_tool_call', tool: 'move_to' } }), 'Using move_to');
-  assert.equal(describe({ type: 'item.completed', item: { type: 'agent_message', text: 'Healed.\nAUTOPLAY: continue' } }), 'Healed.');
+  assert.equal(describe({ type: 'item.started', item: { type: 'mcp_tool_call', server: 'mgba-willow', tool: 'move_to' } }), 'Using move_to');
+  assert.equal(describe({ type: 'item.completed', item: { type: 'agent_message', text: 'I’ll play now.' } }), undefined);
 });
 
 test('Auto Play resumes the same Codex thread until the player is needed', async t => {
@@ -86,8 +95,8 @@ test('Auto Play resumes the same Codex thread until the player is needed', async
 
 test('Auto Play waits while the game is paused and stops idle turns', async t => {
   const h = await harness(t, [
-    { tools: 0, message: 'Nothing to do.' },
-    { tools: 0, message: 'Still nothing.' },
+    { actions: [{ tool: 'observe' }], message: 'Nothing to do.' },
+    { actions: [{ tool: 'press', status: 'failed' }], message: 'Still nothing.' },
   ]);
   let checks = 0;
   await h.run({ state: async () => ({ started: true, paused: ++checks <= 2 }) });
@@ -113,4 +122,12 @@ test('Auto Play stops immediately on usage limits and when the game closes', asy
   const closed = await harness(t, []);
   await closed.run({ state: async () => null });
   assert.match(closed.reports.at(-1).message, /Open a single-player game/);
+});
+
+test('Auto Play times out a stalled Codex turn and retries', async t => {
+  const h = await harness(t, [{ hang: true }, { tools: 1, message: 'AUTOPLAY: blocked Test complete' }]);
+  await h.run({ activityTimeout: 500 });
+  assert.equal((await h.calls()).length, 2);
+  assert.ok(h.reports.some(report => report.message.includes('stopped responding')));
+  assert.match(h.reports.at(-1).message, /Test complete/);
 });

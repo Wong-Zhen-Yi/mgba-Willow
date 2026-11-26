@@ -1,5 +1,6 @@
-# Windows PowerShell 5.1 compatible; invoked by Launch mGBA.cmd.
+# Windows PowerShell 5.1 compatible; shared by both Windows launchers.
 param(
+    [switch]$UseCallerDirectory,
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$AppArguments
 )
 
@@ -188,7 +189,11 @@ try {
     Write-Host 'Restart the MCP server after updating this checkout to discover new tools.'
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $appPath
-    $startInfo.WorkingDirectory = Split-Path -Parent $appPath
+    $startInfo.WorkingDirectory = if ($UseCallerDirectory) {
+        (Get-Location).ProviderPath
+    } else {
+        Split-Path -Parent $appPath
+    }
     $startInfo.UseShellExecute = $false
     # Escape using Windows command-line rules, including trailing backslashes.
     $quotedArguments = foreach ($argument in $AppArguments) {
