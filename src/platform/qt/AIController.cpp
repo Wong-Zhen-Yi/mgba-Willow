@@ -44,7 +44,6 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 	m_descriptor = dataDirectory() + "/sessions/" + m_id + ".json";
 	actions->addMenu(tr("AI"), "ai");
 	m_enabled = actions->addBooleanAction(tr("MCP Enabled"), "mcpEnabled", [](bool) {}, "ai");
-	m_toggle = actions->addBooleanAction(tr("AI Control"), "aiControl", [](bool) {}, "ai");
 	actions->addMenu(tr("AI Speed"), "aiSpeed", "ai");
 	auto speed = window->config()->addOption("aiSpeed");
 	for (int multiplier : {1, 2, 4, 8}) speed->addValue(tr("%1x").arg(multiplier), multiplier, actions, "aiSpeed");
@@ -67,24 +66,6 @@ AIController::AIController(Window* window, ActionMapper* actions) : QObject(wind
 		m_gameId.clear();
 	});
 	connect(m_enabled.get(), &Action::activated, this, [this](bool enabled) { if (!m_changingEnabled) setEnabled(enabled); });
-	connect(m_toggle.get(), &Action::activated, this, [this](bool enabled) {
-		if (!enabled) { if (m_core) release(tr("ready")); return; }
-		auto core = m_window->controller();
-		if (!m_server.isListening() || !core || !core->hasStarted() || (core->multiplayerController() && core->multiplayerController()->attached() > 1)) {
-			release(tr("enable MCP and open a single-player game")); return;
-		}
-		m_core = core;
-		m_gamePath = core->path();
-		m_coreConnections.append(connect(core.get(), &CoreController::stopping, this, [this]() { release(tr("ready; game stopped")); }));
-		m_coreConnections.append(connect(core.get(), &CoreController::didReset, this, [this]() { release(tr("ready; game reset, reconnect")); }));
-		m_coreConnections.append(connect(core.get(), &CoreController::stateLoaded, this, [this]() { release(tr("ready; state changed, reconnect")); }));
-		m_coreConnections.append(connect(core.get(), &CoreController::crashed, this, [this]() { release(tr("error: game crashed")); }));
-		m_coreConnections.append(connect(core.get(), &CoreController::aiActionFinished, this, [this]() { finishPending(); }));
-		m_coreConnections.append(connect(core.get(), &CoreController::paused, this, [this]() { finishPending(true, tr("Game paused; resume manually")); }));
-		core->setAISpeed(m_window->config()->getOption("aiSpeed", 4).toFloat());
-		core->setAIControl(true);
-		m_status->setText(tr("MCP: ready; AI waiting for agents"));
-	});
 	m_server.setSocketOptions(QLocalServer::UserAccessOption);
 	connect(&m_server, &QLocalServer::newConnection, this, [this]() {
 		while (auto socket = m_server.nextPendingConnection()) {
@@ -131,7 +112,6 @@ void AIController::setEnabled(bool enabled) {
 		QFile::remove(m_descriptor);
 		const auto sockets = m_sockets;
 		for (auto socket : sockets) socket->disconnectFromServer();
-		m_toggle->setEnabled(false);
 		m_status->setText(tr("MCP: disabled"));
 	} else {
 		if (m_server.isListening()) return;
@@ -147,7 +127,6 @@ void AIController::setEnabled(bool enabled) {
 			m_server.close();
 			QFile::remove(m_descriptor);
 			m_status->setText(tr("MCP: error; cannot create endpoint or discovery file"));
-			m_toggle->setEnabled(false);
 			m_enabled->setActive(false);
 			// Action::trigger finishes its outer activated(true) emission after
 			// this callback; synchronize the menu again on the next GUI turn.
@@ -159,7 +138,6 @@ void AIController::setEnabled(bool enabled) {
 			});
 			return;
 		}
-		m_toggle->setEnabled(true);
 		m_status->setText(tr("MCP: ready"));
 	}
 	m_enabled->setActive(enabled);
@@ -539,6 +517,24 @@ void AIController::disconnectClient(QLocalSocket* socket) {
 	else m_status->setText(tr("MCP: connected; %1 AI clients").arg(m_clients.size()));
 }
 
+void AIController::attach() {
+	auto core = m_window->controller();
+	if (!m_server.isListening() || !core || !core->hasStarted() || (core->multiplayerController() && core->multiplayerController()->attached() > 1)) {
+		release(tr("enable MCP and open a single-player game")); return;
+	}
+	m_core = core;
+	m_gamePath = core->path();
+	m_coreConnections.append(connect(core.get(), &CoreController::stopping, this, [this]() { release(tr("ready; game stopped")); }));
+	m_coreConnections.append(connect(core.get(), &CoreController::didReset, this, [this]() { release(tr("ready; game reset, reconnect")); }));
+	m_coreConnections.append(connect(core.get(), &CoreController::stateLoaded, this, [this]() { release(tr("ready; state changed, reconnect")); }));
+	m_coreConnections.append(connect(core.get(), &CoreController::crashed, this, [this]() { release(tr("error: game crashed")); }));
+	m_coreConnections.append(connect(core.get(), &CoreController::aiActionFinished, this, [this]() { finishPending(); }));
+	m_coreConnections.append(connect(core.get(), &CoreController::paused, this, [this]() { finishPending(true, tr("Game paused; resume manually")); }));
+	core->setAISpeed(m_window->config()->getOption("aiSpeed", 4).toFloat());
+	core->setAIControl(true);
+	m_status->setText(tr("MCP: ready; AI waiting for agents"));
+}
+
 void AIController::release(const QString& reason) {
 	finishPending(true, reason);
 	m_timer.stop();
@@ -549,7 +545,6 @@ void AIController::release(const QString& reason) {
 	m_clients.clear();
 	m_movement.clear();
 	m_actionOwner.clear();
-	m_toggle->setActive(false);
 	m_status->setText(tr("MCP: %1").arg(reason));
 }
 
@@ -572,7 +567,7 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 	if (!m_server.isListening()) { fail(tr("MCP is disabled")); return; }
 	if (method == "session") { reply(socket, id, session()); return; }
 	if (method == "connect") {
-		if (!m_toggle->isActive()) m_toggle->setActive(true);
+		if (!m_core) attach();
 		if (!m_core) { fail(tr("Open a single-player game first")); return; }
 		m_clients.insert(socket);
 		m_status->setText(tr("MCP: connected; %1 AI clients").arg(m_clients.size()));

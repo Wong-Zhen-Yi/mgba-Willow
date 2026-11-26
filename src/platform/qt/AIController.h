@@ -45,6 +45,7 @@ private:
 	void mobileFrame(const QJsonValue& id, const QJsonObject& args, bool waited);
 	void answerMobileFrame();
 	void detachMobile();
+	void attach();
 	void release(const QString& reason);
 	void disconnectClient(QLocalSocket* socket);
 	void setEnabled(bool enabled);
@@ -60,7 +61,6 @@ private:
 	QSet<QLocalSocket*> m_clients;
 	QPointer<QLocalSocket> m_actionOwner;
 	std::shared_ptr<CoreController> m_core;
-	std::shared_ptr<Action> m_toggle;
 	std::shared_ptr<Action> m_enabled;
 	QSet<QLocalSocket*> m_sockets;
 	QLabel* m_status;
