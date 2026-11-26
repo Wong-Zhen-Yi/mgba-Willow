@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace QGBA {
+namespace Willow {
 
 // The emulation thread owns this timeline; GUI access requires an Interrupter.
 class AIGameplay {

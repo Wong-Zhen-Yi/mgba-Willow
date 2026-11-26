@@ -13,9 +13,10 @@
 #include <QSize>
 
 #include "VFileDevice.h"
-#include "AIGameplay.h"
-#include "EmeraldGameState.h"
-#include "EmeraldMusic.h"
+#include "WillowJson.h"
+#include "willow/AIGameplay.h"
+#include "willow/EmeraldGameState.h"
+#include "willow/EmeraldMusic.h"
 
 #include <functional>
 #include <atomic>
@@ -40,6 +41,11 @@
 struct mCore;
 
 namespace QGBA {
+
+using Willow::AIGameplay;
+using Willow::AIStateAction;
+using Willow::EmeraldGameState;
+using Willow::EmeraldMusic;
 
 class ConfigController;
 class InputController;
@@ -156,7 +162,7 @@ public:
 	bool startAIStateAction(const QString& method, const QJsonObject& args);
 	const EmeraldGameState& aiGameState() const { return m_aiGameState; }
 	bool aiAtomicFrame() const { return !m_hwaccel && m_aiGameState.supported() && m_aiGameState.hasSnapshot() && m_aiGameState.frame() == m_frameCounter; }
-	QJsonObject aiStateActionResult() const { return m_aiStateAction.result(); }
+	QJsonObject aiStateActionResult() const { return toQJson(m_aiStateAction.result()); }
 	size_t aiCompletedSteps() const { return m_aiGameplay.completed(); }
 	uint64_t aiActionStart() const { return m_aiGameplay.startFrame(); }
 	unsigned aiKeys() const { return m_aiKeys; }

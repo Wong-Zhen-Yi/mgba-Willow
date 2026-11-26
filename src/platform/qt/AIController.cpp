@@ -488,7 +488,7 @@ QJsonObject AIController::observation(bool screenshot) {
 	result.insert("paused", m_core->isPaused());
 	result.insert("keys", int(core->getKeys(core)));
 	result.insert("effective_keys", int(core->getKeys(core)));
-	result.insert("game_state", m_core->aiGameState().state());
+	result.insert("game_state", toQJson(m_core->aiGameState().state()));
 	result.insert("atomic", m_core->aiAtomicFrame());
 	guard.resume();
 	if (!screenshot) return result;
@@ -533,7 +533,7 @@ void AIController::finishPending(bool cancelled, const QString& reason) {
 		result.insert("progress", stateActionResult);
 	}
 	else if (m_directionKeys && m_actionState.value("available").toBool()) {
-		const auto end = m_core->aiGameState().state(false);
+		const auto end = toQJson(m_core->aiGameState().state(false));
 		const auto startPlayer = m_actionState.value("player").toObject(), endPlayer = end.value("player").toObject();
 		const bool sameMap = end.value("map") == m_actionState.value("map");
 		const bool unchanged = end.value("available").toBool() && sameMap && startPlayer.value("x") == endPlayer.value("x") && startPlayer.value("y") == endPlayer.value("y");
@@ -620,7 +620,7 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		if (method == "get_local_map" && args.contains("radius") && !integer(args.value("radius"), 1, 16)) { fail(tr("Expected radius 1–16")); return; }
 		CoreController::Interrupter guard(m_core);
 		auto result = observation(args.value("screenshot").toBool(method == "observe"));
-		if (method == "get_local_map") result.insert("local_map", m_core->aiGameState().localMap(args.value("radius").toInt(4)));
+		if (method == "get_local_map") result.insert("local_map", toQJson(m_core->aiGameState().localMap(args.value("radius").toInt(4))));
 		reply(socket, id, result); return;
 	}
 	if (!m_pending.isNull() && !m_pending.isUndefined() && method != "memory_map" && method != "read_memory") {
@@ -703,7 +703,7 @@ void AIController::request(QLocalSocket* socket, const QJsonObject& req) {
 		}
 		if (total > 600) { fail(tr("Sequence exceeds 600 total frames")); return; }
 		CoreController::Interrupter guard(m_core);
-		m_actionState = m_core->aiGameState().state(false);
+		m_actionState = toQJson(m_core->aiGameState().state(false));
 		m_directionKeys = 0;
 		for (const auto& step : steps) m_directionKeys |= step.keys & 0xF0;
 		if (!m_core->advanceAI(steps)) { fail(tr("Cannot advance game; resume manually if paused")); return; }

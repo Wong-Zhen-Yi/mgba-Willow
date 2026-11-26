@@ -99,8 +99,6 @@ endif()
 set(SOURCE_FILES
 	AIController.cpp
 	AutoPlay.cpp
-	EmeraldGameState.cpp
-	EmeraldMusic.cpp
 	AboutScreen.cpp
 	AbstractUpdater.cpp
 	Action.cpp
@@ -471,7 +469,7 @@ if(WIN32)
 	endif()
 endif()
 
-list(APPEND QT_LIBRARIES ${QT}::Widgets ${QT}::Network)
+list(APPEND QT_LIBRARIES willow ${QT}::Widgets ${QT}::Network)
 if(${QT_V} GREATER_EQUAL 6)
 	list(APPEND QT_LIBRARIES ${QT}::OpenGL ${QT}::OpenGLWidgets)
 endif()
@@ -608,12 +606,6 @@ if(BUILD_SUITE OR BUILD_AI_TESTS)
 	add_executable(test-audio-tempo ${PROJECT_SOURCE_DIR}/src/util/test/audio-tempo.c)
 	target_link_libraries(test-audio-tempo ${BINARY_NAME})
 	add_test(util-audio-tempo test-audio-tempo)
-	if(M_CORE_GBA)
-		add_executable(test-qt-emeraldmusic test/emeraldmusic.cpp EmeraldMusic.cpp EmeraldGameState.cpp)
-		target_link_libraries(test-qt-emeraldmusic ${BINARY_NAME} ${QT}::Core)
-		set_target_properties(test-qt-emeraldmusic PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
-		add_test(platform-qt-emeraldmusic test-qt-emeraldmusic)
-	endif()
 	add_executable(test-qt-gamelibrary test/gamelibrary.cpp GameLibrary.cpp ${CMAKE_CURRENT_BINARY_DIR}/qrc_library-artwork.cpp)
 	target_link_libraries(test-qt-gamelibrary ${BINARY_NAME} ${QT}::Widgets ${QT}::Network)
 	set_target_properties(test-qt-gamelibrary PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
@@ -623,16 +615,10 @@ if(BUILD_SUITE OR BUILD_AI_TESTS)
 	target_link_libraries(test-qt-mobilevideo ${BINARY_NAME} ${QT}::Gui)
 	set_target_properties(test-qt-mobilevideo PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
 	add_test(platform-qt-mobilevideo test-qt-mobilevideo)
-	add_executable(test-qt-aigameplay test/aigameplay.cpp)
-	add_test(platform-qt-aigameplay test-qt-aigameplay)
 	add_executable(test-qt-controllerpainter test/controllerpainter.cpp ControllerPainter.cpp)
 	target_link_libraries(test-qt-controllerpainter ${QT}::Gui)
 	add_test(platform-qt-controllerpainter test-qt-controllerpainter)
 	set_tests_properties(platform-qt-controllerpainter PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-	add_executable(test-qt-emeraldgamestate test/emeraldgamestate.cpp EmeraldGameState.cpp)
-	target_link_libraries(test-qt-emeraldgamestate ${QT}::Core)
-	set_target_properties(test-qt-emeraldgamestate PROPERTIES COMPILE_DEFINITIONS "${FEATURE_DEFINES};${FUNCTION_DEFINES};${OS_DEFINES};${QT_DEFINES}")
-	add_test(platform-qt-emeraldgamestate test-qt-emeraldgamestate)
 endif()
 if(BUILD_SUITE)
 	find_package(${QT}Test)

@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is the mGBA emulator with Willow's local MCP controls and Emerald-specific adapters. Emulator code lives in `src/` (`arm/`, `gb/`, `gba/`, `core/`, `util/`); public headers are in `include/mgba/`. Frontends live under `src/platform/`, especially `qt/` and `sdl/`. The Node.js MCP server, setup scripts, and tests are in `tools/mcp/`. Assets are in `res/`, documentation in `doc/`, and emulation regression fixtures in `cinema/`. Keep vendored dependencies in `src/third-party/` separate from project changes.
+This is the mGBA emulator with Willow's local MCP controls and Emerald-specific adapters. Emulator code lives in `src/` (`arm/`, `gb/`, `gba/`, `core/`, `util/`); public headers are in `include/mgba/`. Frontends live under `src/platform/`, especially `qt/` and `sdl/`. Willow logic that any frontend needs (AI gameplay, Emerald state and music) lives in `src/willow/` as libwillow, which must not depend on Qt; it uses the standard library and the vendored `src/third-party/nlohmann/json.hpp`. The Node.js MCP server, setup scripts, and tests are in `tools/mcp/`. Assets are in `res/`, documentation in `doc/`, and emulation regression fixtures in `cinema/`. Keep vendored dependencies in `src/third-party/` separate from project changes.
 
 ## Build, Test, and Development Commands
 
@@ -11,6 +11,7 @@ Install a C/C++ toolchain, CMake, and frontend dependencies as described in `REA
 - `cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_AI_TESTS=ON`: configure a debug build with standalone Qt AI tests.
 - `cmake --build build --parallel`: compile configured targets.
 - `ctest --test-dir build/qt -R "platform-qt-" --output-on-failure`: run Qt tests.
+- `ctest --test-dir build/willow --output-on-failure`: run libwillow tests (no Qt needed).
 - `cmake -S . -B build -DBUILD_SUITE=ON`: enable the broader cmocka suite; build, then run `ctest --test-dir build --output-on-failure`.
 - In `tools/mcp/`, run `npm ci`, then `npm test`; `npm start` launches the stdio MCP server. Requires Node.js 20+.
 - Double-click `Launch mGBA.cmd` to build and open the Windows app.
@@ -22,7 +23,7 @@ Follow `CONTRIBUTING.md` and `.clang-format`: tabs for C/C++ indentation, four-c
 
 ## Testing Guidelines
 
-Place C tests in the component's `test/` directory, Qt tests in `src/platform/qt/test/`, and Node tests in `tools/mcp/test/*.test.mjs` using `node:test`. Add regression cases for changed behavior; no numeric coverage threshold is documented. Use synthetic Emerald fixtures where possible. Live smoke tests advance gameplay and create checkpoints: run them only against disposable sessions.
+Place C tests in the component's `test/` directory, libwillow tests in `src/willow/test/`, Qt tests in `src/platform/qt/test/`, and Node tests in `tools/mcp/test/*.test.mjs` using `node:test`. Add regression cases for changed behavior; no numeric coverage threshold is documented. Use synthetic Emerald fixtures where possible. Live smoke tests advance gameplay and create checkpoints: run them only against disposable sessions.
 
 ## Gameplay Control and Verification
 

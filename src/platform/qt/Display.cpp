@@ -7,7 +7,6 @@
 #include "moc_Display.cpp"
 
 #include "CoreController.h"
-#include "AIGameplay.h"
 #include "ConfigController.h"
 #include "DisplayGL.h"
 #include "DisplayQt.h"

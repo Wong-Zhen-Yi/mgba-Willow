@@ -6,7 +6,7 @@
 #define CHECK(condition) do { if (!(condition)) { std::cerr << "Failed line " << __LINE__ << ": " << #condition << '\n'; std::abort(); } } while (0)
 
 int main() {
-	using QGBA::AIGameplay;
+	using Willow::AIGameplay;
 	constexpr unsigned A = 1, B = 2, Right = 16, Left = 32, Up = 64, Down = 128;
 	CHECK(AIGameplay::mergeKeys(Left | A, Right | B) == (Left | A | B));
 	CHECK(AIGameplay::mergeKeys(Right, Left) == Right);

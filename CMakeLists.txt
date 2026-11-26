@@ -1067,6 +1067,10 @@ if(BUILD_MAINTAINER_TOOLS)
 	target_link_libraries(font-sdf-tool ${OS_LIB} ${PLATFORM_LIBRARY} ${BINARY_NAME})
 endif()
 
+if(BUILD_QT OR BUILD_SDL)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/willow ${CMAKE_CURRENT_BINARY_DIR}/willow)
+endif()
+
 if(BUILD_SDL)
 	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/platform/sdl ${CMAKE_CURRENT_BINARY_DIR}/sdl)
 endif()

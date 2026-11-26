@@ -30,7 +30,7 @@ The ROM assumptions are documented in the Emerald decompilation's
 and [sound-driver structures](https://github.com/pret/pokeemerald/blob/master/include/gba/m4a_internal.h).
 Identity checks use the existing Emerald adapter's verified hash list.
 
-With `BUILD_AI_TESTS=ON`, `test-qt-emeraldmusic` checks fallback behavior. Pass
+With `BUILD_AI_TESTS=ON`, `test-willow-emeraldmusic` checks fallback behavior. Pass
 `<ROM> <checkpoint> [output.pcm] [second-checkpoint]` for isolated integration
 checks: identical native-rate music at 8x and 16x, an unchanged gameplay state,
 song changes and accelerated gameplay with audio sync enabled. Inputs are read

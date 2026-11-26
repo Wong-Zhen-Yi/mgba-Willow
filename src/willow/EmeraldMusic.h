@@ -1,11 +1,13 @@
 #pragma once
 
-#include <QByteArray>
 #include <mgba-util/audio-buffer.h>
+
+#include <cstdint>
+#include <vector>
 
 struct mCore;
 
-namespace QGBA {
+namespace Willow {
 
 // Runs only Emerald's sound driver in a private, disk-free GBA instance.
 // All methods run on the main emulation thread (or while it is interrupted).
@@ -27,7 +29,7 @@ private:
 	void destroy();
 	unsigned findPlayer(mCore* source) const;
 	mCore* m_music = nullptr;
-	QByteArray m_state;
+	std::vector<uint8_t> m_state;
 	mAudioBuffer m_buffer;
 	unsigned m_player = 0;
 	unsigned m_song = 0;

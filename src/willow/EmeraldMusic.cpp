@@ -10,7 +10,7 @@
 #include <mgba/internal/gba/gba.h>
 #endif
 
-using namespace QGBA;
+using namespace Willow;
 
 namespace {
 constexpr unsigned Main = 0x030022C0;
@@ -98,7 +98,7 @@ bool EmeraldMusic::create(mCore* source) {
 		}
 	}
 	m_music->reset(m_music);
-	m_state.resize(int(source->stateSize(source)));
+	m_state.resize(source->stateSize(source));
 	return true;
 #else
 	(void) source;
@@ -109,7 +109,7 @@ bool EmeraldMusic::create(mCore* source) {
 bool EmeraldMusic::seed(mCore* source) {
 #ifdef M_CORE_GBA
 	if (!m_music && !create(source)) return false;
-	if (!source->saveState(source, m_state.data()) || !m_music->loadState(m_music, m_state.constData())) return false;
+	if (!source->saveState(source, m_state.data()) || !m_music->loadState(m_music, m_state.data())) return false;
 	auto* gba = static_cast<GBA*>(m_music->board);
 	unsigned sound = m_music->rawRead32(m_music, 0x03007FF0, -1);
 	if (!ram(sound, 0xFB0) || m_music->rawRead32(m_music, sound, -1) != Magic) return false;
