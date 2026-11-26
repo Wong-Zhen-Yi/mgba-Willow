@@ -35,7 +35,7 @@ h1 { font-size: 1.4rem; margin: 0; letter-spacing: -.035em; }
 h1 span { color: var(--accent); }
 #game-title { margin: 3px 0 0; font-size: .83rem; color: var(--muted); overflow-wrap: anywhere; }
 .header-actions { display: flex; gap: 6px; }
-.header-actions button { padding-inline: 10px; font-size: .8rem; }
+header button { flex: none; padding-inline: 10px; font-size: .8rem; }
 .player-controls { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 #status {
   flex: 1;
@@ -87,26 +87,59 @@ button, input, select {
 }
 
 button { cursor: pointer; font-weight: 700; }
-button:disabled, select:disabled { opacity: .4; cursor: not-allowed; }
+button:disabled, select:disabled, input:disabled { opacity: .4; cursor: not-allowed; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-button[type="submit"] { background: var(--accent); color: #202c1b; }
 
-dialog {
-  width: min(360px, calc(100% - 32px));
-  max-height: calc(100dvh - var(--pad-top) - var(--pad-bottom));
-  padding: 16px;
-  border: 1px solid #4d5b4f;
-  border-radius: 16px;
-  background: #222a24;
-  color: inherit;
+/* Settings: a full page over whichever page opened it. */
+body[data-settings] main { display: none !important; }
+.settings-page { max-width: 480px; margin: 0 auto; }
+.settings-page h2 {
+  margin: 20px 4px 8px;
+  font-size: .75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
 }
-dialog::backdrop { background: #080b09b8; }
-dialog h2 { margin: 0 0 12px; font-size: 1.2rem; }
-dialog label { display: block; margin: 12px 0 4px; font-size: .85rem; font-weight: 700; }
-dialog select { width: 100%; }
-dialog p { margin: 8px 0 0; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
-dialog p:empty { display: none; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.settings-group { padding: 2px 14px; border: 1px solid #38413a; border-radius: 14px; background: #222a24; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 6px 0; }
+.settings-group > * + .setting { border-top: 1px solid #38413a; }
+.setting label { font-weight: 600; }
+.setting select { flex: 0 1 58%; min-width: 0; }
+.settings-group p { margin: 0 0 12px; font-size: .82rem; line-height: 1.4; color: var(--muted); overflow-wrap: anywhere; }
+.settings-group p:empty { display: none; }
+.settings-group > p:first-child { margin-top: 12px; }
+#settings-done { background: var(--accent); color: #202c1b; }
+input[role="switch"] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 32px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 16px;
+  cursor: pointer;
+}
+input[role="switch"]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ecf0de;
+  transition: transform .15s;
+}
+input[role="switch"]:checked { border-color: var(--accent); background: var(--accent); }
+input[role="switch"]:checked::before { transform: translateX(20px); background: #202c1b; }
+.danger { width: 100%; margin-bottom: 14px; color: #f3b9ae; border-color: #7a4a43; background: #2e2220; }
+
+/* Phone-only display preferences. */
+body[data-screen="smooth"] .screen canvas { image-rendering: auto; }
+body[data-controls="large"] { --arm: clamp(46px, 14vw, 68px); --face: clamp(54px, 18vw, 82px); }
 
 /* Game picker: the first page after pairing. */
 .picker header { margin-bottom: 4px; }
@@ -231,6 +264,7 @@ dialog p:empty { display: none; }
     --arm: clamp(40px, 6.5vw, 54px);
     --face: clamp(48px, 7.5vw, 64px);
   }
+  body[data-page="play"][data-controls="large"] { --arm: clamp(46px, 7.5vw, 62px); --face: clamp(56px, 8.8vw, 74px); }
   body[data-page="play"] main {
     display: grid;
     grid-template-columns: var(--side) minmax(0, 1fr) var(--side);
@@ -250,8 +284,8 @@ dialog p:empty { display: none; }
     width: 100%;
     min-height: 0;
   }
-  body[data-page="play"] header { flex-wrap: wrap; gap: 4px 8px; margin-bottom: 6px; }
-  body[data-page="play"] h1 { font-size: 1.05rem; }
+  body[data-page="play"] .display header { flex-wrap: wrap; gap: 4px 8px; margin-bottom: 6px; }
+  body[data-page="play"] .display h1 { font-size: 1.05rem; }
   body[data-page="play"] .player-controls { margin-top: 6px; }
   body[data-page="play"] .screen {
     align-self: center;

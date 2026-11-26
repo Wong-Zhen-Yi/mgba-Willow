@@ -10,11 +10,13 @@ const screen = byId('frame');
 const painter = screen.getContext('2d', { alpha: false });
 const back = byId('back');
 const autoPlay = byId('autoplay');
-const autoPlayDialog = byId('autoplay-dialog');
 const autoPlayModel = byId('autoplay-model');
-const settingsDialog = byId('settings-dialog');
+const settingsPage = byId('settings-page');
 const speedSelect = byId('speed');
 const videoMode = byId('video-mode');
+const screenFilter = byId('screen-filter');
+const controlSize = byId('control-size');
+const keepAwake = byId('keep-awake');
 const gamepad = document.querySelector('.gamepad');
 const directions = gamepad.querySelector('.directions');
 const buttons = [...gamepad.querySelectorAll('button')];
@@ -26,7 +28,7 @@ const keyMap = new Map([
 ]);
 
 const fragment = new URLSearchParams(location.hash.slice(1));
-const token = fragment.get('pair') || sessionStorage.getItem('willow-pair');
+let token = fragment.get('pair') || sessionStorage.getItem('willow-pair');
 if (fragment.has('pair')) {
   history.replaceState(null, '', '/');
   if (token) sessionStorage.setItem('willow-pair', token);
@@ -68,8 +70,45 @@ let artBusy = false;
 const art = new Map();
 const artRequested = new Set();
 
-const savedVideoMode = localStorage.getItem('willow-video-mode');
-if ([...videoMode.options].some(option => option.value === savedVideoMode)) videoMode.value = savedVideoMode;
+let wakeLock;
+let wakeRequest;
+let settingsScroll = 0;
+
+// Phone-only preferences; storage can be unavailable in private browsing.
+function readStored(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function store(key, value) {
+  try { localStorage.setItem(key, value); } catch {}
+}
+function loadSetting(control, key) {
+  const saved = readStored(key);
+  if (control.type === 'checkbox') control.checked = saved === 'on';
+  else if ([...control.options].some(option => option.value === saved)) control.value = saved;
+}
+function saveSetting(control, key) {
+  store(key, control.type === 'checkbox' ? (control.checked ? 'on' : 'off') : control.value);
+}
+function applyLook() {
+  document.body.dataset.screen = screenFilter.value;
+  document.body.dataset.controls = controlSize.value;
+}
+loadSetting(videoMode, 'willow-video-mode');
+loadSetting(screenFilter, 'willow-screen-filter');
+loadSetting(controlSize, 'willow-control-size');
+loadSetting(keepAwake, 'willow-keep-awake');
+applyLook();
+// Auto Play models come from the PC when a game opens; remember them so Settings can show the choice any time.
+let knownModels = [];
+try { knownModels = JSON.parse(readStored('willow-autoplay-models')) || []; } catch {}
+if (!Array.isArray(knownModels)) knownModels = [];
+let pcDefaultModel = readStored('willow-autoplay-default') || '';
+let chosenModel = readStored('willow-autoplay-model') || '';
+if (!('wakeLock' in navigator)) {
+  keepAwake.checked = false;
+  keepAwake.disabled = true;
+  byId('keep-awake-note').textContent = 'This browser cannot keep the screen awake.';
+}
 
 function send(message) {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -270,10 +309,9 @@ function clearGame() {
   autoPlayState = undefined;
   autoPlayPending = undefined;
   autoPlayModels = [];
-  autoPlayDialog.close();
-  settingsDialog.close();
   renderAutoPlay();
   setSpeed(undefined);
+  updateWakeLock();
   gamepad.inert = true;
   byId('waiting').hidden = false;
   screen.hidden = true;
@@ -417,7 +455,6 @@ async function showPng(bytes) {
 
 function renderAutoPlay() {
   const running = Boolean(autoPlayState?.running);
-  if (running) autoPlayDialog.close();
   autoPlay.disabled = !attached || !autoPlayState || autoPlayPending || Boolean(autoPlayState.stopping)
     || (!running && !autoPlayModels.length);
   autoPlay.toggleAttribute('data-running', running);
@@ -427,10 +464,34 @@ function renderAutoPlay() {
   autoPlay.textContent = label;
 }
 
+function renderModels() {
+  const pcDefault = knownModels.find(model => model.id === pcDefaultModel)?.label;
+  autoPlayModel.replaceChildren(new Option(pcDefault ? `PC default (${pcDefault})` : 'PC default', ''),
+    ...knownModels.map(({ id, label }) => new Option(label, id)));
+  autoPlayModel.value = knownModels.some(model => model.id === chosenModel) ? chosenModel : '';
+  autoPlayModel.disabled = !knownModels.length;
+  byId('autoplay-note').textContent = knownModels.length
+    ? 'Tap Auto Play on the game screen to let Codex play. A new model applies the next time Auto Play starts.'
+    : 'Open a game to see the Auto Play models on the PC.';
+}
+
+function learnModels(models, defaultModel) {
+  if (Array.isArray(models) && models.length) {
+    knownModels = models.filter(model => typeof model?.id === 'string' && typeof model?.label === 'string');
+    store('willow-autoplay-models', JSON.stringify(knownModels));
+  }
+  if (typeof defaultModel === 'string' && defaultModel) {
+    pcDefaultModel = defaultModel;
+    store('willow-autoplay-default', defaultModel);
+  }
+  renderModels();
+}
+
 function setSpeed(speed) {
   gameSpeed = speed;
   speedSelect.value = speed ?? 0;
   speedSelect.disabled = speed === undefined;
+  byId('speed-note').hidden = speed !== undefined;
 }
 
 const videoLabel = codec => ({ hevc: 'HEVC', h264: 'H.264', png: 'PNG' })[codec];
@@ -471,9 +532,89 @@ function returnToPicker(text) {
 }
 
 back.onclick = () => returnToPicker();
-byId('settings').onclick = () => {
+
+// ---- Settings page -----------------------------------------------------
+
+const settingsOpen = () => !settingsPage.hidden;
+
+function renderConnection() {
+  const text = paired ? `Connected to Willow at ${location.host}.` :
+    !token ? 'Not paired. In Willow on the PC, choose Pair iPhone, then scan the QR code.' :
+    'Connecting to Willow on the PC…';
+  const connection = byId('connection-status');
+  if (connection.textContent !== text) connection.textContent = text;
+  byId('forget').disabled = !token;
+}
+
+function openSettings() {
+  if (settingsOpen()) return;
   release();
-  settingsDialog.showModal();
+  settingsScroll = scrollY;
+  renderConnection();
+  settingsPage.hidden = false;
+  document.body.toggleAttribute('data-settings', true);
+  // A history entry lets the iOS back swipe close Settings.
+  history.pushState({ willowSettings: true }, '');
+  scrollTo(0, 0);
+}
+
+function closeSettings(fromHistory = false) {
+  if (!settingsOpen()) return;
+  if (!fromHistory && history.state?.willowSettings) {
+    history.back();
+    return;
+  }
+  settingsPage.hidden = true;
+  document.body.toggleAttribute('data-settings', false);
+  scrollTo(0, settingsScroll);
+}
+
+// Only while a game is attached and visible; the browser drops the lock when the tab hides.
+async function updateWakeLock() {
+  if (!keepAwake.checked || !attached || document.hidden) {
+    wakeRequest = undefined;
+    const lock = wakeLock;
+    wakeLock = undefined;
+    lock?.release().catch(() => {});
+    return;
+  }
+  if (wakeLock || wakeRequest || !('wakeLock' in navigator)) return;
+  const request = wakeRequest = navigator.wakeLock.request('screen').catch(() => null);
+  const lock = await request;
+  if (request !== wakeRequest) {
+    lock?.release().catch(() => {});
+    return;
+  }
+  wakeRequest = undefined;
+  if (!lock) return;
+  wakeLock = lock;
+  lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = undefined; });
+}
+
+if (history.state?.willowSettings) history.replaceState(null, '');
+for (const button of document.querySelectorAll('.open-settings')) button.onclick = openSettings;
+byId('settings-done').onclick = () => closeSettings();
+window.addEventListener('popstate', () => { if (!history.state?.willowSettings) closeSettings(true); });
+screenFilter.onchange = () => {
+  saveSetting(screenFilter, 'willow-screen-filter');
+  applyLook();
+};
+controlSize.onchange = () => {
+  saveSetting(controlSize, 'willow-control-size');
+  applyLook();
+};
+keepAwake.onchange = () => {
+  saveSetting(keepAwake, 'willow-keep-awake');
+  updateWakeLock();
+};
+byId('forget').onclick = () => {
+  if (!token || !confirm('Unpair this phone? To play again, scan the QR code in Willow on the PC.')) return;
+  if (attached) send({ type: 'disconnect' });
+  wanted = null;
+  token = null;
+  sessionStorage.removeItem('willow-pair');
+  socket?.close();
+  closeSettings();
 };
 autoPlay.onclick = () => {
   if (autoPlay.disabled) return;
@@ -481,19 +622,13 @@ autoPlay.onclick = () => {
     setAutoPlay(false);
     return;
   }
-  autoPlayModel.replaceChildren(...autoPlayModels.map(({ id, label }) => new Option(label, id)));
-  autoPlayModel.value = autoPlayState.default_model;
-  if (autoPlayModel.selectedIndex < 0) autoPlayModel.selectedIndex = 0;
-  release();
-  autoPlayDialog.showModal();
+  // Settings → Auto Play picks the model; without a choice the PC's default runs.
+  const model = autoPlayModels.some(({ id }) => id === chosenModel) ? chosenModel : undefined;
+  setAutoPlay(true, model);
 };
-byId('autoplay-cancel').onclick = () => autoPlayDialog.close();
-byId('autoplay-form').onsubmit = event => {
-  event.preventDefault();
-  autoPlayDialog.close();
-  if (!autoPlay.disabled && !autoPlayState.running) {
-    setAutoPlay(true, autoPlayModel.value);
-  }
+autoPlayModel.onchange = () => {
+  chosenModel = autoPlayModel.value;
+  store('willow-autoplay-model', chosenModel);
 };
 function setAutoPlay(enabled, model) {
   autoPlayPending = enabled ? 'start' : 'stop';
@@ -505,7 +640,7 @@ speedSelect.onchange = () => {
   send({ type: 'speed', multiplier: Number(speedSelect.value) });
 };
 videoMode.onchange = () => {
-  localStorage.setItem('willow-video-mode', videoMode.value);
+  saveSetting(videoMode, 'willow-video-mode');
   if (attached) chooseVideo();
 };
 
@@ -515,6 +650,7 @@ function handle(message) {
       retry = 500;
       busySince = 0;
       paired = true;
+      renderConnection();
       if (document.body.dataset.page === 'play' && wanted) send({ type: 'sessions' });
       else {
         setPickerStatus('Loading your games…');
@@ -551,6 +687,7 @@ function handle(message) {
       attaching = false;
       autoPlayState = message.autoplay;
       autoPlayModels = message.autoplay_models ?? [];
+      learnModels(autoPlayModels, autoPlayState?.default_model);
       renderAutoPlay();
       setSpeed(message.speed);
       gba = message.platform === 'GBA';
@@ -562,6 +699,7 @@ function handle(message) {
       hint.textContent = 'Waiting for the picture…';
       showPause(message.paused);
       chooseVideo();
+      updateWakeLock();
       break;
     case 'pause':
       if (attached) showPause(message.paused);
@@ -570,6 +708,10 @@ function handle(message) {
       if (!attached) break;
       autoPlayState = message.autoplay;
       if (message.acknowledged) autoPlayPending = undefined;
+      // The PC's default can change from its menu or Settings while the phone is attached.
+      if (typeof autoPlayState?.default_model === 'string' && autoPlayState.default_model !== pcDefaultModel) {
+        learnModels(undefined, autoPlayState.default_model);
+      }
       renderAutoPlay();
       renderPlayerStatus();
       break;
@@ -626,7 +768,15 @@ function connect() {
     paired = false;
     artBusy = false;
     clearGame();
-    if (code === 4001) {
+    renderConnection();
+    if (!token) {
+      document.body.dataset.page = 'picker';
+      library.replaceChildren();
+      resume.hidden = search.hidden = true;
+      setPickerStatus('This phone is unpaired. In Willow on the PC, choose Pair iPhone, then scan the QR code with Camera.');
+    } else if (code === 4001) {
+      token = null;
+      renderConnection();
       sessionStorage.removeItem('willow-pair');
       document.body.dataset.page = 'picker';
       library.replaceChildren();
@@ -692,7 +842,9 @@ for (const button of buttons) {
 gamepad.oncontextmenu = event => event.preventDefault();
 window.addEventListener('keydown', event => {
   const bit = keyMap.get(event.code);
-  if (!attached || paused || !bit || (bit > 255 && !gba) || event.target.closest('button, input, select, dialog')) return;
+  if (event.code === 'Escape' && settingsOpen()) return closeSettings();
+  if (!attached || paused || settingsOpen() || !bit || (bit > 255 && !gba) ||
+      event.target.closest('button, input, select')) return;
   event.preventDefault();
   keyboard.set(event.code, bit);
   updateKeys();
@@ -707,14 +859,19 @@ window.addEventListener('pageshow', event => { if (event.persisted) location.rel
 window.addEventListener('hashchange', () => {
   if (new URLSearchParams(location.hash.slice(1)).has('pair')) location.reload();
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) release();
+  updateWakeLock();
+});
 setInterval(() => { if (attached && !paused && !document.hidden) updateKeys(true); }, 150);
 // Keep the picker current (running game, finished scans) and wait for a starting game.
 setInterval(() => {
   if (!paired || document.hidden) return;
   if (document.body.dataset.page === 'picker') requestLibrary();
-  else if (!attached && !attaching) send({ type: 'sessions' });
+  else if (document.body.dataset.page === 'play' && !attached && !attaching) send({ type: 'sessions' });
 }, 2500);
 
+renderConnection();
+renderModels();
 if (token) connect();
 else setPickerStatus('In Willow on the PC, choose Pair iPhone, then scan the QR code with Camera.');

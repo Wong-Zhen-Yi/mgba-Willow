@@ -30,8 +30,14 @@ Launching with a ROM argument still opens that game directly.
 **Launch mGBA.cmd** builds and opens this checkout's MCP-enabled emulator.
 Open a game, then connect from Codex to play through the MCP tools. To let Codex
 play by itself, click **Auto Play** in the status bar (GPT-6.1 Terra on medium by
-default, or GPT-6 Luna on extra high from **AI → Auto Play Model**). See
-[Auto Play](tools/mcp/README.md#auto-play).
+default, or GPT-6 Luna on extra high from **AI → Auto Play Model** or
+**Settings → Willow → Auto Play**). See [Auto Play](tools/mcp/README.md#auto-play).
+
+**Settings** is one scrolling page. Willow's own options come first: the ROM
+folder, the Auto Play model, and iPhone pairing, including opening Willow at
+Windows sign-in. The emulator's sections follow. Click a section in the sidebar
+to jump to it, or type in **Search settings** (Ctrl+F) to show only the
+sections that mention a word.
 
 Select **Pair iPhone** in Willow's game library or **Tools → Pair iPhone**
 during gameplay to show a pairing QR code. The iPhone opens an HTTPS link that
@@ -43,7 +49,7 @@ During capped AI fast-forward, supported English Emerald ROMs play background
 music at its original speed in both the SDL and Qt audio backends. A private,
 memory-only emulator runs the ROM's music driver, follows song changes, and
 suppresses sound effects, cries and fanfares. The feature is enabled by default;
-toggle **Normal-speed Emerald music during AI play** in Settings' Audio group.
+toggle **Normal-speed Emerald music during AI play** under Settings → Willow → Auto Play.
 Ordinary playback resumes at 1x or when AI control is disabled. Existing mute
 and fast-forward volume settings still apply. Unbounded speed and other ROMs
 use the existing audio path with Sonic pitch-preserving time stretching.

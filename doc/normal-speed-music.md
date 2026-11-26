@@ -1,8 +1,8 @@
 # Normal-speed Emerald music
 
 During capped AI play above 1x, the verified English Emerald layouts use a
-private GBA core for background music. Settings → Audio → **Normal-speed Emerald
-music during AI play** enables this by default. Returning to 1x, disabling AI
+private GBA core for background music. Settings → Willow → Auto Play →
+**Normal-speed Emerald music during AI play** enables this by default. Returning to 1x, disabling AI
 control or disabling the option restores ordinary game audio. Mute and volume
 settings still apply. Unsupported games and unbounded speed retain the existing
 audio path.

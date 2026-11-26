@@ -7,6 +7,7 @@
 
 #include <QDialog>
 #include <QProcess>
+#include <QTimer>
 
 class QLabel;
 class QPushButton;
@@ -23,12 +24,23 @@ public:
 	void start();
 	void stop();
 
+	// One line for Settings: what Willow Mobile is doing now.
+	QString summary() const { return m_summary; }
+
+signals:
+	void summaryChanged(const QString& summary);
+
 private:
+	void setStatus(const QString& text, const QString& summary = {});
 	void readUpdates();
 	void clearPairing();
+	void scheduleRetry();
 
 	QProcess m_process;
+	QTimer m_retry;
+	int m_retryDelay = 0;
 	QByteArray m_updates;
+	QString m_summary;
 	QLabel* m_status;
 	QLabel* m_qr;
 	QPushButton* m_start;

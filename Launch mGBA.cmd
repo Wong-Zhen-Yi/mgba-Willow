@@ -3,6 +3,8 @@ setlocal EnableExtensions DisableDelayedExpansion
 rem Use Windows PowerShell without inheriting modules from a developer terminal.
 set "PSModulePath=%SystemRoot%\System32\WindowsPowerShell\v1.0\Modules"
 if /i "%~1"=="--install-terminal-command" goto install_terminal_command
+if /i "%~1"=="--install-startup" goto install_startup
+if /i "%~1"=="--remove-startup" goto remove_startup
 title mGBA Willow - Game Library + Multi-Agent MCP
 rem Resolve all launcher paths from this checkout, not the caller's directory.
 cd /d "%~dp0"
@@ -25,9 +27,13 @@ echo Use File / Return to game library after saving your current game.
 echo Multi-agent MCP support remains available during gameplay.
 echo Changed emulator sources will be rebuilt automatically.
 echo To enable mgba in your terminal, run "Launch mGBA.cmd" --install-terminal-command.
-echo To play from your iPhone, click Pair iPhone in the Willow window, then pick a game on the phone.
-echo Tap Auto Play to choose a Codex model, or Stop Auto Play to stop the current run.
-echo Open Settings on the phone to change game speed or video format.
+echo Willow serves the iPhone link in the background from startup.
+echo To open Willow minimized and serve the iPhone link at Windows sign-in, run "Launch mGBA.cmd" --install-startup.
+echo Sign-in launches use the last build; run --remove-startup to undo.
+echo To play from your iPhone, click Pair iPhone in the Willow window to see the QR code, then pick a game on the phone.
+echo Tap Auto Play on the phone to let Codex play, or Stop Auto Play to stop the current run.
+echo Tap Settings on the phone for game speed, the Auto Play model, video, button size and keeping the screen awake.
+echo Settings on the PC is one page: Willow options first, then the emulator; use the sidebar or Ctrl+F to find a setting.
 echo The iPhone link uses Tailscale Funnel HTTPS; Tailscale handles the certificate.
 echo Auto video tries NVIDIA NVENC HEVC first, with H.264 and PNG fallbacks.
 echo GBA games render on the GPU with OpenGL; Willow uses the software renderer while an AI agent has control.
@@ -53,4 +59,12 @@ exit /b 1
 
 :install_terminal_command
 "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\install-terminal-command.ps1"
+exit /b %errorlevel%
+
+:install_startup
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\install-startup.ps1"
+exit /b %errorlevel%
+
+:remove_startup
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\install-startup.ps1" -Remove
 exit /b %errorlevel%

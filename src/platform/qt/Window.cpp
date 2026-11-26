@@ -148,6 +148,12 @@ Window::Window(CoreManager* manager, ConfigController* config, int playerId, QWi
 	});
 	connect(m_gameLibrary, &GameLibrary::openRequested, this, &Window::selectROM);
 	connect(m_gameLibrary, &GameLibrary::mobilePairingRequested, this, &Window::showMobilePairing);
+	if (m_playerId == 0) {
+		// Serve Willow Mobile from startup so the phone can pair without opening the dialog first.
+		m_mobilePairing = new MobilePairing(this);
+		connect(this, &Window::shutdown, m_mobilePairing, &MobilePairing::stop);
+		QTimer::singleShot(2000, m_mobilePairing, &MobilePairing::start);
+	}
 	connect(m_gameLibrary, &GameLibrary::settingsRequested, this, [this]() { openSettingsWindow(); });
 #ifdef USE_SQLITE3
 	m_libraryView = new LibraryController(nullptr, ConfigController::configDir() + "/library.sqlite3", m_config);
@@ -586,7 +592,7 @@ void Window::exportSharkport() {
 }
 
 void Window::openSettingsWindow() {
-	openSettingsWindow(SettingsView::Page::AV);
+	openSettingsWindow(SettingsView::Page::WILLOW);
 }
 
 void Window::openSettingsWindow(SettingsView::Page page) {
@@ -613,6 +619,12 @@ void Window::openSettingsWindow(SettingsView::Page page) {
 	});
 #endif
 	connect(this, &Window::shaderSelectorAdded, settingsWindow, &SettingsView::setShaderSelector);
+	connect(settingsWindow, &SettingsView::romFolderChanged, m_gameLibrary, &GameLibrary::setFolder);
+	connect(settingsWindow, &SettingsView::mobilePairingRequested, this, &Window::showMobilePairing);
+	if (m_mobilePairing) {
+		settingsWindow->setMobileStatus(m_mobilePairing->summary());
+		connect(m_mobilePairing, &MobilePairing::summaryChanged, settingsWindow, &SettingsView::setMobileStatus);
+	}
 	openView(settingsWindow);
 	settingsWindow->selectPage(page);
 }

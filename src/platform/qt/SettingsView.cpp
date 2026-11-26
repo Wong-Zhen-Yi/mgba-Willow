@@ -7,10 +7,12 @@
 #include "moc_SettingsView.cpp"
 
 #include "AudioProcessor.h"
+#include "AutoPlay.h"
 #include "CheckBoxDelegate.h"
 #include "ConfigController.h"
 #include "Display.h"
 #include "GBAApp.h"
+#include "GameLibrary.h"
 #include "GBAKeyEditor.h"
 #include "InputController.h"
 #include "RotatedHeaderView.h"
@@ -21,6 +23,21 @@
 #include "GameBoy.h"
 #include <mgba/gb/interface.h>
 #endif
+
+#include <QApplication>
+#include <QFormLayout>
+#include <QFrame>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QProcess>
+#include <QPropertyAnimation>
+#include <QScreen>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QShortcut>
+#include <QStandardPaths>
+#include <QVBoxLayout>
+#include <QWheelEvent>
 
 #include <mgba/core/serialize.h>
 #include <mgba/core/version.h>
@@ -39,20 +56,9 @@ SettingsView::SettingsView(ConfigController* controller, InputController* inputC
 	, m_logModel(logController)
 {
 	m_ui.setupUi(this);
-
-	m_pageIndex[Page::AV] = 0;
-	m_pageIndex[Page::GAMEPLAY] = 1;
-	m_pageIndex[Page::INTERFACE] = 2;
-	m_pageIndex[Page::UPDATE] = 3;
-	m_pageIndex[Page::EMULATION] = 4;
-	m_pageIndex[Page::ENHANCEMENTS] = 5;
-	m_pageIndex[Page::BIOS] = 6;
-	m_pageIndex[Page::PATHS] = 7;
-	m_pageIndex[Page::LOGGING] = 8;
+	setupSinglePage();
 
 #ifdef M_CORE_GB
-	m_pageIndex[Page::GB] = 9;
-
 	for (auto& model : GameBoy::modelList()) {
 		m_ui.gbModel->addItem(GameBoy::modelName(model), model);
 		m_ui.sgbModel->addItem(GameBoy::modelName(model), model);
@@ -328,7 +334,6 @@ SettingsView::SettingsView(ConfigController* controller, InputController* inputC
 	m_ui.gbBiosBrowse->hide();
 	m_ui.gbcBiosBrowse->hide();
 	m_ui.sgbBiosBrowse->hide();
-	m_ui.gb->hide();
 #endif
 
 	GBAKeyEditor* editor = new GBAKeyEditor(inputController, InputController::KEYBOARD, QString(), this);
@@ -430,14 +435,10 @@ SettingsView::~SettingsView() {
 
 void SettingsView::setShaderSelector(ShaderSelector* shaderSelector) {
 #if  defined(BUILD_GLES2) || defined(BUILD_GLES3) || defined(USE_EPOXY)
-	auto items = m_ui.tabs->findItems(tr("Shaders"), Qt::MatchFixedString);
-	for (QListWidgetItem* item : items) {
-		delete item;
-	}
-	if (!m_shader) {
-		m_ui.stackedWidget->removeWidget(m_dummyShader);
-	} else {
-		QObject::disconnect(m_shader, nullptr, this, nullptr);
+	removePage(Page::SHADERS);
+	if (m_shader) {
+		QObject::disconnect(this, nullptr, m_shader, nullptr);
+		QObject::disconnect(m_ui.buttonBox, nullptr, m_shader, nullptr);
 	}
 	m_shader = shaderSelector;
 	if (shaderSelector) {
@@ -451,7 +452,338 @@ void SettingsView::setShaderSelector(ShaderSelector* shaderSelector) {
 }
 
 void SettingsView::selectPage(SettingsView::Page page) {
-	m_ui.tabs->setCurrentRow(m_pageIndex[page]);
+	const int row = sectionRow(page);
+	if (row < 0) {
+		return;
+	}
+	// Sections have their final positions once the dialog is shown, so jump on the next pass.
+	QTimer::singleShot(0, this, [this, row]() { scrollToSection(row, false); });
+}
+
+void SettingsView::setMobileStatus(const QString& status) {
+	if (m_mobileStatus) {
+		m_mobileStatus->setText(status.isEmpty() ? tr("Off.") : status);
+	}
+}
+
+namespace {
+
+QString startupShortcutPath() {
+	return QDir(QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation))
+	    .filePath("Startup/mGBA Willow.lnk");
+}
+
+// Willow's launcher scripts sit beside the MCP folder that Launch mGBA.cmd points Willow at.
+QString willowToolsScript(const QString& name) {
+	for (const char* variable : { "WILLOW_MOBILE_SCRIPT", "WILLOW_AUTOPLAY_SCRIPT" }) {
+		const QString script = qEnvironmentVariable(variable);
+		if (script.isEmpty()) {
+			continue;
+		}
+		QDir tools = QFileInfo(script).dir();
+		if (tools.cdUp() && QFileInfo(tools.filePath(name)).isFile()) {
+			return tools.filePath(name);
+		}
+	}
+	return {};
+}
+
+QLabel* makeNote(const QString& text, QWidget* parent) {
+	QLabel* note = new QLabel(text, parent);
+	note->setWordWrap(true);
+	note->setForegroundRole(QPalette::PlaceholderText);
+	return note;
+}
+
+QString searchableText(const QWidget* root) {
+	QStringList text;
+	for (const QWidget* widget : root->findChildren<QWidget*>()) {
+		if (auto* label = qobject_cast<const QLabel*>(widget)) {
+			text << label->text();
+		} else if (auto* button = qobject_cast<const QAbstractButton*>(widget)) {
+			text << button->text();
+		} else if (auto* group = qobject_cast<const QGroupBox*>(widget)) {
+			text << group->title();
+		} else if (auto* combo = qobject_cast<const QComboBox*>(widget)) {
+			for (int i = 0; i < combo->count(); ++i) {
+				text << combo->itemText(i);
+			}
+		}
+		text << widget->toolTip();
+	}
+	return text.join('\n').remove('&');
+}
+
+}
+
+void SettingsView::setupSinglePage() {
+	// The .ui pages become sections, in the order of their sidebar entries.
+	static const Page uiPages[] = {
+		Page::AV, Page::GAMEPLAY, Page::INTERFACE, Page::UPDATE, Page::EMULATION,
+		Page::ENHANCEMENTS, Page::BIOS, Page::PATHS, Page::LOGGING, Page::GB,
+	};
+	QStringList titles;
+	for (int i = 0; i < m_ui.tabs->count(); ++i) {
+		titles << m_ui.tabs->item(i)->text();
+	}
+	QList<QWidget*> pages;
+	while (m_ui.stackedWidget->count()) {
+		QWidget* page = m_ui.stackedWidget->widget(0);
+		m_ui.stackedWidget->removeWidget(page);
+		// removeWidget keeps the parent, and the stacked widget is deleted below.
+		page->setParent(this);
+		pages << page;
+	}
+	m_ui.tabs->clear();
+
+	m_content = new QWidget;
+	m_sectionLayout = new QVBoxLayout(m_content);
+	m_sectionLayout->setContentsMargins(20, 16, 20, 24);
+	m_sectionLayout->setSpacing(0);
+	m_noResults = makeNote(QString(), m_content);
+	m_noResults->setAlignment(Qt::AlignCenter);
+	m_noResults->hide();
+	m_sectionLayout->addWidget(m_noResults);
+	m_sectionLayout->addStretch(1);
+
+	m_scroll = new QScrollArea(this);
+	m_scroll->setWidget(m_content);
+	m_scroll->setWidgetResizable(true);
+	m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	m_scroll->setFrameShape(QFrame::NoFrame);
+	delete m_ui.gridLayout->replaceWidget(m_ui.stackedWidget, m_scroll);
+	delete m_ui.stackedWidget;
+	m_ui.stackedWidget = nullptr;
+
+	m_scrollAnimation = new QPropertyAnimation(m_scroll->verticalScrollBar(), "value", this);
+	m_scrollAnimation->setDuration(220);
+	m_scrollAnimation->setEasingCurve(QEasingCurve::OutCubic);
+	connect(m_scrollAnimation, &QPropertyAnimation::finished, this, [this]() { m_navigating = false; });
+	connect(m_scroll->verticalScrollBar(), &QScrollBar::valueChanged, this, &SettingsView::syncSectionToScroll);
+	connect(m_ui.tabs, &QListWidget::currentRowChanged, this, [this](int row) { scrollToSection(row, true); });
+
+	m_search = new QLineEdit(this);
+	m_search->setPlaceholderText(tr("Search settings"));
+	m_search->setAccessibleName(tr("Search settings"));
+	m_search->setClearButtonEnabled(true);
+	m_search->setMaximumWidth(m_ui.tabs->maximumWidth());
+	m_ui.gridLayout->addWidget(m_search, 0, 0);
+	connect(m_search, &QLineEdit::textChanged, this, &SettingsView::filterSections);
+	auto* find = new QShortcut(QKeySequence::Find, this);
+	connect(find, &QShortcut::activated, m_search, [this]() {
+		m_search->setFocus(Qt::ShortcutFocusReason);
+		m_search->selectAll();
+	});
+
+	m_ui.tabs->setMinimumWidth(170);
+	m_ui.tabs->setAccessibleName(tr("Settings sections"));
+
+	// One page scrolls, so the dialog can follow the screen size instead of the tallest page.
+	m_ui.gridLayout->setSizeConstraint(QLayout::SetDefaultConstraint);
+	setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+	setMinimumSize(720, 460);
+	QSize size(1000, 780);
+	if (QScreen* display = screen()) {
+		size = size.boundedTo(display->availableGeometry().size() * 0.9);
+	}
+	resize(size);
+
+	addPage(tr("Willow"), createWillowPage(), Page::WILLOW);
+	for (int i = 0; i < pages.count(); ++i) {
+		const Page page = i < int(std::size(uiPages)) ? uiPages[i] : Page::AV;
+#ifndef M_CORE_GB
+		if (page == Page::GB) {
+			pages[i]->setParent(this);
+			pages[i]->hide();
+			continue;
+		}
+#endif
+		addPage(i < titles.count() ? titles[i] : QString(), pages[i], page);
+	}
+	m_ui.loggingView->setMinimumHeight(360);
+}
+
+QWidget* SettingsView::createWillowPage() {
+	QWidget* page = new QWidget;
+	auto* layout = new QVBoxLayout(page);
+
+	auto* library = new QGroupBox(tr("Game library"), page);
+	auto* libraryForm = new QFormLayout(library);
+	auto* folderRow = new QHBoxLayout;
+	m_romFolder = new QLineEdit(library);
+	m_romFolder->setPlaceholderText(tr("No folder chosen"));
+	auto* browse = new QPushButton(tr("Browse"), library);
+	folderRow->addWidget(m_romFolder, 1);
+	folderRow->addWidget(browse);
+	libraryForm->addRow(tr("ROM folder:"), folderRow);
+	libraryForm->addRow(makeNote(tr("Willow's game library lists the games in this folder. Your iPhone shows the same list."), library));
+	connect(browse, &QAbstractButton::clicked, this, [this]() {
+		const QString folder = GBAApp::app()->getOpenDirectoryName(this, tr("Choose your ROM folder"), m_romFolder->text());
+		if (!folder.isEmpty()) {
+			m_romFolder->setText(QDir::toNativeSeparators(folder));
+		}
+	});
+	layout->addWidget(library);
+
+	auto* autoPlay = new QGroupBox(tr("Auto Play"), page);
+	auto* autoPlayForm = new QFormLayout(autoPlay);
+	m_autoPlayModel = new QComboBox(autoPlay);
+	for (const auto& [id, label] : AutoPlay::modelList()) {
+		m_autoPlayModel->addItem(label, id);
+	}
+	autoPlayForm->addRow(tr("Model:"), m_autoPlayModel);
+	// Moved here from Audio: it only applies while an AI plays.
+	m_ui.normalSpeedMusic->parentWidget()->layout()->removeWidget(m_ui.normalSpeedMusic);
+	m_ui.normalSpeedMusic->setParent(autoPlay);
+	autoPlayForm->addRow(m_ui.normalSpeedMusic);
+	autoPlayForm->addRow(makeNote(tr("Click ▶ Auto Play in the status bar, or tap Auto Play on your iPhone, to let Codex "
+	                                 "play the open game. A new model applies the next time Auto Play starts."),
+	                              autoPlay));
+	layout->addWidget(autoPlay);
+
+#ifdef Q_OS_WIN
+	auto* mobile = new QGroupBox(tr("iPhone"), page);
+	auto* mobileForm = new QFormLayout(mobile);
+	m_mobileStatus = new QLabel(tr("Off."), mobile);
+	m_mobileStatus->setWordWrap(true);
+	m_mobileStatus->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	mobileForm->addRow(tr("Willow Mobile:"), m_mobileStatus);
+	auto* pair = new QPushButton(tr("Pair iPhone…"), mobile);
+	connect(pair, &QAbstractButton::clicked, this, &SettingsView::mobilePairingRequested);
+	auto* pairRow = new QHBoxLayout;
+	pairRow->addWidget(pair);
+	pairRow->addStretch(1);
+	mobileForm->addRow(QString(), pairRow);
+	m_startAtSignIn = new QCheckBox(tr("Open Willow minimized when you sign in to Windows"), mobile);
+	mobileForm->addRow(m_startAtSignIn);
+	QLabel* signInNote = makeNote(
+	    tr("Keeps the iPhone link available whenever this PC is on. Sign-in launches use the last build."), mobile);
+	mobileForm->addRow(signInNote);
+	if (willowToolsScript("install-startup.ps1").isEmpty()) {
+		m_startAtSignIn->setEnabled(false);
+		signInNote->setText(tr("Open Willow using Launch mGBA.cmd to change this."));
+	}
+	layout->addWidget(mobile);
+#endif
+
+	layout->addStretch(1);
+	return page;
+}
+
+int SettingsView::sectionRow(Page index) const {
+	for (int row = 0; row < m_sections.count(); ++row) {
+		if (m_sections[row].page == index) {
+			return row;
+		}
+	}
+	return -1;
+}
+
+void SettingsView::scrollToSection(int row, bool animate) {
+	if (row < 0 || row >= m_sections.count() || m_sections[row].widget->isHidden()) {
+		return;
+	}
+	if (m_ui.tabs->currentRow() != row) {
+		const QSignalBlocker blocker(m_ui.tabs);
+		m_ui.tabs->setCurrentRow(row);
+	}
+	QScrollBar* bar = m_scroll->verticalScrollBar();
+	// Land with the section title near the top, past its divider.
+	const Section& section = m_sections[row];
+	const int title = section.widget->y() + (section.divider->isHidden() ? 0 : section.divider->height());
+	const int target = qBound(0, title - m_sectionLayout->contentsMargins().top(), bar->maximum());
+	m_scrollAnimation->stop();
+	if (!animate || !isVisible() || target == bar->value()) {
+		// A short last section cannot reach the top; navigating keeps its row highlighted anyway.
+		m_navigating = true;
+		bar->setValue(target);
+		m_navigating = false;
+		return;
+	}
+	m_navigating = true;
+	m_scrollAnimation->setStartValue(bar->value());
+	m_scrollAnimation->setEndValue(target);
+	m_scrollAnimation->start();
+}
+
+void SettingsView::syncSectionToScroll() {
+	if (m_navigating) {
+		return;
+	}
+	const QScrollBar* bar = m_scroll->verticalScrollBar();
+	const bool atEnd = bar->maximum() > 0 && bar->value() >= bar->maximum();
+	const int line = bar->value() + m_scroll->viewport()->height() / 4;
+	int current = -1;
+	for (int row = 0; row < m_sections.count(); ++row) {
+		const QWidget* widget = m_sections[row].widget;
+		if (widget->isHidden()) {
+			continue;
+		}
+		if (current < 0 || atEnd || widget->y() <= line) {
+			current = row;
+		}
+	}
+	if (current >= 0 && current != m_ui.tabs->currentRow()) {
+		const QSignalBlocker blocker(m_ui.tabs);
+		m_ui.tabs->setCurrentRow(current);
+	}
+}
+
+void SettingsView::filterSections(const QString& query) {
+	const QString needle = query.trimmed();
+	int shown = 0;
+	for (int row = 0; row < m_sections.count(); ++row) {
+		const Section& section = m_sections[row];
+		const bool match = needle.isEmpty() || m_ui.tabs->item(row)->text().contains(needle, Qt::CaseInsensitive) ||
+		    searchableText(section.widget).contains(needle, Qt::CaseInsensitive);
+		section.widget->setVisible(match);
+		m_ui.tabs->item(row)->setHidden(!match);
+		shown += match;
+	}
+	m_noResults->setText(tr("No settings match “%1”.").arg(needle));
+	m_noResults->setVisible(!shown);
+	updateDividers();
+	m_scrollAnimation->stop();
+	m_navigating = false;
+	m_scroll->verticalScrollBar()->setValue(0);
+	// Positions update after the layout runs.
+	QTimer::singleShot(0, this, &SettingsView::syncSectionToScroll);
+}
+
+bool SettingsView::eventFilter(QObject* object, QEvent* event) {
+	// Scrolling the page must not change a control that happens to be under the pointer.
+	if (event->type() == QEvent::Wheel) {
+		auto* widget = qobject_cast<QWidget*>(object);
+		if (widget && !widget->hasFocus()) {
+			QCoreApplication::sendEvent(m_scroll->verticalScrollBar(), event);
+			return true;
+		}
+	}
+	return QDialog::eventFilter(object, event);
+}
+
+void SettingsView::applyStartAtSignIn() {
+	if (!m_startAtSignIn || m_startAtSignIn->isChecked() == m_loadedStartAtSignIn) {
+		return;
+	}
+	const QString script = willowToolsScript("install-startup.ps1");
+	if (script.isEmpty()) {
+		return;
+	}
+	QStringList arguments{ "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", QDir::toNativeSeparators(script) };
+	if (!m_startAtSignIn->isChecked()) {
+		arguments << "-Remove";
+	}
+	QProcess process;
+	process.setStandardOutputFile(QProcess::nullDevice());
+	process.setStandardErrorFile(QProcess::nullDevice());
+	QApplication::setOverrideCursor(Qt::WaitCursor);
+	process.start(QDir(qEnvironmentVariable("SystemRoot")).filePath("System32/WindowsPowerShell/v1.0/powershell.exe"),
+	              arguments);
+	process.waitForFinished(20000);
+	QApplication::restoreOverrideCursor();
+	m_loadedStartAtSignIn = QFileInfo::exists(startupShortcutPath());
+	m_startAtSignIn->setChecked(m_loadedStartAtSignIn);
 }
 
 QString SettingsView::makePortablePath(const QString& path) {
@@ -700,6 +1032,18 @@ void SettingsView::updateConfig() {
 	saveSetting("gb.colors", gbColors);
 #endif
 
+	// Only real changes, so Apply does not repeat Auto Play's "new model" notice or rescan the library.
+	const QString autoPlayModel = m_autoPlayModel->currentData().toString();
+	if (autoPlayModel != m_controller->getOption("autoPlayModel", AutoPlay::defaultModel())) {
+		m_controller->setOption("autoPlayModel", autoPlayModel);
+	}
+	const QString romFolder = QDir::fromNativeSeparators(m_romFolder->text().trimmed());
+	if (romFolder != m_loadedRomFolder) {
+		m_loadedRomFolder = romFolder;
+		emit romFolderChanged(romFolder);
+	}
+	applyStartAtSignIn();
+
 	emit saveSettingsRequested();
 
 	m_controller->write();
@@ -709,6 +1053,15 @@ void SettingsView::updateConfig() {
 }
 
 void SettingsView::reloadConfig() {
+	m_loadedRomFolder = m_controller->getQtOption(GameLibrary::folderSettingKey()).toString();
+	m_romFolder->setText(QDir::toNativeSeparators(m_loadedRomFolder));
+	const int model = m_autoPlayModel->findData(m_controller->getOption("autoPlayModel", AutoPlay::defaultModel()));
+	m_autoPlayModel->setCurrentIndex(qMax(model, 0));
+	if (m_startAtSignIn) {
+		m_loadedStartAtSignIn = QFileInfo::exists(startupShortcutPath());
+		m_startAtSignIn->setChecked(m_loadedStartAtSignIn);
+	}
+
 	loadSetting("bios", m_ui.gbaBios);
 	loadSetting("gba.bios", m_ui.gbaBios);
 	loadSetting("gb.bios", m_ui.gbBios);
@@ -915,9 +1268,103 @@ void SettingsView::updateChecked() {
 }
 
 void SettingsView::addPage(const QString& name, QWidget* view, Page index) {
-	m_pageIndex[index] = m_ui.tabs->count();
+	static const QMap<Page, const char*> descriptions{
+		{ Page::WILLOW, QT_TR_NOOP("Your game library, Auto Play, and playing from your iPhone.") },
+		{ Page::AV, QT_TR_NOOP("Sound output, volume, and how the picture is drawn.") },
+		{ Page::GAMEPLAY, QT_TR_NOOP("Frame rate and sync, what loads with a game, and save state contents.") },
+		{ Page::INTERFACE, QT_TR_NOOP("Language, the classic library, focus behaviour, and on-screen messages.") },
+		{ Page::UPDATE, QT_TR_NOOP("Update channel and version checks.") },
+		{ Page::EMULATION, QT_TR_NOOP("Fast forward, rewind, autofire, and compatibility.") },
+		{ Page::ENHANCEMENTS, QT_TR_NOOP("Video renderer and high-resolution scaling.") },
+		{ Page::BIOS, QT_TR_NOOP("BIOS files for each system.") },
+		{ Page::PATHS, QT_TR_NOOP("Where save games, save states, screenshots, patches, and cheats are kept.") },
+		{ Page::LOGGING, QT_TR_NOOP("Which messages are logged, and where.") },
+		{ Page::GB, QT_TR_NOOP("Game Boy models, palettes, and the Game Boy Camera.") },
+		{ Page::KEYBOARD, QT_TR_NOOP("Keyboard keys for each button.") },
+		{ Page::CONTROLLERS, QT_TR_NOOP("Gamepad buttons for each button.") },
+		{ Page::SHORTCUTS, QT_TR_NOOP("Keyboard and gamepad shortcuts (hotkeys) for menu actions.") },
+		{ Page::SHADERS, QT_TR_NOOP("Post-processing shaders for the OpenGL display.") },
+	};
+
+	auto* section = new QWidget(m_content);
+	auto* layout = new QVBoxLayout(section);
+	const int indent = view->layout() ? view->layout()->contentsMargins().left() : 0;
+	layout->setContentsMargins(0, 0, 0, 4);
+	layout->setSpacing(2);
+	// The first shown section drops its divider; see updateDividers().
+	auto* divider = new QWidget(section);
+	auto* dividerLayout = new QVBoxLayout(divider);
+	dividerLayout->setContentsMargins(0, 20, 0, 12);
+	auto* line = new QFrame(divider);
+	line->setFrameShape(QFrame::HLine);
+	line->setFrameShadow(QFrame::Sunken);
+	dividerLayout->addWidget(line);
+	layout->addWidget(divider);
+	auto* title = new QLabel(name, section);
+	QFont font = title->font();
+	font.setBold(true);
+	font.setPointSizeF(font.pointSizeF() * 1.4);
+	title->setFont(font);
+	title->setContentsMargins(indent, 0, indent, 0);
+	layout->addWidget(title);
+	if (descriptions.contains(index)) {
+		QLabel* description = makeNote(tr(descriptions[index]), section);
+		description->setContentsMargins(indent, 0, indent, 0);
+		layout->addWidget(description);
+	}
+	view->setParent(section);
+	view->show();
+	layout->addWidget(view);
+	if (index == Page::SHORTCUTS || index == Page::SHADERS) {
+		view->setMinimumHeight(460);
+	}
+
+	for (QWidget* control : view->findChildren<QWidget*>()) {
+		if (qobject_cast<QComboBox*>(control) || qobject_cast<QAbstractSpinBox*>(control) ||
+		    qobject_cast<QAbstractSlider*>(control)) {
+			if (control->focusPolicy() == Qt::WheelFocus) {
+				control->setFocusPolicy(Qt::StrongFocus);
+			}
+			control->installEventFilter(this);
+		}
+	}
+
+	m_sectionLayout->insertWidget(m_sections.count(), section);
+	m_sections.append({ index, section, view, divider });
 	m_ui.tabs->addItem(name);
-	m_ui.stackedWidget->addWidget(view);
+	if (!m_search->text().isEmpty()) {
+		filterSections(m_search->text());
+	}
+	updateDividers();
+}
+
+void SettingsView::updateDividers() {
+	bool first = true;
+	for (const Section& section : m_sections) {
+		section.divider->setVisible(!first);
+		first = first && section.widget->isHidden();
+	}
+}
+
+void SettingsView::removePage(Page index) {
+	const int row = sectionRow(index);
+	if (row < 0) {
+		return;
+	}
+	const Section section = m_sections.takeAt(row);
+	// The window owns the shader selector, so hand it back instead of deleting it.
+	if (section.view == m_shader.data()) {
+		section.view->setParent(nullptr);
+	} else {
+		section.view->setParent(this);
+		section.view->hide();
+	}
+	{
+		const QSignalBlocker blocker(m_ui.tabs);
+		delete m_ui.tabs->takeItem(row);
+	}
+	delete section.widget;
+	updateDividers();
 }
 
 void SettingsView::saveSetting(const char* key, const QAbstractButton* field) {

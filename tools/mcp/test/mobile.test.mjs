@@ -109,8 +109,15 @@ test('a paired mobile controller streams frames and controls input, speed and Lu
   assert.equal(page.status, 200);
   assert.match(page.csp, /connect-src ws:\/\/100\.94\.12\.10:9444/);
   assert.match(page.body, /<button id="autoplay" type="button" disabled>Auto Play<\/button>/);
-  assert.match(page.body, /<dialog id="settings-dialog"/);
-  assert.match(page.body, /<select id="autoplay-model" required>/);
+  assert.match(page.body, /<section id="settings-page" class="settings-page" aria-labelledby="settings-title" hidden>/);
+  assert.equal(page.body.match(/<button class="open-settings" type="button">Settings<\/button>/g)?.length, 2);
+  assert.doesNotMatch(page.body, /settings-dialog/);
+  for (const control of ['speed', 'autoplay-model', 'video-mode', 'screen-filter', 'control-size', 'keep-awake', 'forget']) {
+    assert.match(page.body, new RegExp(`id="${control}"`));
+  }
+  // Every phone setting, Auto Play's model included, lives on the one Settings page.
+  assert.match(page.body, /<section aria-labelledby="autoplay-settings">[\s\S]*<select id="autoplay-model" disabled>/);
+  assert.doesNotMatch(page.body, /<dialog/);
   assert.match(page.body, /<label for="speed">Game speed<\/label>/);
   assert.equal((await get('/', { Host: 'example.com' })).status, 404);
   assert.equal((await get('/Willow-Mobile.mobileconfig')).status, 404);

@@ -6,7 +6,7 @@
 #pragma once
 
 #include <QDialog>
-#include <QMap>
+#include <QList>
 #include <QPointer>
 #include <QTimer>
 
@@ -21,6 +21,10 @@
 #endif
 
 #include "ui_SettingsView.h"
+
+class QPropertyAnimation;
+class QScrollArea;
+class QVBoxLayout;
 
 namespace QGBA {
 
@@ -47,6 +51,7 @@ public:
 		CONTROLLERS,
 		SHORTCUTS,
 		SHADERS,
+		WILLOW,
 	};
 
 	SettingsView(ConfigController* controller, InputController* inputController, ShortcutController* shortcutController, LogController* logController, QWidget* parent = nullptr);
@@ -64,10 +69,13 @@ signals:
 	void libraryCleared();
 	void saveSettingsRequested();
 	void openAutorunScripts();
+	void romFolderChanged(const QString& folder);
+	void mobilePairingRequested();
 
 public slots:
 	void selectPage(Page);
 	void setShaderSelector(ShaderSelector* shaderSelector);
+	void setMobileStatus(const QString& status);
 
 private slots:
 	void selectBios(QLineEdit*);
@@ -77,7 +85,18 @@ private slots:
 	void reloadConfig();
 	void updateChecked();
 
+protected:
+	bool eventFilter(QObject*, QEvent*) override;
+
 private:
+	// Every page is a section of one scrolling page; the sidebar jumps between them.
+	struct Section {
+		Page page;
+		QWidget* widget;
+		QWidget* view;
+		QWidget* divider;
+	};
+
 	Ui::SettingsView m_ui;
 
 	ConfigController* m_controller;
@@ -92,11 +111,34 @@ private:
 	ColorPicker m_colorPickers[12];
 #endif
 
-	QMap<Page, int> m_pageIndex;
+	QList<Section> m_sections;
+	QScrollArea* m_scroll;
+	QWidget* m_content;
+	QVBoxLayout* m_sectionLayout;
+	QLineEdit* m_search;
+	QLabel* m_noResults;
+	QPropertyAnimation* m_scrollAnimation;
+	bool m_navigating = false;
+
+	QLineEdit* m_romFolder;
+	QComboBox* m_autoPlayModel;
+	QLabel* m_mobileStatus = nullptr;
+	QCheckBox* m_startAtSignIn = nullptr;
+	QString m_loadedRomFolder;
+	bool m_loadedStartAtSignIn = false;
 
 	QString makePortablePath(const QString& path);
 
+	void setupSinglePage();
+	QWidget* createWillowPage();
 	void addPage(const QString& name, QWidget* view, Page index);
+	void removePage(Page index);
+	int sectionRow(Page index) const;
+	void scrollToSection(int row, bool animate);
+	void syncSectionToScroll();
+	void filterSections(const QString& query);
+	void updateDividers();
+	void applyStartAtSignIn();
 
 	void saveSetting(const char* key, const QAbstractButton*);
 	void saveSetting(const char* key, const QComboBox*);

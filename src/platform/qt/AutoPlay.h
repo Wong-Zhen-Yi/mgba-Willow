@@ -7,7 +7,9 @@
 
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QList>
 #include <QObject>
+#include <QPair>
 #include <QProcess>
 #include <memory>
 
@@ -32,6 +34,9 @@ public:
 	QJsonObject status() const;
 	QJsonArray models() const;
 	static bool supportsModel(const QString& model);
+	// Model ids and translated labels, in menu order.
+	static QList<QPair<QString, QString>> modelList();
+	static QString defaultModel() { return QStringLiteral("terra"); }
 
 private:
 	void readUpdates();

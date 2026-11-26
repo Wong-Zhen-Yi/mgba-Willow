@@ -1,6 +1,8 @@
 # Windows PowerShell 5.1 compatible; shared by both Windows launchers.
 param(
     [switch]$UseCallerDirectory,
+    # Windows sign-in: open the existing build minimized, without hashing sources.
+    [switch]$Background,
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$AppArguments
 )
 
@@ -14,18 +16,22 @@ $msysRoot = Join-Path $toolsDir 'msys64'
 $lockStream = $null
 $transcribing = $false
 $buildReady = $null
-# Include source changes, not just the build script, in the cached build identity.
-$buildInputs = @(
-    Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src'), (Join-Path $repoRoot 'include'), (Join-Path $repoRoot 'res') -Recurse -File
-    Get-Item -LiteralPath (Join-Path $repoRoot 'CMakeLists.txt'), (Join-Path $repoRoot 'version.cmake'), (Join-Path $PSScriptRoot 'build-windows.sh')
-)
-$buildIdentity = ($buildInputs | Sort-Object FullName | ForEach-Object {
-    $_.FullName.Substring($repoRoot.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
-}) -join "`n"
-$recipeHasher = [Security.Cryptography.SHA256]::Create()
-try {
-    $buildRecipe = [BitConverter]::ToString($recipeHasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($buildIdentity))).Replace('-', '')
-} finally { $recipeHasher.Dispose() }
+$buildRecipe = $null
+
+function Get-BuildRecipe {
+    # Include source changes, not just the build script, in the cached build identity.
+    $buildInputs = @(
+        Get-ChildItem -LiteralPath (Join-Path $repoRoot 'src'), (Join-Path $repoRoot 'include'), (Join-Path $repoRoot 'res') -Recurse -File
+        Get-Item -LiteralPath (Join-Path $repoRoot 'CMakeLists.txt'), (Join-Path $repoRoot 'version.cmake'), (Join-Path $PSScriptRoot 'build-windows.sh')
+    )
+    $buildIdentity = ($buildInputs | Sort-Object FullName | ForEach-Object {
+        $_.FullName.Substring($repoRoot.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+    }) -join "`n"
+    $recipeHasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        return [BitConverter]::ToString($recipeHasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($buildIdentity))).Replace('-', '')
+    } finally { $recipeHasher.Dispose() }
+}
 
 function Invoke-Native {
     param([string]$Program, [string[]]$NativeArguments)
@@ -155,10 +161,20 @@ try {
     if (-not $appPath) {
         $appPath = Join-Path $buildDir 'mGBA.exe'
         $buildReady = Join-Path $buildDir 'build-ready'
-        if (-not (Test-Path -LiteralPath $appPath) -or
-            -not (Test-Path -LiteralPath $buildReady) -or
-            (Get-Content -LiteralPath $buildReady -ErrorAction SilentlyContinue) -ne $buildRecipe -or
-            -not (Test-Path -LiteralPath (Join-Path $msysRoot 'ucrt64\bin\Qt6Core.dll'))) {
+        $built = (Test-Path -LiteralPath $appPath) -and (Test-Path -LiteralPath $buildReady) -and
+            (Test-Path -LiteralPath (Join-Path $msysRoot 'ucrt64\bin\Qt6Core.dll'))
+        if ($Background) {
+            # One window serves the phone, so a sign-in launch never opens a second one.
+            if (Get-Process -Name mGBA -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $appPath }) {
+                Write-Host 'mGBA is already running.'
+                exit 0
+            }
+            # Skip the source hash at sign-in; the next normal launch rebuilds changed sources.
+            if ($built) { $buildReady = $null }
+        }
+        if ($buildReady) { $buildRecipe = Get-BuildRecipe }
+        if ($buildReady -and (-not $built -or
+            (Get-Content -LiteralPath $buildReady -ErrorAction SilentlyContinue) -ne $buildRecipe)) {
             # Windows locks a running executable. Preserve the user's game and
             # explain how to finish the update before downloading or compiling.
             $runningApp = Get-Process -Name mGBA -ErrorAction SilentlyContinue | Where-Object {
@@ -202,6 +218,7 @@ try {
     $startInfo.Arguments = $quotedArguments -join ' '
     $startInfo.EnvironmentVariables['WILLOW_MOBILE_SCRIPT'] = Join-Path $PSScriptRoot 'mcp\mobile-launch.mjs'
     $startInfo.EnvironmentVariables['WILLOW_AUTOPLAY_SCRIPT'] = Join-Path $PSScriptRoot 'mcp\autoplay.mjs'
+    if ($Background) { $startInfo.EnvironmentVariables['WILLOW_START_MINIMIZED'] = '1' }
     $appProcess = [Diagnostics.Process]::Start($startInfo)
     if ($appProcess.WaitForExit(2000)) {
         if ($appProcess.ExitCode -ne 0 -or $AppArguments.Count -eq 0) {

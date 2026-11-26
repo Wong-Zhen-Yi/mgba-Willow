@@ -145,7 +145,13 @@ Window* GBAApp::newWindow() {
 	m_windows.append(w);
 	w->setAttribute(Qt::WA_DeleteOnClose);
 	w->loadConfig();
-	w->show();
+	// Started at Windows sign-in: serve Willow Mobile from the taskbar until the user opens the window.
+	if (m_windows.count() == 1 && qEnvironmentVariableIsSet("WILLOW_START_MINIMIZED")) {
+		qunsetenv("WILLOW_START_MINIMIZED");
+		w->showMinimized();
+	} else {
+		w->show();
+	}
 	w->multiplayerChanged();
 	for (Window* w : m_windows) {
 		w->updateMultiplayerStatus(m_windows.count() < MAX_GBAS);

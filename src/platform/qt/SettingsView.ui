@@ -787,7 +787,7 @@
        <item row="3" column="1">
         <widget class="QLabel" name="libraryStartInfo">
          <property name="text">
-          <string>The game card library opens when no game is running. Change its ROM folder from the library screen.</string>
+          <string>The game card library opens when no game is running. Choose its ROM folder under Willow → Game library.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>

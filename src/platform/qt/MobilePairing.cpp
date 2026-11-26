@@ -57,13 +57,17 @@ MobilePairing::MobilePairing(QWidget* parent)
 	connect(m_stop, &QPushButton::clicked, this, &MobilePairing::stop);
 	connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
+	// Serving starts with Willow, so retry quietly when Tailscale is not ready yet.
+	m_retry.setSingleShot(true);
+	connect(&m_retry, &QTimer::timeout, this, &MobilePairing::start);
+
 	connect(&m_process, &QProcess::readyReadStandardOutput, this, &MobilePairing::readUpdates);
 	// Keep the QR in the GUI process, away from the launcher output.
 	m_process.setStandardErrorFile(QProcess::nullDevice());
 	connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
 		if (error != QProcess::FailedToStart)
 			return;
-		m_status->setText(tr("Could not start Willow Mobile. Check your Node.js installation and try again."));
+		setStatus(tr("Could not start Willow Mobile. Check your Node.js installation and try again."));
 		m_start->setEnabled(true);
 		m_stop->setEnabled(false);
 	});
@@ -71,8 +75,11 @@ MobilePairing::MobilePairing(QWidget* parent)
 		clearPairing();
 		m_start->setEnabled(true);
 		m_stop->setEnabled(false);
-		if (!m_stopping && !m_reportedError)
-			m_status->setText(tr("Willow Mobile stopped. Choose Start to pair again."));
+		if (m_stopping)
+			return;
+		if (!m_reportedError)
+			setStatus(tr("Willow Mobile stopped."));
+		scheduleRetry();
 	});
 }
 
@@ -85,25 +92,26 @@ MobilePairing::~MobilePairing() {
 }
 
 void MobilePairing::start() {
+	m_retry.stop();
 	if (m_process.state() != QProcess::NotRunning)
 		return;
 	const auto script = qEnvironmentVariable("WILLOW_MOBILE_SCRIPT");
 	if (!QFileInfo(script).isFile()) {
-		m_status->setText(tr("Open Willow using Launch mGBA.cmd to set up iPhone pairing."));
+		setStatus(tr("Open Willow using Launch mGBA.cmd to set up iPhone pairing."));
 		return;
 	}
 	const auto programFiles = qEnvironmentVariable("ProgramFiles");
 	const auto node = findProgram("node", QDir(programFiles).filePath("nodejs/node.exe"));
 	const auto tailscale = findProgram("tailscale", QDir(programFiles).filePath("Tailscale/tailscale.exe"));
 	if (node.isEmpty() || tailscale.isEmpty()) {
-		m_status->setText(node.isEmpty() ? tr("Install Node.js 20 or newer, then reopen Willow.") :
-		                                   tr("Install and connect Tailscale on this PC, then try again."));
+		setStatus(node.isEmpty() ? tr("Install Node.js 20 or newer, then reopen Willow.") :
+		                           tr("Install and connect Tailscale on this PC, then try again."));
 		return;
 	}
 	m_stopping = false;
 	m_reportedError = false;
 	m_updates.clear();
-	m_status->setText(tr("Starting Willow Mobile…"));
+	setStatus(tr("Starting Willow Mobile…"));
 	m_start->setEnabled(false);
 	m_stop->setEnabled(true);
 	m_process.start(node, { script, QString::number(QCoreApplication::applicationPid()), tailscale });
@@ -111,10 +119,29 @@ void MobilePairing::start() {
 
 void MobilePairing::stop() {
 	m_stopping = true;
+	m_retry.stop();
+	m_retryDelay = 0;
 	clearPairing();
 	m_stop->setEnabled(false);
-	m_status->setText(tr("Willow Mobile is off. Choose Start to pair again."));
+	setStatus(tr("Willow Mobile is off. Choose Start to pair again."), tr("Off."));
 	m_process.closeWriteChannel();
+}
+
+void MobilePairing::setStatus(const QString& text, const QString& summary) {
+	m_status->setText(text);
+	const auto line = summary.isEmpty() ? text : summary;
+	if (line == m_summary)
+		return;
+	m_summary = line;
+	emit summaryChanged(m_summary);
+}
+
+void MobilePairing::scheduleRetry() {
+	// 30 s, then doubling up to 5 min: one short Node run per attempt, nothing in between.
+	m_retryDelay = m_retryDelay ? qMin(m_retryDelay * 2, 300) : 30;
+	const auto retry = tr("Willow will try again in %n second(s).", nullptr, m_retryDelay);
+	setStatus(QString("%1\n%2").arg(m_status->text(), retry), QString("%1 %2").arg(m_summary, retry));
+	m_retry.start(m_retryDelay * 1000);
 }
 
 void MobilePairing::clearPairing() {
@@ -129,7 +156,7 @@ void MobilePairing::readUpdates() {
 	m_updates += bytes;
 	if (m_updates.size() > 128 * 1024) {
 		stop();
-		m_status->setText(tr("Willow Mobile returned an invalid pairing response."));
+		setStatus(tr("Willow Mobile returned an invalid pairing response."));
 		return;
 	}
 	int end;
@@ -139,19 +166,21 @@ void MobilePairing::readUpdates() {
 		const auto type = update.value("type").toString();
 		if (type == "error" || type == "progress") {
 			m_reportedError = type == "error";
-			m_status->setText(update.value("message").toString());
+			setStatus(update.value("message").toString());
 		} else if (type == "ready") {
 			QPixmap qr;
 			if (!qr.loadFromData(QByteArray::fromBase64(update.value("qr").toString().toLatin1()), "PNG")) {
 				stop();
-				m_status->setText(tr("Could not load the pairing QR code."));
+				setStatus(tr("Could not load the pairing QR code."));
 				return;
 			}
 			// Funnel links are public, so the iPhone does not need Tailscale for them.
 			const auto steps = update.value("access").toString() == "funnel" ?
 			    tr("Scan this code with your iPhone Camera. Keep it private: anyone with the link can pair.") :
 			    tr("Connect your iPhone to Tailscale, then scan this code with Camera.");
-			m_status->setText(QString("%1\n%2").arg(steps, update.value("origin").toString()));
+			const auto origin = update.value("origin").toString();
+			setStatus(QString("%1\n%2").arg(steps, origin), tr("On. Your iPhone can pair at %1").arg(origin));
+			m_retryDelay = 0;
 			m_qr->setPixmap(qr);
 			m_qr->show();
 			adjustSize();

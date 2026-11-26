@@ -69,8 +69,8 @@ AutoPlay::AutoPlay(Window* window, ActionMapper* actions, const QString& session
 			    showMessage(tr("Auto Play: the new model applies the next time you start it."));
 	    },
 	    this);
-	const auto initial = window->config()->getOption("autoPlayModel", "terra");
-	window->config()->setOption("autoPlayModel", supportsModel(initial) ? initial : QStringLiteral("terra"));
+	const auto initial = window->config()->getOption("autoPlayModel", defaultModel());
+	window->config()->setOption("autoPlayModel", supportsModel(initial) ? initial : defaultModel());
 
 	m_button = new QToolButton(window);
 	m_button->setCheckable(true);
@@ -141,7 +141,7 @@ void AutoPlay::start(const QString& model) {
 	m_stopping = false;
 	m_reportedError = false;
 	m_updates.clear();
-	const auto selectedModel = model.isEmpty() ? m_window->config()->getOption("autoPlayModel", "terra") : model;
+	const auto selectedModel = model.isEmpty() ? m_window->config()->getOption("autoPlayModel", defaultModel()) : model;
 	if (!supportsModel(selectedModel))
 		return fail(tr("Auto Play: invalid model."));
 	setRunning(true);
@@ -166,13 +166,20 @@ QJsonObject AutoPlay::status() const {
 	return { { "running", running },
 		     { "stopping", running && m_stopping },
 		     { "message", m_message },
-		     { "default_model", m_window->config()->getOption("autoPlayModel", "terra") } };
+		     { "default_model", m_window->config()->getOption("autoPlayModel", defaultModel()) } };
 }
 
 QJsonArray AutoPlay::models() const {
 	QJsonArray models;
+	for (const auto& [id, label] : modelList())
+		models.append(QJsonObject { { "id", id }, { "label", label } });
+	return models;
+}
+
+QList<QPair<QString, QString>> AutoPlay::modelList() {
+	QList<QPair<QString, QString>> models;
 	for (const auto& profile : _models)
-		models.append(QJsonObject { { "id", QString::fromLatin1(profile.id) }, { "label", tr(profile.label) } });
+		models.append({ QString::fromLatin1(profile.id), tr(profile.label) });
 	return models;
 }
 

@@ -10,8 +10,17 @@ its saves stay on the PC. Audio plays on the PC.
 
 1. Connect the Windows Tailscale app on the PC. Pairing on Windows also needs
    Node.js 20 or newer.
-2. Double-click **Launch mGBA.cmd** as usual. Click **Pair iPhone** in the game
-   library or choose **Tools → Pair iPhone** during gameplay.
+2. Double-click **Launch mGBA.cmd** as usual. Willow starts serving the phone
+   link in the background a few seconds after it opens. Click **Pair iPhone**
+   in the game library or choose **Tools → Pair iPhone** during gameplay to
+   see the QR code.
+
+   To serve the link whenever the PC is on, run
+   `"Launch mGBA.cmd" --install-startup` once. Willow then opens minimized on
+   the taskbar when you sign in to Windows. Sign-in launches skip the source
+   check and use the last build, so they start quickly. The next normal launch
+   still rebuilds changed sources. `"Launch mGBA.cmd" --remove-startup` undoes
+   it.
 3. Scan the QR code with the iPhone Camera and open the link in any browser.
 4. Pick a game. The phone opens on your Willow game library, with the same
    games and cover art as the PC. Tapping a game starts it on the PC and opens
@@ -22,23 +31,49 @@ on PC**. Tap **Continue** to control it. The phone never closes a running game,
 because it may have unsaved progress. To switch games, save on the PC and
 return to the game library there first.
 
-Tap **Auto Play**, choose a model, and tap **Start Auto Play**. The picker
-starts with the PC's **AI → Auto Play Model** setting. Your choice applies to
-that run. Tap **Stop Auto Play** on the phone or PC to stop it. Auto Play waits
+Tap **Auto Play** to let Codex play. It uses the model chosen in
+**Settings → Auto Play → Model** on the phone. **PC default** (the starting
+choice) follows the PC's **AI → Auto Play Model** setting. Tap **Stop Auto Play**
+on the phone or PC to stop it. Auto Play waits
 while the game is paused and keeps running on the PC if you return to **Games**
 or close the mobile page.
 
-Open **Settings → Game speed** to choose **1×**, **2×**, **4×**, **8×**, or **Maximum** for
-manual play and Auto Play. **PC speed** follows Willow’s desktop settings.
-Desktop fast-forward controls take priority when active. Willow returns to
-**PC speed** when the phone disconnects or returns to **Games**.
-
-You can close the pairing dialog after scanning. To turn off mobile access,
-click **Stop** in **Pair iPhone** or close Willow. **Games** on the phone
+You can close the pairing dialog after scanning. Mobile access stays on while
+Willow is open. To turn it off, click **Stop** in **Pair iPhone** or close
+Willow. If Tailscale is not connected yet, or the link stops working, Willow
+tries again after 30 seconds, then waits twice as long each time, up to five
+minutes. Nothing runs between attempts, and while it waits for a phone, the
+server only listens for connections. **Games** on the phone
 releases control and returns to the game list. The game keeps running on the
 PC. Starting mobile access again creates a
 new pairing code. Anyone with the current link can pair, so keep the QR code
 private.
+
+## Settings
+
+Tap **Settings** at the top of the game list or the game screen. It opens a
+full page; tap **Done** or swipe back to return. A game keeps running on the PC
+while Settings is open.
+
+- **Game → Game speed** chooses **1×**, **2×**, **4×**, **8×**, or **Maximum** for
+  manual play and Auto Play. It works once a game is open. **PC speed** follows
+  Willow’s desktop settings. Desktop fast-forward controls take priority when
+  active. Willow returns to **PC speed** when the phone disconnects or returns
+  to **Games**.
+- **Auto Play → Model** chooses the Codex model for the next Auto Play run.
+  The list comes from the PC, so it fills in the first time a game opens.
+- **Video → Video stream** picks the stream format (see below), and shows the
+  codec and encoder in use.
+- **Video → Screen scaling** chooses **Sharp pixels** (the default) or
+  **Smooth**.
+- **Controls → Button size** chooses **Standard** or **Large** buttons.
+- **Controls → Keep screen awake** stops the phone from dimming while a game
+  is open, for example while you watch Auto Play. It needs iOS 16.4 or newer.
+- **Connection** shows the PC the phone is connected to. **Unpair this phone**
+  forgets the pairing link. To play again, scan the QR code on the PC.
+
+The phone remembers the Auto Play model, video, screen, button and
+screen-awake choices.
 
 ## Video stream
 

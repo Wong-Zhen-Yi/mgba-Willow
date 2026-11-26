@@ -13,6 +13,7 @@
     <section class="picker" aria-labelledby="picker-title">
       <header>
         <h1 id="picker-title">Willow <span>Mobile</span></h1>
+        <button class="open-settings" type="button">Settings</button>
       </header>
       <p id="picker-status" role="status">Connecting to Willow…</p>
       <button id="continue" class="continue" type="button" hidden>
@@ -32,7 +33,7 @@
           <p id="game-title" hidden></p>
         </div>
         <div class="header-actions">
-          <button id="settings" type="button">Settings</button>
+          <button class="open-settings" type="button">Settings</button>
           <button id="back" type="button">Games</button>
         </div>
       </header>
@@ -67,39 +68,87 @@
       </div>
     </section>
   </main>
-  <dialog id="settings-dialog" aria-labelledby="settings-title">
-    <h2 id="settings-title">Settings</h2>
-    <label for="speed">Game speed</label>
-    <select id="speed" disabled>
-      <option value="0">PC speed</option>
-      <option value="1">1×</option>
-      <option value="2">2×</option>
-      <option value="4">4×</option>
-      <option value="8">8×</option>
-      <option value="-1">Maximum</option>
-    </select>
-    <label for="video-mode">Video stream</label>
-    <select id="video-mode">
-      <option value="auto">Auto (prefer NVIDIA HEVC)</option>
-      <option value="h264">H.264</option>
-      <option value="png">PNG</option>
-    </select>
-    <p id="stream-status" role="status"></p>
-    <p id="settings-status"></p>
-    <form method="dialog" class="dialog-actions">
-      <button type="submit">Done</button>
-    </form>
-  </dialog>
-  <dialog id="autoplay-dialog" aria-labelledby="autoplay-title">
-    <h2 id="autoplay-title">Auto Play</h2>
-    <form id="autoplay-form" method="dialog">
-      <label for="autoplay-model">Model</label>
-      <select id="autoplay-model" required></select>
-      <div class="dialog-actions">
-        <button id="autoplay-cancel" type="button">Cancel</button>
-        <button type="submit">Start Auto Play</button>
+  <section id="settings-page" class="settings-page" aria-labelledby="settings-title" hidden>
+    <header>
+      <h1 id="settings-title">Settings</h1>
+      <button id="settings-done" type="button">Done</button>
+    </header>
+    <section aria-labelledby="game-settings">
+      <h2 id="game-settings">Game</h2>
+      <div class="settings-group">
+        <div class="setting">
+          <label for="speed">Game speed</label>
+          <select id="speed" disabled>
+            <option value="0">PC speed</option>
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+            <option value="-1">Maximum</option>
+          </select>
+        </div>
+        <p id="speed-note">Open a game to change its speed.</p>
+        <p id="settings-status" role="status"></p>
       </div>
-    </form>
-  </dialog>
+    </section>
+    <section aria-labelledby="autoplay-settings">
+      <h2 id="autoplay-settings">Auto Play</h2>
+      <div class="settings-group">
+        <div class="setting">
+          <label for="autoplay-model">Model</label>
+          <select id="autoplay-model" disabled>
+            <option value="">PC default</option>
+          </select>
+        </div>
+        <p id="autoplay-note">Tap Auto Play on the game screen to let Codex play. A new model applies the next time Auto Play starts.</p>
+      </div>
+    </section>
+    <section aria-labelledby="video-settings">
+      <h2 id="video-settings">Video</h2>
+      <div class="settings-group">
+        <div class="setting">
+          <label for="video-mode">Video stream</label>
+          <select id="video-mode">
+            <option value="auto">Auto (prefer NVIDIA HEVC)</option>
+            <option value="h264">H.264</option>
+            <option value="png">PNG</option>
+          </select>
+        </div>
+        <p id="stream-status" role="status"></p>
+        <div class="setting">
+          <label for="screen-filter">Screen scaling</label>
+          <select id="screen-filter">
+            <option value="sharp">Sharp pixels</option>
+            <option value="smooth">Smooth</option>
+          </select>
+        </div>
+      </div>
+    </section>
+    <section aria-labelledby="control-settings">
+      <h2 id="control-settings">Controls</h2>
+      <div class="settings-group">
+        <div class="setting">
+          <label for="control-size">Button size</label>
+          <select id="control-size">
+            <option value="standard">Standard</option>
+            <option value="large">Large</option>
+          </select>
+        </div>
+        <div class="setting">
+          <label for="keep-awake">Keep screen awake</label>
+          <input id="keep-awake" type="checkbox" role="switch">
+        </div>
+        <p id="keep-awake-note">While a game is open on this phone.</p>
+        <p>With a keyboard: arrow keys move, X is A, Z is B, Enter is Start, Shift is Select, and A and S are L and R.</p>
+      </div>
+    </section>
+    <section aria-labelledby="connection-settings">
+      <h2 id="connection-settings">Connection</h2>
+      <div class="settings-group">
+        <p id="connection-status" role="status"></p>
+        <button id="forget" class="danger" type="button">Unpair this phone</button>
+      </div>
+    </section>
+  </section>
 </body>
 </html>
