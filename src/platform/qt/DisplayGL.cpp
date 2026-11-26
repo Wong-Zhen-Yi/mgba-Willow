@@ -562,7 +562,53 @@ PainterGL::~PainterGL() {
 	if (m_gl) {
 		destroy();
 	}
+#ifdef Q_OS_WIN
+	if (m_waitTimer) {
+		CloseHandle(m_waitTimer);
+	}
+#endif
 }
+
+// Waits until m_delayTimer reaches the deadline. On Windows, QThread::usleep
+// works in whole milliseconds of the system timer, so polling with 500 µs
+// sleeps either spins or overshoots. A high-resolution waitable timer sleeps
+// for the exact remainder instead.
+void PainterGL::sleepUntil(qint64 deadlineNsec) {
+#ifdef Q_OS_WIN
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
+	if (!m_waitTimer) {
+		m_waitTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+	}
+	qint64 remaining = deadlineNsec - m_delayTimer.nsecsElapsed();
+	if (remaining <= 0) {
+		return;
+	}
+	if (m_waitTimer) {
+		LARGE_INTEGER due;
+		due.QuadPart = -(remaining / 100); // Relative, in 100 ns units
+		if (SetWaitableTimer(m_waitTimer, &due, 0, nullptr, nullptr, FALSE) &&
+		    WaitForSingleObject(m_waitTimer, INFINITE) == WAIT_OBJECT_0) {
+			return;
+		}
+	}
+	// Windows before 10 1803 has no high-resolution timers; Sleep(1) waits a
+	// timer tick, which is still better than spinning.
+	while (m_delayTimer.nsecsElapsed() < deadlineNsec) {
+		Sleep(1);
+	}
+#else
+	while (m_delayTimer.nsecsElapsed() < deadlineNsec) {
+		QThread::usleep(500);
+	}
+#endif
+}
+
+#if defined(_WIN32) && defined(USE_EPOXY)
+// The context epoxy last resolved GL functions for on this thread.
+static thread_local HGLRC s_epoxyContext = nullptr;
+#endif
 
 void PainterGL::setThread(QThread* thread) {
 	moveToThread(thread);
@@ -572,7 +618,15 @@ void PainterGL::setThread(QThread* thread) {
 void PainterGL::makeCurrent() {
 	m_gl->makeCurrent(m_surface);
 #if defined(_WIN32) && defined(USE_EPOXY)
-	epoxy_handle_external_wglMakeCurrent();
+	// Resetting epoxy makes every later GL call resolve its function pointer
+	// again through wglGetProcAddress, which stalls NVIDIA's threaded driver.
+	// swap() makes the same context current every frame, so only reset after
+	// this thread really switches contexts.
+	HGLRC current = wglGetCurrentContext();
+	if (current != s_epoxyContext) {
+		s_epoxyContext = current;
+		epoxy_handle_external_wglMakeCurrent();
+	}
 #endif
 }
 
@@ -671,6 +725,10 @@ void PainterGL::destroy() {
 #endif
 	m_backend->deinit(m_backend);
 	m_gl->doneCurrent();
+#if defined(_WIN32) && defined(USE_EPOXY)
+	// A new context may reuse this handle value.
+	s_epoxyContext = nullptr;
+#endif
 	m_paintDev.reset();
 	m_gl.reset();
 
@@ -887,9 +945,7 @@ void PainterGL::draw() {
 		m_delayTimer.start();
 	} else {
 		if (wantSwap) {
-			while (m_delayTimer.nsecsElapsed() + OVERHEAD_NSEC < 1000000000 / sync->fpsTarget) {
-				QThread::usleep(500);
-			}
+			sleepUntil(qint64(1000000000 / sync->fpsTarget) - OVERHEAD_NSEC);
 			forceRedraw = sync->videoFrameWait;
 		}
 		if (!forceRedraw) {

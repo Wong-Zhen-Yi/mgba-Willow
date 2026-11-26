@@ -244,6 +244,10 @@ private:
 	MessagePainter* m_messagePainter = nullptr;
 	ControllerPainter* m_controllerPainter = nullptr;
 	QElapsedTimer m_delayTimer;
+	void sleepUntil(qint64 deadlineNsec);
+#ifdef Q_OS_WIN
+	void* m_waitTimer = nullptr;
+#endif
 	std::shared_ptr<VideoProxy> m_videoProxy;
 	int m_swapInterval = -1;
 	QList<qint64> m_frametimes;
